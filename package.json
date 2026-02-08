@@ -1,0 +1,48 @@
+{
+  "name": "drsaverfyp",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.36.2",
+    "@neondatabase/serverless": "^1.0.2",
+    "@prisma/adapter-neon": "^6.17.1",
+    "@prisma/client": "^6.17.1",
+    "@reduxjs/toolkit": "^2.11.1",
+    "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
+    "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
+    "imagekit": "^6.0.0",
+    "inngest": "^3.47.0",
+    "jspdf": "^4.0.0",
+    "jspdf-autotable": "^5.0.7",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.561.0",
+    "mapbox-gl": "^3.18.1",
+    "next": "15.4.10",
+    "react": "19.1.0",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "19.1.0",
+    "react-error-boundary": "^6.1.0",
+    "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^5.0.0",
+    "react-map-gl": "^8.1.0",
+    "react-redux": "^9.2.0",
+    "recharts": "^3.6.0",
+    "stripe": "^19.1.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/ws": "^8.18.1",
+    "prisma": "^6.17.1",
+    "tailwindcss": "^4"
+  }
+}
