@@ -38,12 +38,14 @@ export async function POST(request) {
     // 🔍 LOG THE RECEIVED DATA
     console.log("📥 API Received Address Data:", body);
 
+    // Handle nested or flat structure
     const data = body.address || body;
     const { name, street, city, state, zip, country, phone, latitude, longitude } = data;
 
-    if (!name || !street || !city || !zip) {
-      console.log("❌ Missing Fields:", { name, street, city, zip });
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // ✅ FIX: Removed '!zip' from validation so empty zip codes don't block saving
+    if (!name || !street || !city) {
+      console.log("❌ Missing Fields:", { name, street, city });
+      return NextResponse.json({ error: "Missing required fields (Name, Street, City)" }, { status: 400 });
     }
 
     const newAddress = await prisma.address.create({
@@ -54,7 +56,8 @@ export async function POST(request) {
         street,
         city,
         state: state || "",
-        zip,
+        // ✅ FIX: Default to "00000" if zip is missing or empty
+        zip: zip || "00000",
         country: country || "Pakistan",
         phone: phone || "",
         latitude: latitude ? parseFloat(latitude) : null,

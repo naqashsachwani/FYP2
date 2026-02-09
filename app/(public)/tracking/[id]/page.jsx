@@ -17,53 +17,61 @@ export default function TrackingPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  // Fetch Data
+  // 1. Fetch Delivery Data
   const fetchData = async () => {
     try {
       const res = await fetch(`/api/delivery/${id}`);
       const data = await res.json();
-      // Only update state if data is valid and different to prevent unnecessary re-renders
-      if (!data.error) setDelivery(data);
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      if (!data.error) {
+        setDelivery(data);
+      }
+    } catch (e) { 
+      console.error("Fetch Error:", e); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => {
     if (!id) return;
     
-    // 1. Initial Load
-    fetchData(); 
+    fetchData(); // Initial load
     
-    // 2. ✅ AUTO-UPDATE: Poll every 4 seconds
-    // This ensures that when the Store Admin changes status/location, 
-    // the customer sees it immediately without refreshing.
-    const interval = setInterval(fetchData, 4000); 
+    // 2. Poll for updates every 4 seconds (Live Tracking)
+    const interval = setInterval(() => {
+      fetchData();
+    }, 4000); 
 
-    // Cleanup interval on unmount
     return () => clearInterval(interval);
   }, [id]);
 
-  // --- USER ACTION: Confirm Delivery ---
+  // 3. User Action: Confirm Delivery
   const handleConfirmDelivery = async () => {
     if (!confirm("Are you sure you received the package?")) return;
     setUpdating(true);
     try {
-      await fetch(`/api/delivery/${id}`, {
+      const res = await fetch(`/api/delivery/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'DELIVERED' })
       });
-      await fetchData(); 
-    } catch (error) { alert("Failed to confirm"); } 
-    finally { setUpdating(false); }
+      if (res.ok) await fetchData(); 
+    } catch (error) { 
+      alert("Failed to confirm delivery"); 
+    } finally { 
+      setUpdating(false); 
+    }
   };
 
-  // --- DEV TOOL: Simulate Driver Movement ---
+  // 4. Simulation for Testing (Moves driver near the Store)
   const simulateMovement = async () => {
+    if (!delivery?.goal?.product?.store) return alert("Store coordinates missing");
     setUpdating(true);
     
-    const storeLat = delivery?.goal?.product?.store?.latitude || 24.8607;
-    const storeLng = delivery?.goal?.product?.store?.longitude || 67.0011;
+    const storeLat = Number(delivery.goal.product.store.latitude);
+    const storeLng = Number(delivery.goal.product.store.longitude);
 
+    // Random small movement
     const randomLat = storeLat + (Math.random() * 0.01 - 0.005); 
     const randomLng = storeLng + (Math.random() * 0.01 - 0.005);
     
@@ -86,7 +94,7 @@ export default function TrackingPage({ params }) {
 
   const product = delivery.goal?.product;
   const isDelivered = delivery.status === 'DELIVERED';
-  const isDispatched = delivery.status === 'DISPATCHED'; 
+  const isDispatched = delivery.status === 'DISPATCHED' || delivery.status === 'IN_TRANSIT'; 
   const statusColor = isDelivered ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700';
 
   return (
@@ -98,23 +106,23 @@ export default function TrackingPage({ params }) {
             <ArrowLeft size={16} className="mr-1" /> Back
           </button>
           
-          {/* Button ONLY shows if status is exactly 'DISPATCHED' */}
-          {isDispatched && (
-            <button onClick={simulateMovement} disabled={updating} className="text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1">
+          {/* Debug/Simulation Tools */}
+          {!isDelivered && (
+            <button onClick={simulateMovement} disabled={updating} className="text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1 bg-white px-3 py-1 rounded-full border shadow-sm transition-all">
               <PlayCircle size={14} /> Driver Update
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[80vh]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[80vh]">
           
-          {/* SIDEBAR */}
+          {/* LEFT SIDEBAR: Details */}
           <div className="md:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full overflow-y-auto">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Track Delivery</h1>
             <p className="text-gray-400 text-xs font-mono mb-6">ID: {delivery.trackingNumber}</p>
             
             <div className={`p-4 rounded-xl border mb-6 ${statusColor}`}>
-              <div className="flex items-center gap-2 mb-1 font-bold uppercase">
+              <div className="flex items-center gap-2 mb-1 font-bold uppercase tracking-wide">
                 {isDelivered ? <CheckCircle size={18} /> : <Truck size={18} />} 
                 {delivery.status.replace('_', ' ')}
               </div>
@@ -122,13 +130,14 @@ export default function TrackingPage({ params }) {
                 <Calendar size={12} />
                 {isDelivered 
                   ? `Delivered on ${new Date(delivery.updatedAt).toLocaleDateString()}`
-                  : `Scheduled Delivery: ${new Date(delivery.estimatedDate).toDateString()}` 
+                  : `Estimated: ${new Date(delivery.estimatedDate).toDateString()}` 
                 }
               </div>
             </div>
 
+            {/* Product Card */}
             <div className="flex gap-4 items-start border-t border-gray-100 pt-6 mb-6">
-               {product?.images?.[0] && <img src={product.images[0]} className="w-16 h-16 rounded-lg bg-gray-100 object-cover border" />}
+               {product?.images?.[0] && <img src={product.images[0]} alt="Product" className="w-16 h-16 rounded-lg bg-gray-100 object-cover border" />}
                <div>
                  <h3 className="font-semibold text-gray-800 line-clamp-1">{product?.name}</h3>
                  <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
@@ -137,42 +146,37 @@ export default function TrackingPage({ params }) {
                </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-6 mb-auto">
+            {/* Destination */}
+            <div className="border-t border-gray-100 pt-6 mb-6">
                <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 tracking-wider">Destination</h4>
-               <div className="flex gap-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+               <div className="flex gap-3 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-100">
                  <MapPin size={18} className="mt-0.5 text-gray-400 shrink-0" /> 
                  <span className="leading-relaxed">{delivery.shippingAddress}</span>
                </div>
             </div>
 
-            {/* CONFIRM BUTTON: Only visible/enabled when DISPATCHED */}
-            {!isDelivered && isDispatched && (
-              <div className="mt-6 border-t border-gray-100 pt-6">
+            {/* Action Buttons */}
+            {!isDelivered && (
+              <div className="mt-auto pt-6">
                 <button 
                   onClick={handleConfirmDelivery}
-                  disabled={updating}
-                  className="w-full py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={updating || !isDispatched}
+                  className="w-full py-3.5 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 shadow-lg shadow-green-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:bg-gray-400"
                 >
                   {updating ? <Loader2 className="animate-spin" /> : <CheckCircle size={20} />}
-                  Confirm Delivery Received
+                  Confirm Received
                 </button>
-                <p className="text-xs text-center text-gray-400 mt-3">
-                  Only click this once you have physically received your package.
-                </p>
+                {!isDispatched && (
+                   <p className="text-xs text-center text-gray-400 mt-3 italic">
+                    Waiting for the store to dispatch your order.
+                  </p>
+                )}
               </div>
             )}
-            
-            {/* If Pending, show message instead of button */}
-            {!isDelivered && !isDispatched && (
-                <div className="mt-6 border-t border-gray-100 pt-6 text-center">
-                    <p className="text-sm text-gray-500 italic">Waiting for dispatch...</p>
-                </div>
-            )}
-
           </div>
 
-          {/* MAP */}
-          <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative">
+          {/* RIGHT SIDE: Interactive Map */}
+          <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[400px]">
             <DeliveryMap delivery={delivery} />
           </div>
 

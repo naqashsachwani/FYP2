@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Truck, MapPin, X, Gift, Loader2, Plus, ChevronLeft, Calendar, Crosshair, Trash2 } from "lucide-react";
+import { MapPin, X, Gift, Loader2, Plus, ChevronLeft, Calendar, Crosshair, Trash2 } from "lucide-react";
 import axios from "axios"; 
 
 export default function RedeemAction({ goal, addresses, setAddresses, onSuccess }) {
@@ -23,12 +23,160 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ... (Keep existing helpers: handleUseGPS, handleSaveAddress, handleDeleteAddress) ...
-  const handleUseGPS = () => { if (!navigator.geolocation) return alert("Geolocation not supported"); setLoadingLocation(true); navigator.geolocation.getCurrentPosition(async (pos) => { const { latitude, longitude } = pos.coords; try { const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`); const data = res.data.address; setFormData(prev => ({ ...prev, latitude, longitude, street: data.road || data.suburb || prev.street, city: data.city || data.town || prev.city, state: data.state || prev.state, zip: data.postcode || prev.zip, country: data.country || prev.country })); } catch (e) { setFormData(prev => ({ ...prev, latitude, longitude })); } finally { setLoadingLocation(false); } }, () => { alert("Location permission denied"); setLoadingLocation(false); }); };
+  // 1. Get Current Location (GPS)
+  const handleUseGPS = () => {
+    if (!navigator.geolocation) return alert("Geolocation not supported");
+    setLoadingLocation(true);
+    
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
+        const data = res.data.address;
+        setFormData(prev => ({
+          ...prev,
+          latitude,
+          longitude,
+          street: data.road || data.suburb || prev.street,
+          city: data.city || data.town || prev.city,
+          state: data.state || prev.state,
+          zip: data.postcode || "", // Auto-fill zip from GPS if available
+          country: data.country || prev.country
+        }));
+      } catch (e) {
+        setFormData(prev => ({ ...prev, latitude, longitude }));
+      } finally {
+        setLoadingLocation(false);
+      }
+    }, () => {
+      alert("Location permission denied");
+      setLoadingLocation(false);
+    });
+  };
   
-  const handleSaveAddress = async (e) => { e.preventDefault(); setLoading(true); let finalData = { ...formData }; if (!finalData.latitude) { try { const query = `${finalData.street}, ${finalData.city}, ${finalData.state}, ${finalData.country}`; const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`); if (res.data && res.data.length > 0) { finalData.latitude = parseFloat(res.data[0].lat); finalData.longitude = parseFloat(res.data[0].lon); } } catch (error) { console.warn("Auto-geocode failed"); } } try { const res = await fetch('/api/address', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: finalData }) }); const data = await res.json(); if (data.success) { const newAddr = data.newAddress || data.address; const updatedList = [newAddr, ...(addresses || [])]; setAddresses(updatedList); setSelectedAddress(newAddr.id); setIsAddingNew(false); setFormData({ name: "", street: "", city: "", state: "", zip: "", country: "Pakistan", phone: "", latitude: null, longitude: null }); } else { alert(data.error || "Failed to save address"); } } catch (error) { console.error(error); alert("Failed to save address"); } finally { setLoading(false); } };
+  // 2. Save Address (with Smart Zip Extraction)
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    let finalData = { ...formData };
 
-  const handleDeleteAddress = async (e, id) => { e.stopPropagation(); if (!confirm("Are you sure?")) return; setDeletingId(id); try { const res = await fetch(`/api/address/${id}`, { method: 'DELETE' }); const data = await res.json(); if (data.success) { const updatedList = addresses.filter(addr => addr.id !== id); setAddresses(updatedList); if (selectedAddress === id) setSelectedAddress(updatedList.length > 0 ? updatedList[0].id : ""); } else { alert(data.error); } } catch (error) { console.error(error); alert("Error deleting"); } finally { setDeletingId(null); } };
+    // Geocoding Logic
+    if (!finalData.latitude) {
+      try {
+        // Attempt 1: Full Address Search
+        // ✅ Added '&addressdetails=1' to get the Zip Code
+        const fullQuery = `${finalData.street}, ${finalData.city}, ${finalData.country}`;
+        let res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&limit=1&addressdetails=1`);
+        
+        if (res.data && res.data.length > 0) {
+          const result = res.data[0];
+          finalData.latitude = parseFloat(result.lat);
+          finalData.longitude = parseFloat(result.lon);
+          
+          // ✅ FIX: Auto-fill Zip Code if user left it empty and Map found one
+          if (!finalData.zip && result.address && result.address.postcode) {
+             finalData.zip = result.address.postcode;
+          }
+        } else {
+          // Attempt 2: Smart Retry (Split Street)
+          const parts = finalData.street.split(",");
+          let found = false;
+          
+          for (let part of parts) {
+            if (found) break;
+            const cleanPart = part.trim();
+            if (cleanPart.length < 3) continue;
+
+            try {
+              const retryQuery = `${cleanPart}, ${finalData.city}, ${finalData.country}`;
+              const retryRes = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(retryQuery)}&limit=1&addressdetails=1`);
+              
+              if (retryRes.data && retryRes.data.length > 0) {
+                const result = retryRes.data[0];
+                finalData.latitude = parseFloat(result.lat);
+                finalData.longitude = parseFloat(result.lon);
+                
+                // ✅ FIX: Auto-fill Zip here too
+                if (!finalData.zip && result.address && result.address.postcode) {
+                    finalData.zip = result.address.postcode;
+                }
+                found = true;
+              }
+            } catch (err) { /* ignore */ }
+          }
+
+          // Attempt 3: City Fallback
+          if (!found) {
+            console.warn("Falling back to city center");
+            res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(finalData.city + ", " + finalData.country)}&limit=1`);
+            if (res.data && res.data.length > 0) {
+              finalData.latitude = parseFloat(res.data[0].lat);
+              finalData.longitude = parseFloat(res.data[0].lon);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("Auto-geocode failed");
+      }
+    }
+
+    // Default Zip only if STILL missing
+    if (!finalData.zip) finalData.zip = "75000";
+
+    // Stop if still no coordinates
+    if (!finalData.latitude || !finalData.longitude) {
+      alert("Could not locate address. Please check spelling or use 'Use Current Location'.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: finalData })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        const newAddr = data.newAddress || data.address;
+        const updatedList = [newAddr, ...(addresses || [])];
+        setAddresses(updatedList);
+        setSelectedAddress(newAddr.id);
+        setIsAddingNew(false);
+        setFormData({ name: "", street: "", city: "", state: "", zip: "", country: "Pakistan", phone: "", latitude: null, longitude: null });
+      } else {
+        alert(data.error || "Failed to save address");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save address");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/address/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        const updatedList = addresses.filter(addr => addr.id !== id);
+        setAddresses(updatedList);
+        if (selectedAddress === id) setSelectedAddress(updatedList.length > 0 ? updatedList[0].id : "");
+      } else {
+        alert(data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error deleting");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleRedeem = async () => {
     if (!selectedAddress) return alert("Please select an address");
@@ -47,9 +195,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
       
       if (data.success) {
         setIsModalOpen(false); 
-        // Force parent refresh
         if (onSuccess) onSuccess(); 
-        // Redirect if delivery ID exists
         if (data.deliveryId) router.push(`/tracking/${data.deliveryId}`);
       } else {
         alert(data.error || "Redemption failed");
@@ -95,7 +241,11 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                     <input required name="city" value={formData.city} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="City" />
                     <input required name="state" value={formData.state} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="State" />
                   </div>
-                  <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Phone" />
+                  {/* Manually allow editing Zip */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <input required name="zip" value={formData.zip} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Zip Code" />
+                    <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Phone" />
+                  </div>
                 </form>
               ) : (
                 <div className="space-y-6">
@@ -109,7 +259,10 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                         {addresses?.length > 0 ? addresses.map((addr) => (
                         <div key={addr.id} onClick={() => setSelectedAddress(addr.id)} className={`group cursor-pointer border-2 rounded-lg p-3 flex gap-3 items-start transition-all ${selectedAddress === addr.id ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
                             <div className={`mt-1 p-1 rounded-full shrink-0 ${selectedAddress === addr.id ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"}`}><MapPin size={14} /></div>
-                            <div className="flex-1"><p className="font-bold text-gray-900 text-sm">{addr.name}</p><p className="text-xs text-gray-500">{addr.street}, {addr.city}</p></div>
+                            <div className="flex-1">
+                                <p className="font-bold text-gray-900 text-sm">{addr.name}</p>
+                                <p className="text-xs text-gray-500">{addr.street}, {addr.city} - {addr.zip}</p>
+                            </div>
                             <button onClick={(e) => handleDeleteAddress(e, addr.id)} disabled={deletingId === addr.id} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full">{deletingId === addr.id ? <Loader2 size={16} className="animate-spin text-red-600"/> : <Trash2 size={16} />}</button>
                         </div>
                         )) : <div className="text-center py-6 text-gray-400 border-2 border-dashed rounded-xl bg-gray-50">No addresses found</div>}
