@@ -23,6 +23,13 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Helper to display date as DD-MM-YYYY
+  const formatDateForDisplay = (isoDate) => {
+    if (!isoDate) return "";
+    const [year, month, day] = isoDate.split("-");
+    return `${day}-${month}-${year}`;
+  };
+
   // 1. Get Current Location (GPS)
   const handleUseGPS = () => {
     if (!navigator.geolocation) return alert("Geolocation not supported");
@@ -40,7 +47,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
           street: data.road || data.suburb || prev.street,
           city: data.city || data.town || prev.city,
           state: data.state || prev.state,
-          zip: data.postcode || "", // Auto-fill zip from GPS if available
+          zip: data.postcode || "", 
           country: data.country || prev.country
         }));
       } catch (e) {
@@ -54,17 +61,14 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     });
   };
   
-  // 2. Save Address (with Smart Zip Extraction)
+  // 2. Save Address
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     setLoading(true);
     let finalData = { ...formData };
 
-    // Geocoding Logic
     if (!finalData.latitude) {
       try {
-        // Attempt 1: Full Address Search
-        // ✅ Added '&addressdetails=1' to get the Zip Code
         const fullQuery = `${finalData.street}, ${finalData.city}, ${finalData.country}`;
         let res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery)}&limit=1&addressdetails=1`);
         
@@ -73,12 +77,11 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
           finalData.latitude = parseFloat(result.lat);
           finalData.longitude = parseFloat(result.lon);
           
-          // ✅ FIX: Auto-fill Zip Code if user left it empty and Map found one
           if (!finalData.zip && result.address && result.address.postcode) {
              finalData.zip = result.address.postcode;
           }
         } else {
-          // Attempt 2: Smart Retry (Split Street)
+          // Attempt 2: Smart Retry
           const parts = finalData.street.split(",");
           let found = false;
           
@@ -96,7 +99,6 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                 finalData.latitude = parseFloat(result.lat);
                 finalData.longitude = parseFloat(result.lon);
                 
-                // ✅ FIX: Auto-fill Zip here too
                 if (!finalData.zip && result.address && result.address.postcode) {
                     finalData.zip = result.address.postcode;
                 }
@@ -105,9 +107,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
             } catch (err) { /* ignore */ }
           }
 
-          // Attempt 3: City Fallback
           if (!found) {
-            console.warn("Falling back to city center");
             res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(finalData.city + ", " + finalData.country)}&limit=1`);
             if (res.data && res.data.length > 0) {
               finalData.latitude = parseFloat(res.data[0].lat);
@@ -120,10 +120,8 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
       }
     }
 
-    // Default Zip only if STILL missing
     if (!finalData.zip) finalData.zip = "75000";
 
-    // Stop if still no coordinates
     if (!finalData.latitude || !finalData.longitude) {
       alert("Could not locate address. Please check spelling or use 'Use Current Location'.");
       setLoading(false);
@@ -241,7 +239,6 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                     <input required name="city" value={formData.city} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="City" />
                     <input required name="state" value={formData.state} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="State" />
                   </div>
-                  {/* Manually allow editing Zip */}
                   <div className="grid grid-cols-2 gap-3">
                     <input required name="zip" value={formData.zip} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Zip Code" />
                     <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Phone" />
@@ -251,8 +248,34 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                 <div className="space-y-6">
                   <div>
                     <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2"><Calendar size={16} className="text-indigo-600"/> Preferred Delivery Date</h4>
-                    <input type="date" min={minDate} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-indigo-600 outline-none text-gray-700 font-medium" />
+                    
+                    {/* ✅ SOLUTION: The "Invisible Input" Trick */}
+                    <div className="relative w-full">
+                        {/* 1. Visible Text Input (Shows DD-MM-YYYY) */}
+                        <input 
+                            type="text" 
+                            readOnly 
+                            placeholder="DD-MM-YYYY" 
+                            value={formatDateForDisplay(selectedDate)} 
+                            className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-indigo-600 outline-none text-gray-700 font-medium" 
+                        />
+                        
+                        {/* 2. Invisible Date Picker (Triggers calendar on click) */}
+                        <input 
+                            type="date" 
+                            min={minDate} 
+                            value={selectedDate} 
+                            onChange={(e) => setSelectedDate(e.target.value)} 
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                        />
+                        
+                        {/* 3. Icon Overlay */}
+                        <div className="absolute right-3 top-3.5 pointer-events-none text-gray-500">
+                            <Calendar size={20} />
+                        </div>
+                    </div>
                   </div>
+                  
                   <div>
                     <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2"><MapPin size={16} className="text-indigo-600"/> Shipping Address</h4>
                     <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">

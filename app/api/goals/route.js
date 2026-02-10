@@ -25,7 +25,11 @@ export async function GET(request) {
       include: { 
         product: true, // Product info
         deposits: { orderBy: { createdAt: "desc" } }, // Deposits history
-        priceLock: true // Linked PriceLock data
+        priceLock: true, // Linked PriceLock data
+        
+        // ✅ CRITICAL FIX: Include Delivery Data
+        // This is required for the "Delivered" section in the dashboard to work
+        delivery: true 
       },
       orderBy: { createdAt: "desc" }, // Latest first
     });
@@ -65,6 +69,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "targetAmount must be positive" }, { status: 400 });
 
     // ---------------- Check if a live goal exists ----------------
+    // We check for ACTIVE or SAVED (Draft) goals for this product
     const existingGoal = await prisma.goal.findFirst({
       where: { 
         userId, 
