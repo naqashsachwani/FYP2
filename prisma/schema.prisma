@@ -53,7 +53,6 @@ enum GoalStatus {
   CANCELLED
   REFUNDED
   SAVED
-
 }
 
 enum DeliveryStatus {
@@ -128,7 +127,7 @@ model Store {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relations (Kept exactly as you had them)
+  // Relations
   products         Product[]
   orders           Order[]
   user             User              @relation(fields: [userId], references: [id])
@@ -190,7 +189,7 @@ model Order {
   refundRequests RefundRequest[]
   escrows        Escrow[]
   priceLocks     PriceLock[]
-  ratings        Rating[]
+  // ratings Rating[] -> REMOVED
 
   @@index([userId])
   @@index([storeId])
@@ -212,21 +211,27 @@ model OrderItem {
 }
 
 model Rating {
-  id        String   @id @default(cuid())
-  rating    Int
-  review    String
-  userId    String
-  productId String
-  orderId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  rating     Int
+  review     String?  // Made optional so users can leave just a star rating
+  userId     String
+  productId  String
+  
+  // --- EDITED FOR GOAL/DELIVERY LOGIC ---
+  goalId     String
+  deliveryId String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  goal       Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, productId, orderId])
+  // A user can only leave one review per goal/product combination
+  @@unique([userId, productId, goalId])
 }
 
 model Address {
@@ -278,22 +283,23 @@ model Goal {
   startDate    DateTime?  @default(now())
   endDate      DateTime?
   
-  // Frequency and nextDepositDate columns removed
-
   priceLocked  Boolean    @default(true)
   lockedPrice  Decimal    @db.Decimal(18, 2)
 
   // Relations
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product       Product?        @relation(fields: [productId], references: [id])
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product       Product?       @relation(fields: [productId], references: [id])
   deposits      Deposit[]
   delivery      Delivery?
   notifications Notification[]
-  refundRequest RefundRequest?  @relation("GoalRefundRequest")
-  refund        Refund?         @relation("GoalRefund")
+  refundRequest RefundRequest? @relation("GoalRefundRequest")
+  refund        Refund?        @relation("GoalRefund")
   transactions  Transaction[]
-  escrow        Escrow?         @relation("GoalEscrow")
-  priceLock     PriceLock?      @relation("GoalPriceLock")
+  escrow        Escrow?        @relation("GoalEscrow")
+  priceLock     PriceLock?     @relation("GoalPriceLock")
+  
+  // --- ADDED ---
+  ratings       Rating[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -330,14 +336,14 @@ model Deposit {
 }
 
 model Delivery {
-  id              String         @id @default(cuid())
-  goalId          String         @unique
-  orderId         String?
-  deliveryDate    DateTime?
-  estimatedDate   DateTime?
-  status          DeliveryStatus @default(PENDING)
-  trackingNumber  String?
-  carrier         String?
+  id             String         @id @default(cuid())
+  goalId         String         @unique
+  orderId        String?
+  deliveryDate   DateTime?
+  estimatedDate  DateTime?
+  status         DeliveryStatus @default(PENDING)
+  trackingNumber String?
+  carrier        String?
   
   // --- Customer Location (Static) ---
   shippingAddress String?
@@ -351,9 +357,12 @@ model Delivery {
   location        String?        // e.g. "Driver En Route" or "Simulated Driver"
 
   // Relations
-  goal              Goal             @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goal              Goal               @relation(fields: [goalId], references: [id], onDelete: Cascade)
   notifications     Notification[]
   deliveryTrackings DeliveryTracking[]
+  
+  // --- ADDED ---
+  ratings           Rating[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

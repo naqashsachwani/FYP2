@@ -1,31 +1,26 @@
-'use client'; // Client-side component for Next.js
+'use client'; 
 
-import { PackageIcon, Search, ShoppingCart, Menu, X } from "lucide-react"; // Icons
-import Link from "next/link"; // Next.js Link component for navigation
-import { useRouter } from "next/navigation"; // Router for programmatic navigation
-import { useState } from "react"; // React state hook
-// REMOVED: import { useSelector } from "react-redux"; 
-import { useUser, useClerk, UserButton, Protect } from "@clerk/nextjs"; // Clerk auth components
+import { Search, ShoppingCart, Menu, X, History } from "lucide-react"; 
+import Link from "next/link"; 
+import { useRouter } from "next/navigation"; 
+import { useState } from "react"; 
+import { useUser, useClerk, UserButton } from "@clerk/nextjs"; 
 
 const Navbar = () => {
-  const { user } = useUser(); // Get authenticated user
-  const { openSignIn } = useClerk(); // Function to open SignIn modal
-  const router = useRouter(); // Next.js router
-  const [search, setSearch] = useState(""); // Search input state
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
-  
-  // REMOVED: const cartCount = useSelector((state) => state.cart.total);
+  const { user } = useUser(); 
+  const { openSignIn } = useClerk(); 
+  const router = useRouter(); 
+  const [search, setSearch] = useState(""); 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
 
-  // Handle search submission
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(search)}`); // Navigate to search page
-      setSearch(""); // Clear input
+      router.push(`/shop?search=${encodeURIComponent(search)}`); 
+      setSearch(""); 
     }
   };
 
-  // Navbar links
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
@@ -78,16 +73,12 @@ const Navbar = () => {
           {/* ---------------- Actions ---------------- */}
           <div className="flex items-center gap-3 lg:gap-6">
 
-            {/* Cart / My Goals */}
             <Link
               href="/cart"
               className="relative flex items-center gap-2 text-slate-600 hover:text-green-600 transition p-2 rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
             >
               <ShoppingCart size={20} />
               <span className="hidden sm:block text-sm font-medium">My Goals</span>
-              
-              {/* REMOVED: Cart count badge code block was here */}
-              
             </Link>
 
             {/* Sign In / User Button */}
@@ -100,11 +91,18 @@ const Navbar = () => {
               </button>
             ) : (
               <div className="hidden sm:block">
-                <UserButton />
+                <UserButton>
+                  <UserButton.MenuItems>
+                    <UserButton.Link 
+                      label="Goal History" 
+                      labelIcon={<History size={15} />} 
+                      href="/goal-history" 
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
               </div>
             )}
 
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md"
@@ -143,7 +141,6 @@ const Navbar = () => {
         }`}
       >
         <div className="px-5 py-4 space-y-3">
-          {/* Mobile nav links */}
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -155,7 +152,6 @@ const Navbar = () => {
             </Link>
           ))}
 
-          {/* Auth Section (Mobile) */}
           <div className="pt-4 border-t border-slate-200">
             {!user ? (
               <button
@@ -170,7 +166,15 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center justify-between py-3 px-2">
                 <span className="text-slate-700 font-medium">Account</span>
-                <UserButton />
+                <UserButton>
+                  <UserButton.MenuItems>
+                    <UserButton.Link 
+                      label="Goal History" 
+                      labelIcon={<History size={15} />} 
+                      href="/goal-history" 
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
               </div>
             )}
           </div>

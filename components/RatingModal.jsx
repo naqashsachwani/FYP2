@@ -1,97 +1,129 @@
 'use client'
 
-import { Star } from 'lucide-react'; // Star icon for rating
+import { Star, XIcon, MessageSquareHeart } from 'lucide-react'; 
 import React, { useState } from 'react';
-import { XIcon } from 'lucide-react'; // Close icon
-import toast from 'react-hot-toast'; // Toast notifications
-import { useAuth } from '@clerk/nextjs'; // Auth hooks
-import { useDispatch } from 'react-redux'; // Redux dispatcher
+import toast from 'react-hot-toast'; 
+import { useAuth } from '@clerk/nextjs'; 
+import { useDispatch } from 'react-redux'; 
 import axios from 'axios';
-import { addRating } from '@/lib/features/rating/ratingSlice'; // Redux action to update rating state
+import { addRating } from '@/lib/features/rating/ratingSlice'; 
 
-// RatingModal component: modal for submitting product rating & review
-const RatingModal = ({ ratingModal, setRatingModal }) => {
+const RatingModal = ({ ratingModal, setRatingModal, onSuccess }) => {
 
-    const { getToken } = useAuth(); // Get auth token
-    const dispatch = useDispatch(); // Redux dispatcher
+    const { getToken } = useAuth(); 
+    const dispatch = useDispatch(); 
 
-    // Local state for rating value (1-5) and review text
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false); // Prevents double-clicking
 
-    // Submit handler for rating
     const handleSubmit = async () => {
         // Validation
-        if (rating < 0 || rating > 5) {
-            return toast('Please select a rating'); // Toast if invalid
+        if (rating === 0) {
+            return toast.error('Please select a star rating.');
         }
-        if (review.length < 5) {
-            return toast('write a short review'); // Require at least 5 characters
+        if (review.trim().length < 5) {
+            return toast.error('Please write a short review (at least 5 characters).'); 
         }
 
+        setIsSubmitting(true);
+        const toastId = toast.loading('Submitting your review...');
+
         try {
-            const token = await getToken(); // Get JWT token
-            // POST rating to API
+            const token = await getToken(); 
             const { data } = await axios.post('/api/rating', {
                 productId: ratingModal.productId,
-                orderId: ratingModal.orderId,
+                orderId: ratingModal.orderId, // Might be undefined from Product page, but backend finds it automatically!
                 rating,
                 review
             }, {
-                headers: { Authorization: `Bearer ${token}` } // Auth header
+                headers: { Authorization: `Bearer ${token}` } 
             });
 
-            dispatch(addRating(data.rating)); // Update Redux store
-            toast.success(data.message); // Success toast
+            // Update Redux globally
+            dispatch(addRating(data.rating)); 
+            
+            toast.success(data.message, { id: toastId }); 
             setRatingModal(null); // Close modal
+            
+            // If the parent component passed an onSuccess function, run it!
+            // This instantly updates the ProductDescription page without refreshing.
+            if (onSuccess) {
+                onSuccess(data.rating);
+            }
+
         } catch (error) {
-            // Show error from API or generic
-            toast.error(error?.response?.data?.error || error.message);
+            // Our backend API sends specific error messages (e.g., "Already reviewed", "Not delivered yet")
+            toast.error(error?.response?.data?.error || 'Failed to submit review.', { id: toastId });
+        } finally {
+            setIsSubmitting(false);
         }
     }
 
     return (
         // Modal backdrop
-        <div className='fixed inset-0 z-120 flex items-center justify-center bg-black/10'>
+        <div className='fixed inset-0 z- flex items-center justify-center bg-slate-900/40 backdrop-blur-sm'>
             
             {/* Modal container */}
-            <div className='bg-white p-8 rounded-lg shadow-lg w-96 relative'>
+            <div className='bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative mx-4 transform transition-all'>
 
                 {/* Close button */}
-                <button onClick={() => setRatingModal(null)} className='absolute top-3 right-3 text-gray-500 hover:text-gray-700'>
+                <button 
+                    onClick={() => setRatingModal(null)} 
+                    className='absolute top-4 right-4 p-2 bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors'
+                >
                     <XIcon size={20} />
                 </button>
 
-                {/* Modal heading */}
-                <h2 className='text-xl font-medium text-slate-600 mb-4'>Rate Product</h2>
+                {/* Modal Header */}
+                <div className='flex items-center gap-3 mb-6 border-b border-slate-100 pb-4'>
+                    <div className='p-2 bg-emerald-50 text-emerald-600 rounded-lg'>
+                        <MessageSquareHeart size={24} />
+                    </div>
+                    <h2 className='text-xl font-bold text-slate-800'>Rate Product</h2>
+                </div>
 
                 {/* Star rating selector */}
-                <div className='flex items-center justify-center mb-4'>
-                    {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                            key={i}
-                            className={`size-8 cursor-pointer ${rating > i ? "text-green-400 fill-current" : "text-gray-300"}`}
-                            onClick={() => setRating(i + 1)} // Set rating on click
-                        />
-                    ))}
+                <div className='flex flex-col items-center justify-center mb-6'>
+                    <p className='text-sm text-slate-500 mb-2 font-medium'>Tap a star to rate</p>
+                    <div className='flex gap-1'>
+                        {Array.from({ length: 5 }, (_, i) => (
+                            <Star
+                                key={i}
+                                className={`size-10 cursor-pointer transition-all hover:scale-110 ${rating > i ? "text-emerald-500 fill-current" : "text-slate-200"}`}
+                                onClick={() => setRating(i + 1)} 
+                            />
+                        ))}
+                    </div>
                 </div>
 
                 {/* Review textarea */}
-                <textarea
-                    className='w-full p-2 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-green-400'
-                    placeholder='Write your review (optional)'
-                    rows='4'
-                    value={review}
-                    onChange={(e) => setReview(e.target.value)}
-                ></textarea>
+                <div className='mb-6'>
+                    <label className='block text-sm font-medium text-slate-700 mb-2'>Your Review</label>
+                    <textarea
+                        className='w-full p-3 border border-slate-200 bg-slate-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all resize-none text-slate-700'
+                        placeholder='What did you like or dislike about this product?'
+                        rows='4'
+                        value={review}
+                        onChange={(e) => setReview(e.target.value)}
+                        disabled={isSubmitting}
+                    ></textarea>
+                </div>
 
                 {/* Submit button */}
                 <button 
-                    onClick={e => toast.promise(handleSubmit(), { loading: 'Submitting...' })} // Show toast while submitting
-                    className='w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition'
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting}
+                    className={`w-full py-3 rounded-xl font-semibold shadow-md transition-all 
+                        ${isSubmitting 
+                            ? 'bg-emerald-400 text-white cursor-not-allowed opacity-70' 
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg active:scale-[0.98]'
+                        }`
+                    }
                 >
-                    Submit Rating
+                    {isSubmitting ? 'Posting Review...' : 'Submit Review'}
                 </button>
+                
             </div>
         </div>
     )

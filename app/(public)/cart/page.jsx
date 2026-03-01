@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link"; 
-import { Trash2Icon, CheckCircleIcon, TruckIcon, XCircleIcon, ClockIcon, Package } from "lucide-react"; 
+import { Trash2Icon, CheckCircleIcon, ClockIcon, Package } from "lucide-react"; 
 
 export default function CartPage() {
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "Rs";
@@ -12,8 +12,6 @@ export default function CartPage() {
     active: [],
     completed: [], 
     inTransit: [], 
-    delivered: [], 
-    cancelled: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +26,6 @@ export default function CartPage() {
         active: [],
         completed: [],
         inTransit: [],
-        delivered: [],
-        cancelled: []
       };
 
       for (const goal of (data.goals || [])) {
@@ -39,11 +35,9 @@ export default function CartPage() {
           const hasDelivery = !!goal.delivery;
           const deliveryStatus = goal.delivery?.status; 
 
-          if (goal.status === 'CANCELLED' || goal.status === 'REFUNDED') {
-              sections.cancelled.push(processedGoal);
-          }
-          else if (goal.status === 'DELIVERED' || deliveryStatus === 'DELIVERED') {
-              sections.delivered.push(processedGoal);
+          // Ignore Cancelled and Delivered (They are now on the Goal History page)
+          if (goal.status === 'CANCELLED' || goal.status === 'REFUNDED' || goal.status === 'DELIVERED' || deliveryStatus === 'DELIVERED') {
+              continue;
           }
           else if (hasDelivery) {
               sections.inTransit.push(processedGoal);
@@ -66,7 +60,6 @@ export default function CartPage() {
   };
 
   const handleDeleteGoal = async (e, goal) => {
-    // No need for e.preventDefault() here because button is outside the link now
     const hasFunds = Number(goal.saved) > 0;
     let message = "";
 
@@ -118,41 +111,52 @@ export default function CartPage() {
         icon = <Package size={16} className="text-indigo-600"/>; 
         badge = <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold">{goal.delivery?.status}</span>;
     }
-    if (type === 'delivered') { 
-        statusColor = "bg-blue-50/50 border-blue-200"; 
-        icon = <TruckIcon size={16} className="text-blue-600"/>; 
-    }
-    if (type === 'cancelled') { 
-        statusColor = "bg-red-50/50 border-red-200 opacity-75"; 
-        icon = <XCircleIcon size={16} className="text-red-500"/>; 
-    }
 
     // Determine target URL
     let targetLink = "#";
     if (goal.delivery?.id) {
         targetLink = `/tracking/${goal.delivery.id}`;
-    } else if (type !== 'cancelled') {
+    } else {
         targetLink = `/goals/${goal.id}`;
     }
 
     return (
-      <div 
-        className={`group relative p-4 border rounded-xl transition-all duration-300 hover:shadow-md ${statusColor}`}
-      >
-        {/* ✅ STRETCHED LINK: This makes the whole card clickable & supports Right Click */}
-        {targetLink !== "#" && (
-            <Link href={targetLink} className="absolute inset-0 z-0" />
-        )}
+      <div className={`group relative p-4 border rounded-xl transition-all duration-300 hover:shadow-md ${statusColor}`}>
+        <Link href={targetLink} className="absolute inset-0 z-0" />
 
         <div className="flex gap-4 items-start relative pointer-events-none"> 
-          {/* pointer-events-none allows clicks to pass through to the Link layer behind */}
           
           <div className="h-16 w-16 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 relative">
-             {goal.product?.images?.[0] ? (
-                <Image src={goal.product.images[0]} alt={goal.product.name} fill className="object-cover" />
-             ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">No Img</div>
-             )}
+            {/* FIXED IMAGE LOGIC */}
+            {(() => {
+              // Determine the image source – could be a string or an array
+              const rawImages = goal.product?.images;
+              let imageSrc = '';
+
+              if (typeof rawImages === 'string') {
+                imageSrc = rawImages; // single image URL
+              } else if (Array.isArray(rawImages) && rawImages.length > 0) {
+                imageSrc = rawImages[0]; // first image from array
+              }
+
+              // Ensure we have a non‑empty string
+              if (imageSrc && typeof imageSrc === 'string' && imageSrc.trim() !== '') {
+                return (
+                  <Image
+                    src={imageSrc}
+                    alt={goal.product?.name || 'Product image'}
+                    fill
+                    className="object-cover"
+                  />
+                );
+              } else {
+                return (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                    No Img
+                  </div>
+                );
+              }
+            })()}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -178,8 +182,6 @@ export default function CartPage() {
             )}
             
             {type === 'inTransit' && <p className="text-xs text-indigo-600 mt-2 font-medium">Tracking ID: {goal.delivery?.trackingNumber}</p>}
-            {type === 'delivered' && <p className="text-xs text-blue-600 mt-2 font-medium">Successfully Delivered</p>}
-            {type === 'cancelled' && <p className="text-xs text-red-500 mt-2 font-medium">Cancelled / Refunded</p>}
           </div>
         </div>
 
@@ -191,7 +193,6 @@ export default function CartPage() {
               </span>
             </div>
 
-            {/* ✅ DELETE BUTTON: Elevated (z-10) to sit ABOVE the link so it catches the click */}
             {type === 'active' && (
               <button
                 onClick={(e) => handleDeleteGoal(e, goal)}
@@ -260,30 +261,6 @@ export default function CartPage() {
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {goalSections.inTransit.map(goal => <GoalCard key={goal.id} goal={goal} type="inTransit" />)}
-                  </div>
-                </section>
-              )}
-
-              {/* 4. DELIVERED HISTORY */}
-              {goalSections.delivered.length > 0 && (
-                <section>
-                  <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <TruckIcon className="text-blue-600" /> Delivered History
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {goalSections.delivered.map(goal => <GoalCard key={goal.id} goal={goal} type="delivered" />)}
-                  </div>
-                </section>
-              )}
-
-              {/* 5. CANCELLED GOALS */}
-              {goalSections.cancelled.length > 0 && (
-                <section>
-                  <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <XCircleIcon className="text-red-500" /> Cancelled / Refunded
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-80 hover:opacity-100 transition-opacity">
-                    {goalSections.cancelled.map(goal => <GoalCard key={goal.id} goal={goal} type="cancelled" />)}
                   </div>
                 </section>
               )}

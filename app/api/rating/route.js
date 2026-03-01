@@ -1,79 +1,80 @@
-import prisma from "@/lib/prisma"; // Import Prisma client for database operations
-import { getAuth } from "@clerk/nextjs/server"; // Import Clerk for server-side authentication
-import { NextResponse } from "next/server"; // Import Next.js response helper
+import prisma from "@/lib/prisma";
+import { getAuth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-
-// ================== POST: Add new rating ==================
-export async function POST(request) {
+export async function POST(req) {
     try {
-        // Get authenticated user's ID
-        const { userId } = getAuth(request);
-
-        // Extract data from request body
-        const { orderId, productId, rating, review } = await request.json();
-
-        // Verify that the order exists and belongs to the user
-        const order = await prisma.order.findUnique({
-            where: { id: orderId, userId } // Only allow rating if user owns the order
-        });
-
-        if (!order) {
-            // Return 404 if order not found or does not belong to user
-            return NextResponse.json({ error: "Order not found" }, { status: 404 });
-        }
-
-        // Check if this product has already been rated for this order
-        const isAlreadyRated = await prisma.rating.findFirst({
-            where: { productId, orderId }
-        });
-
-        if (isAlreadyRated) {
-            // Prevent duplicate ratings
-            return NextResponse.json({ error: "Product already rated" }, { status: 400 });
-        }
-
-        // Create new rating in the database
-        const response = await prisma.rating.create({
-            data: { userId, productId, rating, review, orderId }
-        });
-
-        // Return success message with the newly created rating
-        return NextResponse.json({ message: "Rating added successfully", rating: response });
-
-    } catch (error) {
-        // Log the error for debugging
-        console.error(error);
-
-        // Return error response
-        return NextResponse.json({ error: error.code || error.message }, { status: 400 });
-    }
-}
-
-
-// ================== GET: Fetch all ratings for authenticated user ==================
-export async function GET(request) {
-    try {
-        // Get authenticated user's ID
-        const { userId } = getAuth(request);
-
-        // If user is not logged in, return 401
+        const { userId } = getAuth(req);
+        
         if (!userId) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "You must be logged in to leave a review." }, { status: 401 });
         }
 
-        // Fetch all ratings created by this user
-        const ratings = await prisma.rating.findMany({
-            where: { userId }
+        const body = await req.json();
+        const { productId, rating, review } = body;
+
+        // 1. Basic Validation
+        if (!productId || !rating) {
+            return NextResponse.json({ error: "Product ID and Rating are required." }, { status: 400 });
+        }
+
+        // 2. FIND THE DELIVERED GOAL
+        // We look for a Goal matching this user and product, where the linked Delivery is specifically 'DELIVERED'.
+        const completedGoal = await prisma.goal.findFirst({
+            where: {
+                userId: userId,
+                productId: productId,
+                delivery: {
+                    status: 'DELIVERED' 
+                }
+            },
+            include: { delivery: true } // We must include this so we can grab the delivery.id
         });
 
-        // Return the list of ratings
-        return NextResponse.json(ratings);
+        // If no delivered goal exists, politely block them
+        if (!completedGoal || !completedGoal.delivery) {
+            return NextResponse.json({ 
+                error: "You can only review products after your DreamSaver Goal has been successfully delivered." 
+            }, { status: 403 });
+        }
+
+        // 3. ENFORCE "WRITE ONCE" RULE
+        // Check if a review already exists for this specific User + Product + Goal combination
+        const existingRating = await prisma.rating.findFirst({
+            where: { 
+                userId: userId, 
+                productId: productId,
+                goalId: completedGoal.id 
+            }
+        });
+
+        if (existingRating) {
+            return NextResponse.json({ error: "You have already submitted a review for this delivered product." }, { status: 403 });
+        }
+
+        // 4. SAVE TO DATABASE
+        // Notice how we perfectly match your new schema by connecting all 4 required tables!
+        const newRating = await prisma.rating.create({
+            data: {
+                rating: Number(rating),
+                review: review || "",
+                
+                // Explicitly connecting the 4 required relationships
+                user:     { connect: { id: userId } },
+                product:  { connect: { id: productId } },
+                goal:     { connect: { id: completedGoal.id } },
+                delivery: { connect: { id: completedGoal.delivery.id } } 
+            },
+            include: { user: true } // Returns the user data so the frontend updates instantly
+        });
+
+        return NextResponse.json({ message: "Review submitted successfully!", rating: newRating }, { status: 201 });
 
     } catch (error) {
-        // Log the error for debugging
-        console.error(error);
-
-        // Return error response
-        return NextResponse.json({ error: error.code || error.message }, { status: 400 });
+        console.error("POST /api/rating error:", error);
+        return NextResponse.json({ 
+            error: "Database error while saving review.", 
+            details: error.message 
+        }, { status: 500 });
     }
 }
