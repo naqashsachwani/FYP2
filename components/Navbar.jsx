@@ -1,22 +1,34 @@
-'use client'; 
+'use client';
 
-import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store } from "lucide-react"; 
-import Link from "next/link"; 
-import { useRouter } from "next/navigation"; 
-import { useState, useEffect } from "react"; 
-// --- NEW: Added SignedIn and SignedOut components ---
-import { useUser, useClerk, UserButton, SignedIn, SignedOut } from "@clerk/nextjs"; 
+// Added Settings and LogOut icons for our custom menu
+import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+// Removed UserButton, SignedIn, SignedOut since we are building our own
+import { useUser, useClerk } from "@clerk/nextjs";
 
 const Navbar = () => {
-  const { user } = useUser(); 
-  const { openSignIn } = useClerk(); 
-  const router = useRouter(); 
-  const [search, setSearch] = useState(""); 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
+  const { user } = useUser();
+  const { openSignIn, openUserProfile, signOut } = useClerk();
+  const router = useRouter();
+  
+  const [search, setSearch] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Custom Profile Dropdown State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const [mounted, setMounted] = useState(false); 
 
   // State for role-based dashboard buttons
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [showSellerBtn, setShowSellerBtn] = useState(false);
+
+  // Safely show client-only UI to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch roles from custom API routes
   useEffect(() => {
@@ -36,14 +48,17 @@ const Navbar = () => {
       }
     };
 
-    checkRoles();
-  }, [user]);
+    if (mounted && user) {
+      checkRoles();
+    }
+  }, [mounted, user]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
-      router.push(`/shop?search=${encodeURIComponent(search)}`); 
-      setSearch(""); 
+      router.push(`/shop?search=${encodeURIComponent(search)}`);
+      setSearch("");
+      setIsMobileMenuOpen(false); // Close mobile menu if searching from it
     }
   };
 
@@ -97,7 +112,8 @@ const Navbar = () => {
           </form>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 lg:gap-6">
+          <div className="flex items-center gap-2 lg:gap-4">
+            
             <Link
               href="/cart"
               className="relative flex items-center gap-2 text-slate-600 hover:text-green-600 transition p-2 rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
@@ -106,48 +122,98 @@ const Navbar = () => {
               <span className="hidden sm:block text-sm font-medium">My Goals</span>
             </Link>
 
-            {/* --- FIXED: Clerk handles the Hydration perfectly here --- */}
-            <SignedOut>
+            {/* Authentication & Custom Profile Dropdown */}
+            {!mounted ? (
+              // Safe Hydration Skeleton
+              <div className="hidden sm:block w-9 h-9 bg-slate-200 rounded-full animate-pulse ml-2"></div>
+            ) : !user ? (
               <button
                 onClick={openSignIn}
-                className="hidden sm:flex items-center px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200 active:scale-95"
+                className="hidden sm:flex items-center px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200 active:scale-95 ml-2"
               >
                 Sign In
               </button>
-            </SignedOut>
+            ) : (
+              // --- 100% CUSTOM PROFILE DROPDOWN ---
+              <div className="relative hidden sm:block ml-2 mt-1.5">
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-200 hover:border-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                >
+                  <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
+                </button>
 
-            <SignedIn>
-              <div className="hidden sm:block">
-                <UserButton>
-                  <UserButton.MenuItems>
-                    {showAdminBtn && (
-                      <UserButton.Link
-                        label="Admin Dashboard"
-                        labelIcon={<ShieldCheck size={15} />}
-                        href="/admin"
-                      />
-                    )}
-                    {showSellerBtn && (
-                      <UserButton.Link
-                        label="Store Dashboard"
-                        labelIcon={<Store size={15} />}
-                        href="/store"
-                      />
-                    )}
-                    <UserButton.Link
-                      label="Goal History"
-                      labelIcon={<History size={15} />}
-                      href="/goal-history"
-                    />
-                  </UserButton.MenuItems>
-                </UserButton>
+                {isProfileOpen && (
+                  <>
+                    {/* Invisible overlay to close dropdown when clicking anywhere else */}
+                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+
+                    {/* Dropdown Menu Container */}
+                    <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
+                      
+                      {/* User Info Header */}
+                      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
+                        <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                      </div>
+
+                      <div className="px-2 space-y-1">
+                        <button
+                          onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                        >
+                          <Settings size={16} className="text-slate-500" /> Manage Account
+                        </button>
+
+                        {/* --- THESE ARE NOW REAL LINKS! --- */}
+                        {showAdminBtn && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setIsProfileOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                          >
+                            <ShieldCheck size={16} className="text-slate-500" /> Admin Dashboard
+                          </Link>
+                        )}
+
+                        {showSellerBtn && (
+                          <Link
+                            href="/store"
+                            onClick={() => setIsProfileOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                          >
+                            <Store size={16} className="text-slate-500" /> Store Dashboard
+                          </Link>
+                        )}
+
+                        <Link
+                          href="/goal-history"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                        >
+                          <History size={16} className="text-slate-500" /> Goal History
+                        </Link>
+                      </div>
+
+                      {/* Sign Out Section */}
+                      <div className="border-t border-slate-100 mt-2 pt-2 px-2">
+                        <button
+                          onClick={() => signOut({ redirectUrl: '/' })}
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                        >
+                          <LogOut size={16} className="text-red-500" /> Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-            </SignedIn>
+            )}
 
             {/* Mobile Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md"
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md ml-1"
             >
               {isMobileMenuOpen ? <X size={24} className="text-slate-600" /> : <Menu size={24} className="text-slate-600" />}
             </button>
@@ -158,7 +224,7 @@ const Navbar = () => {
       {/* Mobile Menu */}
       <div
         className={`lg:hidden bg-white border-t border-slate-200 shadow-md transition-all duration-300 overflow-hidden ${
-          isMobileMenuOpen ? "max-h-[450px] opacity-100" : "max-h-0 opacity-0"
+          isMobileMenuOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="px-5 py-4 space-y-3">
@@ -174,8 +240,9 @@ const Navbar = () => {
           ))}
 
           <div className="pt-4 border-t border-slate-200">
-            {/* Mobile Actions Using Clerk Components */}
-            <SignedOut>
+            {!mounted ? (
+              <div className="w-full h-12 bg-slate-200 rounded-xl animate-pulse"></div>
+            ) : !user ? (
               <button
                 onClick={() => {
                   openSignIn();
@@ -185,36 +252,60 @@ const Navbar = () => {
               >
                 Sign In
               </button>
-            </SignedOut>
+            ) : (
+              // --- CUSTOM MOBILE PROFILE MENU ---
+              <div className="flex flex-col space-y-1">
+                <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-slate-50 rounded-xl border border-slate-100">
+                  <img src={user?.imageUrl} alt="User" className="w-10 h-10 rounded-full border border-slate-200" />
+                  <div className="overflow-hidden">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
+                    <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                  </div>
+                </div>
 
-            <SignedIn>
-              <div className="flex items-center justify-between py-3 px-2">
-                <span className="text-slate-700 font-medium">Account Settings</span>
-                <UserButton>
-                  <UserButton.MenuItems>
-                    {showAdminBtn && (
-                      <UserButton.Link
-                        label="Admin Dashboard"
-                        labelIcon={<ShieldCheck size={15} />}
-                        href="/admin"
-                      />
-                    )}
-                    {showSellerBtn && (
-                      <UserButton.Link
-                        label="Store Dashboard"
-                        labelIcon={<Store size={15} />}
-                        href="/store"
-                      />
-                    )}
-                    <UserButton.Link
-                      label="Goal History"
-                      labelIcon={<History size={15} />}
-                      href="/goal-history"
-                    />
-                  </UserButton.MenuItems>
-                </UserButton>
+                <button
+                  onClick={() => { openUserProfile(); setIsMobileMenuOpen(false); }}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                >
+                  <Settings size={18} className="text-slate-500" /> Manage Account
+                </button>
+
+                {showAdminBtn && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                  >
+                    <ShieldCheck size={18} className="text-slate-500" /> Admin Dashboard
+                  </Link>
+                )}
+
+                {showSellerBtn && (
+                  <Link
+                    href="/store"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                  >
+                    <Store size={18} className="text-slate-500" /> Store Dashboard
+                  </Link>
+                )}
+
+                <Link
+                  href="/goal-history"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                >
+                  <History size={18} className="text-slate-500" /> Goal History
+                </Link>
+
+                <button
+                  onClick={() => signOut({ redirectUrl: '/' })}
+                  className="flex items-center gap-3 px-3 py-2.5 mt-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                >
+                  <LogOut size={18} className="text-red-500" /> Sign Out
+                </button>
               </div>
-            </SignedIn>
+            )}
           </div>
         </div>
       </div>

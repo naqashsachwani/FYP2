@@ -1,19 +1,32 @@
 'use client' // Marks this as a Client Component (needed for hooks & Clerk)
 
 // Clerk authentication hooks & components
-import { useUser, UserButton } from "@clerk/nextjs"
+import { useUser, useClerk } from "@clerk/nextjs" // Removed UserButton
+
+// React hooks
+import { useState, useEffect } from "react"
 
 // Next.js routing
 import Link from "next/link"
 
-// Icon for mobile menu
-import { Menu } from "lucide-react"
+// Icons
+import { Menu, Home, Settings, LogOut } from "lucide-react"
 
 // Store Navbar Component
 const StoreNavbar = ({ onMenuClick }) => {
 
-  // Get current logged-in user from Clerk
+  // Get current logged-in user and Clerk functions
   const { user } = useUser()
+  const { openUserProfile, signOut } = useClerk()
+  
+  // Custom Profile Dropdown State
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Hydration safety
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     // Sticky top navigation bar
@@ -54,10 +67,66 @@ const StoreNavbar = ({ onMenuClick }) => {
             Hi, <span className="text-blue-600">{user?.firstName}</span>
           </p>
 
-          {/* Clerk user avatar & menu */}
-          <UserButton afterSignOutUrl="/" />
-        </div>
+          {/* Custom Clerk User Avatar & Menu */}
+          {!mounted ? (
+            <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-200 hover:border-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              >
+                <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
+              </button>
 
+              {isProfileOpen && (
+                <>
+                  {/* Invisible overlay to close dropdown when clicking anywhere else */}
+                  <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+
+                  {/* Dropdown Menu Container */}
+                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
+                    
+                    {/* User Info Header */}
+                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
+                      <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                    </div>
+
+                    <div className="px-2 space-y-1">
+                      <button
+                        onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                      >
+                        <Settings size={16} className="text-slate-500" /> Manage Account
+                      </button>
+
+                      {/* --- NEW: TRUE LINK FOR HOMEPAGE (Supports Right-Click) --- */}
+                      <Link
+                        href="/"
+                        onClick={() => setIsProfileOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                      >
+                        <Home size={16} className="text-slate-500" /> Go to Homepage
+                      </Link>
+                    </div>
+
+                    {/* Sign Out Section */}
+                    <div className="border-t border-slate-100 mt-2 pt-2 px-2">
+                      <button
+                        onClick={() => signOut({ redirectUrl: '/' })}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                      >
+                        <LogOut size={16} className="text-red-500" /> Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
     </header>
   )
