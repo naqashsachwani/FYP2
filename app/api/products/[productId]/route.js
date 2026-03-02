@@ -21,11 +21,18 @@ export async function GET(request, context) {
     where: { id: productId }, // Filter by ID
     include: {
       ratings: {
+        // --- THIS IS THE FIX ---
         select: {
-          rating: true, // Include numeric rating
-          review: true, // Include review text
+          id: true,         // Added so React maps have a unique key
+          rating: true,     // Include numeric rating
+          review: true,     // Include review text
+          images: true,     // <-- ADDED: Now the images will pass through!
+          createdAt: true,  // <-- ADDED: Now the date will pass through perfectly!
           user: { select: { name: true, image: true } }, // Include reviewer details
         },
+        orderBy: {
+          createdAt: 'desc' // Highly recommended: Puts newest reviews at the top!
+        }
       },
       store: true, // Include store information
     },

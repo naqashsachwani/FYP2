@@ -22,9 +22,11 @@ const ProductDetails = ({ product }) => {
     }
   }
 
-  // Calculate average rating safely
-  const averageRating = product?.ratings && product.ratings.length > 0
-    ? product.ratings.reduce((acc, item) => acc + item.rating, 0) / product.ratings.length
+  // --- UPDATED: Total reviews and Average Rating logic ---
+  const totalReviews = product?.ratings?.length || 0;
+  
+  const averageRating = totalReviews > 0
+    ? product.ratings.reduce((acc, item) => acc + item.rating, 0) / totalReviews
     : 0;
 
   return (
@@ -70,12 +72,23 @@ const ProductDetails = ({ product }) => {
           )}
         </h1>
 
-        {/* Rating stars + review count */}
-        <div className='flex items-center mt-2'>
-          {Array(5).fill('').map((_, index) => (
-            <StarIcon key={index} size={14} fill={averageRating >= index + 1 ? "#00C950" : "#D1D5DB"} />
-          ))}
-          <p className="text-sm ml-3 text-slate-500">{product.ratings?.length || 0} Reviews</p>
+        {/* --- FIXED: Rating stars + dynamic review count --- */}
+        <div className='flex items-center mt-3'>
+          <div className="flex gap-0.5">
+            {Array(5).fill('').map((_, index) => (
+              <StarIcon 
+                key={index} 
+                size={16} 
+                // Uses Math.round() to accurately fill the stars based on the exact decimal average
+                fill={index < Math.round(averageRating) ? "#00C950" : "#D1D5DB"} 
+                className={index < Math.round(averageRating) ? "text-[#00C950]" : "text-gray-300"}
+              />
+            ))}
+          </div>
+          <p className="text-sm ml-3 text-slate-500 font-medium">
+            {/* Formats text to "4.6 (12 Reviews)" or "0 (0 Reviews)" */}
+            {averageRating > 0 ? averageRating.toFixed(1) : "0"} ({totalReviews} {totalReviews === 1 ? 'Review' : 'Reviews'})
+          </p>
         </div>
 
         {/* Price section: current price + MRP */}

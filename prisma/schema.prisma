@@ -216,7 +216,7 @@ model Rating {
   review     String?  // Made optional so users can leave just a star rating
   userId     String
   productId  String
-  
+  images     String[]
   // --- EDITED FOR GOAL/DELIVERY LOGIC ---
   goalId     String
   deliveryId String

@@ -22,42 +22,43 @@ export default function Product() {
     // Controls loading UI while data is being fetched
     const [loading, setLoading] = useState(true);
 
-    // This function first checks Redux, then API
+    // --- FIXED: Always fetch fresh data to prevent Redux from hiding images ---
     const fetchProduct = async () => {
 
-        // Try to find product in Redux store
+        // 1. Try to find product in Redux store for an INSTANT initial load
         const foundInRedux = products.find(
             (item) => item.id === productId
         );
 
         if (foundInRedux) {
-            // If product exists in Redux, use it directly
             setProduct(foundInRedux);
             setLoading(false);
-        } else {
-            // If not found in Redux, fetch from backend API
-            try {
-                const res = await fetch(`/api/products/${productId}`);
+        }
 
-                // Handle invalid product ID or server error
-                if (!res.ok) {
+        // 2. ALWAYS fetch from the API in the background (Notice the 'else' is gone!)
+        try {
+            const res = await fetch(`/api/products/${productId}`, {
+                cache: 'no-store' // Force Next.js to bypass its aggressive caching
+            });
+
+            if (!res.ok) {
+                if (!foundInRedux) {
                     console.error("Product not found");
                     setLoading(false);
-                    return;
                 }
-
-                // Convert response to JSON
-                const data = await res.json();
-
-                setProduct(data.product || data);
-
-            } catch (error) {
-                // Handles network or server errors
-                console.error("Failed to fetch product:", error);
-            } finally {
-                // Ensures loader stops even if error occurs
-                setLoading(false);
+                return;
             }
+
+            // Convert response to JSON
+            const data = await res.json();
+
+            // Silently overwrite the Redux data with the 100% fresh API data
+            setProduct(data.product || data);
+
+        } catch (error) {
+            console.error("Failed to fetch fresh product data:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
