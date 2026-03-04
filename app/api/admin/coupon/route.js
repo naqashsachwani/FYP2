@@ -18,10 +18,32 @@ export async function POST(request) {
 
     // Parse coupon from request body
     const { coupon } = await request.json();
-    coupon.code = coupon.code.toUpperCase(); // Standardize coupon code to uppercase
+    
+    // Destructure to safely include the new usageLimit field
+    const {
+      code,
+      description,
+      discount,
+      usageLimit, // <-- NEW FIELD
+      forNewUser,
+      forMember,
+      isPublic,
+      expiresAt
+    } = coupon;
 
     // Create coupon in database
-    const createdCoupon = await prisma.coupon.create({ data: coupon });
+    const createdCoupon = await prisma.coupon.create({ 
+      data: {
+        code: code.toUpperCase(), // Standardize coupon code to uppercase
+        description,
+        discount,
+        usageLimit: usageLimit || 1, // Fallback to 1 if empty
+        forNewUser,
+        forMember,
+        isPublic,
+        expiresAt
+      } 
+    });
 
     // Send event to Inngest to schedule coupon expiration
     await inngest.send({
@@ -78,8 +100,11 @@ export async function GET(request) {
       return NextResponse.json({ error: "not authorized" }, { status: 401 });
     }
 
-    // Fetch all coupons from database
-    const coupons = await prisma.coupon.findMany({});
+    // Fetch all coupons from database (Sorted newest first)
+    const coupons = await prisma.coupon.findMany({
+        orderBy: { createdAt: 'desc' }
+    });
+    
     return NextResponse.json({ coupons });
   } catch (error) {
     console.error(error);

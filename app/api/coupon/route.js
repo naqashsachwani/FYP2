@@ -1,74 +1,119 @@
-import prisma from "@/lib/prisma"; // Prisma client for DB access
-import { getAuth } from "@clerk/nextjs/server"; // Clerk server-side authentication helper
-import { NextResponse } from "next/server"; // Next.js response helper
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { getAuth } from '@clerk/nextjs/server';
 
-// ==============================
-// POST: Validate a coupon code
-// ==============================
-export async function POST(request) {
-  try {
-    // 1️⃣ Get authenticated user info from Clerk
-    const { userId, has } = getAuth(request); // `has` is used to check subscription/plan
+export const dynamic = 'force-dynamic';
+// ==========================================
+// GET: Fetch and sort all coupons for the user
+// ==========================================
+export async function GET(req) {
+    try {
+        const { userId } = getAuth(req);
+        if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // 2️⃣ Parse coupon code from request body
-    const { code } = await request.json();
+        const now = new Date();
 
-    // 3️⃣ Validate input
-    if (!code) {
-      return NextResponse.json(
-        { error: "Coupon code is required" },
-        { status: 400 }
-      );
+        // 1. Fetch all public coupons
+        const allCoupons = await prisma.coupon.findMany({
+            where: { isPublic: true },
+            orderBy: { expiresAt: 'desc' }
+        });
+
+        // 2. See how many times this specific user has used each coupon
+        const usageRecords = await prisma.couponUsage.groupBy({
+            by: ['couponCode'],
+            where: { userId },
+            _count: { couponCode: true }
+        });
+
+        // Convert array to a quick lookup object { "SUMMER20": 1, "WELCOME": 2 }
+        const usageMap = {};
+        usageRecords.forEach(record => {
+            usageMap[record.couponCode] = record._count.couponCode;
+        });
+
+        // 3. Check if they are a "New User" (0 active/completed goals)
+        const goalCount = await prisma.goal.count({ where: { userId } });
+        const isNewUser = goalCount === 0;
+
+        // 4. Sort into Valid vs Invalid/Expired
+        const validCoupons = [];
+        const invalidCoupons = [];
+
+        allCoupons.forEach(coupon => {
+            const timesUsed = usageMap[coupon.code] || 0;
+            const isExpired = new Date(coupon.expiresAt) < now;
+            const limitReached = timesUsed >= coupon.usageLimit;
+            const failedNewUserCheck = coupon.forNewUser && !isNewUser;
+
+            if (isExpired || limitReached || failedNewUserCheck) {
+                let reason = "Expired";
+                if (limitReached) reason = `Used ${timesUsed}/${coupon.usageLimit} times`;
+                if (failedNewUserCheck) reason = "For new users only";
+
+                invalidCoupons.push({ ...coupon, timesUsed, reason });
+            } else {
+                validCoupons.push({ ...coupon, timesUsed });
+            }
+        });
+
+        return NextResponse.json({ validCoupons, invalidCoupons });
+
+    } catch (error) {
+        console.error("Fetch User Coupons Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
+}
 
-    // 4️⃣ Find coupon in database and ensure it is not expired
-    const coupon = await prisma.coupon.findFirst({
-      where: {
-        code: code.toUpperCase(), // Case-insensitive match
-        expiresAt: { gt: new Date() }, // Ensure coupon hasn't expired
-      },
-    });
+// ==========================================
+// POST: Validate a specific coupon code
+// ==========================================
+export async function POST(req) {
+    try {
+        const { userId } = getAuth(req);
+        if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // 5️⃣ If coupon not found or expired, return error
-    if (!coupon) {
-      return NextResponse.json(
-        { error: "Invalid or expired coupon" },
-        { status: 400 }
-      );
+        const { code } = await req.json();
+        if (!code) return NextResponse.json({ error: "Coupon code is required" }, { status: 400 });
+
+        // 1. Find the coupon
+        const coupon = await prisma.coupon.findUnique({
+            where: { code: code.toUpperCase() }
+        });
+
+        if (!coupon) return NextResponse.json({ error: "Invalid coupon code" }, { status: 404 });
+
+        // 2. Check Expiry
+        if (new Date(coupon.expiresAt) < new Date()) {
+            return NextResponse.json({ error: "This coupon has expired" }, { status: 400 });
+        }
+
+        // 3. Check Usage Limits
+        const usageCount = await prisma.couponUsage.count({
+            where: { userId, couponCode: coupon.code }
+        });
+
+        if (usageCount >= coupon.usageLimit) {
+            return NextResponse.json({ error: `You have reached the usage limit (${coupon.usageLimit}) for this coupon.` }, { status: 400 });
+        }
+
+        // 4. Check New User Constraint
+        if (coupon.forNewUser) {
+            const previousGoals = await prisma.goal.count({ where: { userId } });
+            if (previousGoals > 0) {
+                return NextResponse.json({ error: "This coupon is strictly for new users." }, { status: 400 });
+            }
+        }
+
+        // Valid! Return the discount details
+        return NextResponse.json({ 
+            success: true, 
+            discount: coupon.discount,
+            description: coupon.description
+        });
+
+    } catch (error) {
+        console.error("Coupon Validation Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
-
-    // 6️⃣ Restrict coupon to new users only (if applicable)
-    if (coupon.forNewUser) {
-      const userOrders = await prisma.order.findMany({ where: { userId } });
-      if (userOrders.length > 0) {
-        return NextResponse.json(
-          { error: "Coupon valid for new users only" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 7️⃣ Restrict coupon to Plus plan members only (if applicable)
-    if (coupon.forMember) {
-      const hasPlusPlan = has({ plan: "plus" });
-      if (!hasPlusPlan) {
-        return NextResponse.json(
-          { error: "Coupon valid for members only" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 8️⃣ If all checks pass, return coupon details
-    return NextResponse.json({ coupon });
-  } catch (error) {
-    // Log server errors for debugging
-    console.error(error);
-
-    // Return generic server error if something fails
-    return NextResponse.json(
-      { error: error.message || "Server error" },
-      { status: 500 }
-    );
-  }
 }

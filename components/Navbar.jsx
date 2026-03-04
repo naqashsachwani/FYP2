@@ -1,7 +1,7 @@
 'use client';
 
-// Added Settings and LogOut icons for our custom menu
-import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut } from "lucide-react";
+// Added Ticket icon for My Coupons
+import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -187,6 +187,14 @@ const Navbar = () => {
                         )}
 
                         <Link
+                          href="/my-coupons"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                        >
+                          <Ticket size={16} className="text-slate-500" /> My Coupons
+                        </Link>
+
+                        <Link
                           href="/goal-history"
                           onClick={() => setIsProfileOpen(false)}
                           className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
@@ -289,6 +297,14 @@ const Navbar = () => {
                     <Store size={18} className="text-slate-500" /> Store Dashboard
                   </Link>
                 )}
+
+                <Link
+                  href="/my-coupons"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                >
+                  <Ticket size={18} className="text-slate-500" /> My Coupons
+                </Link>
 
                 <Link
                   href="/goal-history"

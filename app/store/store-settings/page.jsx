@@ -5,6 +5,13 @@ import axios from "axios"
 import toast from "react-hot-toast"
 import { MapPin, Save, Crosshair, Store, Search, Loader2 } from "lucide-react" 
 import Loading from "@/components/Loading"
+import dynamic from 'next/dynamic'
+
+// --- NEW: Reuse our interactive map for the Store Owner! ---
+const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { 
+    ssr: false,
+    loading: () => <div className="h-56 bg-slate-100 rounded-xl animate-pulse mb-2 flex items-center justify-center text-slate-400 border-2 border-slate-200 border-dashed">Loading Map...</div> 
+})
 
 export default function StoreSettings() {
     const { getToken } = useAuth()
@@ -47,70 +54,57 @@ export default function StoreSettings() {
         fetchSettings()
     }, [getToken])
 
-    // ✅ FIXED: Smart Geocoding Helper
+    // Convert formData strings to map object
+    const mapPosition = formData.latitude && formData.longitude 
+        ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } 
+        : null;
+
+    // Update form when map pin is dragged/clicked
+    const handleMapClick = (pos) => {
+        setFormData(prev => ({ ...prev, latitude: pos.lat, longitude: pos.lng }))
+    }
+
+    // Smart Geocoding Helper
     const fetchCoordsFromAddress = async (currentData) => {
-        // Attempt 1: Full Address Search
-        // We encodeURIComponent to handle spaces and special chars safely
         const query = `${currentData.address}, ${currentData.city}, Pakistan`
-        console.log("Geocoding Attempt 1:", query);
-        
         try {
             let res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`)
             if (res.data && res.data.length > 0) {
                 return { lat: parseFloat(res.data[0].lat), lon: parseFloat(res.data[0].lon) }
             }
-
-            // Attempt 2: Smart Retry (Split by commas)
-            // Example: "Shop 12, Zamzama Blvd, Phase 5" -> fails
-            // Retry: "Zamzama Blvd, Karachi" -> Success
             const parts = currentData.address.split(",");
             for (let part of parts) {
                 const cleanPart = part.trim();
-                if (cleanPart.length < 3) continue; // Skip short words like "No" or "St"
-
+                if (cleanPart.length < 3) continue; 
                 const retryQuery = `${cleanPart}, ${currentData.city}, Pakistan`;
-                console.log("Geocoding Attempt 2 (Part):", retryQuery);
-                
                 const retryRes = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(retryQuery)}&limit=1`);
-                
                 if (retryRes.data && retryRes.data.length > 0) {
                     toast("Found location using: " + cleanPart, { icon: '📍' });
                     return { lat: parseFloat(retryRes.data[0].lat), lon: parseFloat(retryRes.data[0].lon) }
                 }
             }
-            
-            // Attempt 3: City Fallback (Last Resort)
-            // Ensures we never return null if the city is known
-            console.log("Geocoding Attempt 3 (City Fallback)");
-            const cityRes = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(currentData.city + ", Pakistan")}&limit=1`)
-            if (cityRes.data && cityRes.data.length > 0) {
-                 toast("Address specific not found, defaulting to City Center.", { icon: '⚠️' });
-                 return { lat: parseFloat(cityRes.data[0].lat), lon: parseFloat(cityRes.data[0].lon) }
-            }
-
         } catch (error) {
             console.warn("Geocoding failed", error)
         }
         return null
     }
 
-    // 3. Manual "Get from Address" Button
+    // Manual "Get from Address" Button
     const handleManualGeocode = async () => {
         if (!formData.address) return toast.error("Please enter an address first")
-        
         setGeocoding(true)
         const coords = await fetchCoordsFromAddress(formData)
         setGeocoding(false)
 
         if (coords) {
             setFormData(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lon }))
-            toast.success("Coordinates found!")
+            toast.success("Coordinates found! You can adjust the pin on the map.")
         } else {
-            toast.error("Could not find coordinates. Please try GPS or enter manually.")
+            toast.error("Could not find coordinates. Please click the map.")
         }
     }
 
-    // 4. "Use My GPS" Button
+    // "Use My GPS" Button
     const handleUseGPS = () => {
         if (!navigator.geolocation) return toast.error("Geolocation not supported")
         toast.loading("Getting location...", { id: "gps" })
@@ -121,32 +115,24 @@ export default function StoreSettings() {
                     latitude: pos.coords.latitude,
                     longitude: pos.coords.longitude
                 }))
-                toast.success("GPS Location Found!", { id: "gps" })
+                toast.success("GPS Location Found! Adjust pin if needed.", { id: "gps" })
             },
-            () => toast.error("Location access denied. Please allow location access in your browser.", { id: "gps" }),
+            () => toast.error("Location access denied.", { id: "gps" }),
             { enableHighAccuracy: true }
         )
     }
 
-    // 5. Save Logic
+    // Save Logic
     const handleSave = async (e) => {
         e.preventDefault()
         setSaving(true)
 
         let finalData = { ...formData }
 
-        // Auto-detect if coordinates are missing on save
         if (!finalData.latitude || finalData.latitude === "") {
-            toast.loading("Auto-detecting location...", { id: "geo-save" })
-            const coords = await fetchCoordsFromAddress(finalData)
-            if (coords) {
-                finalData.latitude = coords.lat
-                finalData.longitude = coords.lon
-                setFormData(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lon }))
-                toast.success("Location auto-detected!", { id: "geo-save" })
-            } else {
-                toast.dismiss("geo-save")
-            }
+            toast.error("Please set a map location before saving.")
+            setSaving(false)
+            return;
         }
 
         try {
@@ -176,6 +162,33 @@ export default function StoreSettings() {
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     <form onSubmit={handleSave} className="p-8 space-y-6">
+                        
+                        {/* --- NEW: Interactive Map Area --- */}
+                        <div className="col-span-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <div className="flex justify-between items-end mb-3">
+                                <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                                    <MapPin size={16} className="text-blue-600"/> Pinpoint Store Location
+                                </p>
+                                <div className="flex gap-2">
+                                    <button 
+                                        type="button" onClick={handleManualGeocode} disabled={geocoding}
+                                        className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-50 flex items-center gap-1"
+                                    >
+                                        {geocoding ? <Loader2 size={12} className="animate-spin"/> : <Search size={12} />} 
+                                        Search Address
+                                    </button>
+                                    <button 
+                                        type="button" onClick={handleUseGPS}
+                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 flex items-center gap-1"
+                                    >
+                                        <Crosshair size={12} /> Use GPS
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <LocationPicker position={mapPosition} setPosition={handleMapClick} />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Full Address</label>
@@ -209,60 +222,14 @@ export default function StoreSettings() {
                             </div>
                         </div>
 
-                        {/* COORDINATES SECTION */}
-                        <div className="pt-6 border-t border-gray-100 bg-blue-50/50 p-4 rounded-xl">
-                            <div className="flex flex-wrap justify-between items-end mb-4 gap-2">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-800">Map Coordinates 
-
-[Image of Latitude Longitude]
-</label>
-                                    <p className="text-xs text-gray-500">Required for the delivery tracking map.</p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <button 
-                                        type="button"
-                                        onClick={handleManualGeocode}
-                                        disabled={geocoding}
-                                        className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50 flex items-center gap-1 shadow-sm transition-all"
-                                    >
-                                        {geocoding ? <Loader2 size={14} className="animate-spin"/> : <Search size={14} />} 
-                                        {geocoding ? "Searching..." : "Find from Address"}
-                                    </button>
-                                    
-                                    <button 
-                                        type="button"
-                                        onClick={handleUseGPS}
-                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 flex items-center gap-1 shadow-sm transition-all"
-                                    >
-                                        <Crosshair size={14} /> Use My GPS
-                                    </button>
-                                </div>
+                        <div className="grid grid-cols-2 gap-4 opacity-70 bg-gray-50 p-3 rounded-lg pointer-events-none">
+                            <div>
+                                <span className="text-xs text-gray-500 mb-1 block font-mono">LATITUDE</span>
+                                <input type="number" value={formData.latitude} readOnly className="w-full px-3 py-2 bg-transparent border-b border-gray-300 outline-none font-mono text-sm" />
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="text-xs text-gray-500 mb-1 block font-mono">LATITUDE</span>
-                                    <input 
-                                        type="number" 
-                                        step="any"
-                                        value={formData.latitude}
-                                        onChange={(e) => setFormData({...formData, latitude: e.target.value})}
-                                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg outline-none focus:border-blue-500 font-mono text-sm"
-                                        placeholder="24.8607"
-                                    />
-                                </div>
-                                <div>
-                                    <span className="text-xs text-gray-500 mb-1 block font-mono">LONGITUDE</span>
-                                    <input 
-                                        type="number" 
-                                        step="any"
-                                        value={formData.longitude}
-                                        onChange={(e) => setFormData({...formData, longitude: e.target.value})}
-                                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg outline-none focus:border-blue-500 font-mono text-sm"
-                                        placeholder="67.0011"
-                                    />
-                                </div>
+                            <div>
+                                <span className="text-xs text-gray-500 mb-1 block font-mono">LONGITUDE</span>
+                                <input type="number" value={formData.longitude} readOnly className="w-full px-3 py-2 bg-transparent border-b border-gray-300 outline-none font-mono text-sm" />
                             </div>
                         </div>
 

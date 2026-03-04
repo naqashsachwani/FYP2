@@ -99,6 +99,7 @@ model User {
   refunds           Refund[]           @relation("UserRefunds")
   storeApplications StoreApplication[]
   notifications     Notification[]
+  couponUsages      CouponUsage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,8 +184,6 @@ model Order {
   user           User            @relation("BuyerRelation", fields: [userId], references: [id])
   store          Store           @relation(fields: [storeId], references: [id])
   address        Address         @relation(fields: [addressId], references: [id])
-  coupon         Coupon?         @relation(fields: [couponCode], references: [code])
-  orderItems     OrderItem[]
   transactions   Transaction[]
   refundRequests RefundRequest[]
   escrows        Escrow[]
@@ -204,7 +203,6 @@ model OrderItem {
   price     Float
 
   // Relations
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
   @@id([orderId, productId])
@@ -265,12 +263,28 @@ model Coupon {
   forNewUser  Boolean
   forMember   Boolean  @default(false)
   isPublic    Boolean
+  usageLimit  Int      @default(1) // NEW: Enforces how many times it can be used
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 
-  orders Order[]
+  // NEW RELATIONS
+  goals       Goal[]
+  usages      CouponUsage[]
 
   @@index([expiresAt])
+}
+
+model CouponUsage {
+  id         String   @id @default(cuid())
+  userId     String
+  couponCode String
+  usedAt     DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon     Coupon   @relation(fields: [couponCode], references: [code], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([couponCode])
 }
 
 model Goal {
@@ -285,6 +299,10 @@ model Goal {
   
   priceLocked  Boolean    @default(true)
   lockedPrice  Decimal    @db.Decimal(18, 2)
+  couponCode    String?
+  coupon        Coupon?  @relation(fields: [couponCode], references: [code])
+  deliveryFee   Decimal  @db.Decimal(18, 2) @default(0)
+  discountAmount Decimal @db.Decimal(18, 2) @default(0)
 
   // Relations
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)

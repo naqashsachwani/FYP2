@@ -13,20 +13,15 @@ const normalize = (obj) => JSON.parse(JSON.stringify(obj, (key, value) =>
 // ================== GET: Fetch user goals ==================
 export async function GET(request) {
   try {
-    // Get the authenticated user
     const { userId } = getAuth(request);
-    if (!userId) 
-      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
-    // Fetch all goals for this user, ordered by newest first
-    // Include related product and deposits for richer data
     const goals = await prisma.goal.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
       include: { product: true, deposits: true },
     });
 
-    // Add calculated progressPercent to each goal
     const goalsWithProgress = goals.map(goal => ({
       ...goal,
       progressPercent: goal.targetAmount > 0 
@@ -34,11 +29,9 @@ export async function GET(request) {
         : 0,
     }));
 
-    // Return normalized JSON (Decimal -> Number)
     return NextResponse.json({ goals: normalize(goalsWithProgress) });
 
   } catch (err) {
-    // Return 500 on server errors
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
 }
@@ -46,40 +39,79 @@ export async function GET(request) {
 // ================== POST: Create or Update Goal ==================
 export async function POST(request) {
   try {
-    // Get authenticated user
     const { userId } = getAuth(request);
-    if (!userId) 
-      return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+    if (!userId) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
-    // Parse request body safely
     const body = await request.json().catch(() => null);
-    if (!body) 
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 
-    const { productId, targetAmount, targetDate, status = "ACTIVE" } = body;
+    // Note: We do NOT take targetAmount from the frontend for security reasons.
+    const { productId, targetDate, status = "ACTIVE", couponCode } = body;
 
-    // Debug log to check incoming data
-    console.log(`[API] Create Goal - Product: ${productId}, Date: ${targetDate}`);
+    if (!productId) return NextResponse.json({ error: "productId is required" }, { status: 400 });
 
-    if (!productId) 
-      return NextResponse.json({ error: "productId is required" }, { status: 400 });
+    // 1. Fetch Product to get the true Base Price
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-    const amountNum = Number(targetAmount);
+    const basePrice = Number(product.price);
+    let discountAmount = 0;
+    let appliedCouponCode = null;
+
+    // 2. Validate Coupon (If provided)
+    if (couponCode) {
+        const coupon = await prisma.coupon.findUnique({ 
+            where: { code: couponCode.toUpperCase() } 
+        });
+
+        if (!coupon) {
+            return NextResponse.json({ error: "Invalid coupon code" }, { status: 400 });
+        }
+        if (new Date(coupon.expiresAt) < new Date()) {
+            return NextResponse.json({ error: "Coupon has expired" }, { status: 400 });
+        }
+        
+        // Enforce Usage Limit
+        const usageCount = await prisma.couponUsage.count({
+            where: { userId, couponCode: coupon.code }
+        });
+        if (usageCount >= coupon.usageLimit) {
+            return NextResponse.json({ error: `Coupon limit reached (${coupon.usageLimit}x max)` }, { status: 400 });
+        }
+
+        // Enforce New User Rule
+        if (coupon.forNewUser) {
+            const pastGoals = await prisma.goal.count({ where: { userId } });
+            if (pastGoals > 0) {
+                return NextResponse.json({ error: "This coupon is strictly for new users." }, { status: 400 });
+            }
+        }
+
+        // Coupon is fully valid! Calculate discount.
+        discountAmount = basePrice * (coupon.discount / 100);
+        appliedCouponCode = coupon.code;
+    }
+
+    // 3. Calculate Delivery Fee & Final Target Amount
+    const deliveryFee = basePrice > 5000 ? 0 : 250;
+    const finalTargetAmount = basePrice - discountAmount + deliveryFee;
+    const finalEndDate = targetDate ? new Date(targetDate) : null;
 
     // ================== CASE 1: Updating a Draft ==================
     if (status === "SAVED") {
-      // Find existing draft goal for this product & user
       const existingDraft = await prisma.goal.findFirst({
         where: { userId, productId, status: "SAVED" } 
       });
 
       if (existingDraft) {
-        // Update draft goal
         const updatedDraft = await prisma.goal.update({
           where: { id: existingDraft.id },
           data: {
-            targetAmount: amountNum,
+            targetAmount: finalTargetAmount,
             endDate: targetDate ? new Date(targetDate) : existingDraft.endDate,
+            couponCode: appliedCouponCode,
+            deliveryFee: deliveryFee,
+            discountAmount: discountAmount
           },
         });
         return NextResponse.json({ message: "Draft updated", goal: normalize(updatedDraft) });
@@ -87,51 +119,57 @@ export async function POST(request) {
     }
 
     // ================== CASE 2: Starting a New Goal ==================
-    const product = await prisma.product.findUnique({ where: { id: productId } });
-    if (!product) 
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
-
-    // Ensure valid Date object or null
-    const finalEndDate = targetDate ? new Date(targetDate) : null;
-
-    // Use Prisma transaction to create goal & price lock atomically
+    // Use Prisma transaction to ensure everything creates successfully, or rolls back if it fails
     const result = await prisma.$transaction(async (tx) => {
-      // Create new goal
+      
+      // A. Create the Goal with the exact financial math
       const newGoal = await tx.goal.create({
         data: {
           userId,
           productId,
-          targetAmount: amountNum,
-          endDate: finalEndDate, // Save goal's end date
+          targetAmount: finalTargetAmount,
+          endDate: finalEndDate,
           status: status,
-          saved: 0, // Initially zero saved
-          lockedPrice: product.price, // Lock the product price
+          saved: 0,
+          lockedPrice: basePrice,
           priceLocked: true,
+          couponCode: appliedCouponCode,
+          deliveryFee: deliveryFee,
+          discountAmount: discountAmount
         },
       });
 
-      // Create a price lock record for this goal
+      // B. Create a price lock record for this goal
       await tx.priceLock.create({
         data: {
           productId,
           goalId: newGoal.id,
-          lockedPrice: product.price,
-          originalPrice: product.price,
+          lockedPrice: basePrice,
+          originalPrice: basePrice,
           lockedBy: userId,
           status: "ACTIVE",
           storeId: product.storeId,
-          expiresAt: finalEndDate, // Expiry of price lock syncs with goal's end date
+          expiresAt: finalEndDate, 
         },
       });
 
-      return newGoal; // Return the newly created goal
+      // C. If a coupon was used, CREATE A USAGE RECORD!
+      // This is crucial to ensure the 'usageLimit' logic works next time they try to use it.
+      if (appliedCouponCode) {
+          await tx.couponUsage.create({
+              data: {
+                  userId,
+                  couponCode: appliedCouponCode
+              }
+          });
+      }
+
+      return newGoal; 
     });
 
-    // Respond with the newly created goal
     return NextResponse.json({ message: "New goal created", goal: normalize(result) });
 
   } catch (err) {
-    // Log error for debugging
     console.error("set-goal POST error:", err);
     return NextResponse.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }

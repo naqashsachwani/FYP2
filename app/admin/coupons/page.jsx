@@ -3,32 +3,26 @@
 import { useEffect, useState } from "react"
 import { format } from "date-fns"
 import toast from "react-hot-toast"
-import { DeleteIcon, Loader2, Trash2 } from "lucide-react" 
+import { Loader2, Trash2 } from "lucide-react" 
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 
 export default function AdminCoupons() {
   const { getToken } = useAuth()
-  
   const [coupons, setCoupons] = useState([])
-  
-  // STATE MANAGEMENT: 'isSubmitting'
-  // Prevents the user from clicking the "Add" button multiple times 
-  // while the network request is still processing.
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     description: '',
     discount: '',
+    usageLimit: 1, // NEW: Added Usage Limit state
     forNewUser: false,
     forMember: false,
     isPublic: false,
     expiresAt: new Date()
   })
 
-  // DATA FETCHING
-  // Fetches the initial list of coupons.
   const fetchCoupons = async () => {
     try {
       const token = await getToken()
@@ -41,23 +35,18 @@ export default function AdminCoupons() {
     }
   }
 
-  // FORM SUBMISSION HANDLER
   const handleAddCoupon = async (e) => {
     e.preventDefault()
-    
-    // 1. Double-Submit Prevention
-    //"To prevent duplicate entries in the database if a user double-clicks the submit button rapidly."
     if (isSubmitting) return;
     setIsSubmitting(true)
 
     try {
       const token = await getToken()
       
-      // convert 'discount' to a Number and ensure 'expiresAt' is a Date object
-      // before sending it to the API to match the Prisma schema.
       const couponToSend = { 
         ...newCoupon, 
         discount: Number(newCoupon.discount), 
+        usageLimit: Number(newCoupon.usageLimit), // NEW: Parse limit to number
         expiresAt: new Date(newCoupon.expiresAt) 
       }
 
@@ -66,25 +55,17 @@ export default function AdminCoupons() {
       })
       
       toast.success(data.message)
-      
-      // Reset Form State
-      setNewCoupon({ code: '', description: '', discount: '', forNewUser: false, forMember: false, isPublic: false, expiresAt: new Date() })
-      
-      // Refresh List
-      // We re-fetch the list to ensure the UI is perfectly synced with the backend state.
+      setNewCoupon({ code: '', description: '', discount: '', usageLimit: 1, forNewUser: false, forMember: false, isPublic: false, expiresAt: new Date() })
       await fetchCoupons()
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     } finally {
-      // Ensures the button becomes clickable again regardless of success or failure.
       setIsSubmitting(false)
     }
   }
 
-  // INPUT HANDLER: Controlled Components
   const handleChange = (e) => {
     const { name, value } = e.target
-    
     if (name === 'code') {
         setNewCoupon({ ...newCoupon, [name]: value.toUpperCase() })
     } else {
@@ -92,15 +73,9 @@ export default function AdminCoupons() {
     }
   }
 
-  // DELETE HANDLER:
   const deleteCoupon = async (code) => {
-    // Prevent accidental deletions
     if (!window.confirm("Are you sure you want to delete this coupon?")) return
-
-    // Save current state to memory
     const previousCoupons = [...coupons]
-
-    // Remove immediately from visual list
     setCoupons(coupons.filter(c => c.code !== code))
 
     try {
@@ -110,7 +85,6 @@ export default function AdminCoupons() {
       })
       toast.success("Coupon deleted successfully")
     } catch (error) {
-      // Rollback: If API fails, restore the original list from the snapshot
       setCoupons(previousCoupons)
       toast.error(error?.response?.data?.error || error.message)
     }
@@ -129,8 +103,7 @@ export default function AdminCoupons() {
         <form onSubmit={handleAddCoupon} className="bg-white shadow-md rounded-xl p-6 md:p-8 mb-10 border border-gray-100">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Add <span className="text-indigo-600">Coupon</span></h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Code Input: Controlled by handleChange to enforce Uppercase */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input type="text" placeholder="Coupon Code" 
               className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase"
               name="code" value={newCoupon.code} onChange={handleChange} required />
@@ -138,6 +111,11 @@ export default function AdminCoupons() {
             <input type="number" placeholder="Discount (%)" min={1} max={100} 
               className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               name="discount" value={newCoupon.discount} onChange={handleChange} required />
+              
+            {/* NEW: Usage Limit Input */}
+            <input type="number" placeholder="Usage Limit (Per User)" min={1} 
+              className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              name="usageLimit" value={newCoupon.usageLimit} onChange={handleChange} required />
           </div>
 
           <input type="text" placeholder="Description" 
@@ -155,30 +133,23 @@ export default function AdminCoupons() {
               <input type="checkbox" name="forNewUser" checked={newCoupon.forNewUser} 
                 onChange={(e) => setNewCoupon({ ...newCoupon, forNewUser: e.target.checked })}
                 className="w-4 h-4 accent-indigo-600" />
-              For New User
+              For New User Only
             </label>
             <label className="flex items-center gap-2 mt-2 md:mt-0 cursor-pointer">
-              <input type="checkbox" name="forMember" checked={newCoupon.forMember} 
-                onChange={(e) => setNewCoupon({ ...newCoupon, forMember: e.target.checked })}
+              <input type="checkbox" name="isPublic" checked={newCoupon.isPublic} 
+                onChange={(e) => setNewCoupon({ ...newCoupon, isPublic: e.target.checked })}
                 className="w-4 h-4 accent-indigo-600" />
-              For Member
+              Make Public
             </label>
           </div>
 
           <button 
-            type="submit"
-            disabled={isSubmitting}
+            type="submit" disabled={isSubmitting}
             className={`mt-6 w-full md:w-auto px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2
               ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-indigo-700 active:scale-95'}
             `}
           >
-            {isSubmitting ? (
-               <>
-                 <Loader2 className="animate-spin" size={20} /> Adding...
-               </>
-            ) : (
-               "Add Coupon"
-            )}
+            {isSubmitting ? <><Loader2 className="animate-spin" size={20} /> Adding...</> : "Add Coupon"}
           </button>
         </form>
 
@@ -189,11 +160,10 @@ export default function AdminCoupons() {
             <thead className="bg-gray-100 rounded-t-xl">
               <tr>
                 <th className="py-3 px-4 text-left font-medium text-gray-600">Code</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-600">Description</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-600">Discount</th>
+                <th className="py-3 px-4 text-left font-medium text-gray-600">Limit</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-600">Expires</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-600">New User</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-600">Member</th>
+                <th className="py-3 px-4 text-left font-medium text-gray-600">Type</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-600">Action</th>
               </tr>
             </thead>
@@ -201,30 +171,22 @@ export default function AdminCoupons() {
               {coupons.map((coupon) => (
                 <tr key={coupon.code} className="border-b hover:bg-gray-50 transition group">
                   <td className="py-3 px-4 font-mono font-medium text-indigo-600">{coupon.code}</td>
-                  <td className="py-3 px-4">{coupon.description}</td>
                   <td className="py-3 px-4 font-bold">{coupon.discount}%</td>
+                  <td className="py-3 px-4">{coupon.usageLimit}x</td>
                   <td className="py-3 px-4 text-gray-500">{format(new Date(coupon.expiresAt), 'MMM dd, yyyy')}</td>
-                  <td className="py-3 px-4">{coupon.forNewUser ? "Yes" : "No"}</td>
-                  <td className="py-3 px-4">{coupon.forMember ? "Yes" : "No"}</td>
+                  <td className="py-3 px-4">
+                    {coupon.forNewUser ? <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">New User</span> : <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Standard</span>}
+                  </td>
                   <td className="py-3 px-4">
                     <button 
                         onClick={() => deleteCoupon(coupon.code)} 
-                        className="p-2 hover:bg-red-50 rounded-full transition-colors"
-                        title="Delete Coupon"
+                        className="p-2 hover:bg-red-50 rounded-full transition-colors" title="Delete Coupon"
                     >
                         <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-colors" />
                     </button>
                   </td>
                 </tr>
               ))}
-              {/* Empty State Handling */}
-              {coupons.length === 0 && (
-                <tr>
-                    <td colSpan="7" className="py-8 text-center text-gray-400">
-                        No coupons found. Create one above!
-                    </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

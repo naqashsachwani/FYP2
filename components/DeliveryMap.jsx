@@ -5,20 +5,31 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// --- 1. Map Controller (CRASH FIXED) ---
-function MapController({ center }) {
+// --- 1. Smart Bounds Controller (FIXED ZOOM BUG) ---
+// Automatically zooms and pans the map, but ONLY ONCE when it loads!
+function BoundsController({ points }) {
   const map = useMap();
-  const hasCentered = useRef(false);
+  const hasFitted = useRef(false); // Keeps track of whether we've already set the zoom
 
   useEffect(() => {
-    // Check if we have a valid center and haven't centered yet
-    if (center && !isNaN(center[0]) && !hasCentered.current) {
-      // ✅ FIX: { animate: false } prevents the _leaflet_pos crash
-      // It forces an instant jump instead of a slide animation
-      map.setView(center, 13, { animate: false });
-      hasCentered.current = true;
+    // Filter out null or invalid points
+    const validPoints = points.filter(p => p && p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng));
+
+    if (validPoints.length === 0) return;
+
+    // ONLY adjust the map if we haven't done it yet
+    if (!hasFitted.current) {
+      if (validPoints.length === 1) {
+        // Center directly on single point
+        map.setView([validPoints[0].lat, validPoints[0].lng], 14, { animate: true });
+      } else {
+        // Draw a box around multiple points and zoom to fit
+        const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]));
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15, animate: true });
+      }
+      hasFitted.current = true; // Lock it so it never auto-zooms again!
     }
-  }, [center, map]);
+  }, [points, map]);
 
   return null;
 }
@@ -39,14 +50,15 @@ export default function DeliveryMap({ delivery }) {
   const [routePath, setRoutePath] = useState([]);
   const [usingFallback, setUsingFallback] = useState(false);
 
-  // --- 3. Extract Locations (STRICTLY FROM DB) ---
+  // --- 3. Extract Locations Safely ---
   
   // A. Driver Location
-  const driverLat = Number(delivery?.latitude);
-  const driverLng = Number(delivery?.longitude);
-  const isDriverVisible = !isNaN(driverLat) && !isNaN(driverLng) && driverLat !== 0;
+  const driverLat = delivery?.latitude != null ? Number(delivery.latitude) : null;
+  const driverLng = delivery?.longitude != null ? Number(delivery.longitude) : null;
+  const isDriverVisible = driverLat !== null && driverLng !== null && driverLat !== 0;
+  const driverLocation = isDriverVisible ? { lat: driverLat, lng: driverLng } : null;
 
-  // B. Store Location (Strictly from Product -> Store relation)
+  // B. Store Location
   const storeLocation = useMemo(() => {
     const store = delivery?.goal?.product?.store;
     if (!store?.latitude || !store?.longitude) return null;
@@ -59,17 +71,22 @@ export default function DeliveryMap({ delivery }) {
 
   // C. Customer Location
   const customerLocation = useMemo(() => {
-    return (delivery?.destinationLat && delivery?.destinationLng)
+    return (delivery?.destinationLat != null && delivery?.destinationLng != null)
       ? { lat: Number(delivery.destinationLat), lng: Number(delivery.destinationLng) } 
       : null;
   }, [delivery]);
+
+  // Group all valid points to pass to our Bounds Controller
+  const allPoints = useMemo(() => {
+      return [driverLocation, storeLocation, customerLocation].filter(Boolean);
+  }, [driverLocation, storeLocation, customerLocation]);
 
   // --- 4. Route Calculation ---
   useEffect(() => {
     let isMounted = true;
     
     const fetchRoute = async () => {
-      const start = isDriverVisible ? { lat: driverLat, lng: driverLng } : storeLocation;
+      const start = driverLocation || storeLocation;
       const end = customerLocation;
 
       if (!start || !end || isNaN(start.lat) || isNaN(end.lat)) {
@@ -104,30 +121,25 @@ export default function DeliveryMap({ delivery }) {
 
     fetchRoute();
     return () => { isMounted = false; };
-  }, [driverLat, driverLng, storeLocation, customerLocation, isDriverVisible]);
+  }, [driverLocation, storeLocation, customerLocation]); 
 
   // Icons
   const StoreIcon = useMemo(() => createCustomIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M2 7h20"/></svg>', "indigo"), []);
   const TruckIcon = useMemo(() => createCustomIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="8" x="2" y="10" rx="2"/><path d="M10 10h4C19.33 10 22 12.67 22 18V18"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>', "blue"), []);
   const HomeIcon = useMemo(() => createCustomIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>', "green"), []);
 
-  // Determine Map Center
-  const initialCenter = isDriverVisible 
-    ? [driverLat, driverLng] 
-    : (storeLocation ? [storeLocation.lat, storeLocation.lng] : [24.8607, 67.0011]);
-
   return (
     <div className="w-full h-full relative z-0">
       <MapContainer 
-        center={initialCenter} 
-        zoom={13} 
-        scrollWheelZoom={false}
+        center={[24.8607, 67.0011]} // Default safe fallback (Karachi)
+        zoom={12} 
+        scrollWheelZoom={true} // Enabled scroll wheel zoom for better UX
         style={{ height: '100%', width: '100%' }}
       >
         <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
         
-        {/* Pass the center to our fixed controller */}
-        <MapController center={initialCenter} />
+        {/* Pass all active points to the dynamic controller */}
+        <BoundsController points={allPoints} />
 
         {storeLocation && (
             <Marker position={[storeLocation.lat, storeLocation.lng]} icon={StoreIcon}>
@@ -135,8 +147,17 @@ export default function DeliveryMap({ delivery }) {
             </Marker>
         )}
 
-        {isDriverVisible && <Marker position={[driverLat, driverLng]} icon={TruckIcon}><Popup>Driver</Popup></Marker>}
-        {customerLocation && <Marker position={[customerLocation.lat, customerLocation.lng]} icon={HomeIcon}><Popup>Destination</Popup></Marker>}
+        {isDriverVisible && (
+            <Marker position={[driverLocation.lat, driverLocation.lng]} icon={TruckIcon}>
+                <Popup>Driver</Popup>
+            </Marker>
+        )}
+
+        {customerLocation && (
+            <Marker position={[customerLocation.lat, customerLocation.lng]} icon={HomeIcon}>
+                <Popup>Destination</Popup>
+            </Marker>
+        )}
         
         {routePath.length > 1 && (
           <Polyline 
