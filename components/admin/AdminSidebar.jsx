@@ -6,8 +6,9 @@ import {
   StoreIcon, 
   TicketPercentIcon, 
   LayoutGrid, 
-  Wallet, // ✅ Added Wallet Icon
-  LogOut  // ✅ Added LogOut Icon for the footer
+  Wallet, 
+  LogOut,
+  Users // ✅ Added Users Icon
 } from "lucide-react"
 
 import Image from "next/image"
@@ -20,10 +21,11 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
   const sidebarLinks = [
     { name: 'Dashboard', href: '/admin', icon: LayoutGrid },
+    { name: 'Users', href: '/admin/users', icon: Users }, // ✅ Added Users Link
     { name: 'Stores', href: '/admin/stores', icon: StoreIcon },
     { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
     { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
-    { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, // ✅ Escrow Link
+    { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, 
   ]
 
   return (
@@ -45,7 +47,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
         className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] 
         bg-white border-r border-slate-100 shadow-xl lg:shadow-none 
         transform transition-transform duration-300 ease-in-out 
-        flex flex-col /* ✅ Essential for sticky header/footer */
+        flex flex-col 
         ${isOpen ? "translate-x-0" : "-translate-x-full"} 
         lg:translate-x-0`}
       >
@@ -84,7 +86,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
         {/* ======================================================
             2. SCROLLABLE NAVIGATION (Middle Section)
         ======================================================= */}
-        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+        {/* ✅ UPDATED: Built-in Tailwind scrollbar styling ensures it works everywhere */}
+        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 pr-2">
           <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Main Menu
           </p>
@@ -95,7 +98,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
               <Link
                 key={i}
                 href={link.href}
-                onClick={onClose} // Close sidebar on mobile click
+                onClick={onClose} 
                 className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium
                   ${isActive 
                     ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/20" 

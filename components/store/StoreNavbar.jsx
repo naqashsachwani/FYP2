@@ -1,7 +1,7 @@
 'use client' // Marks this as a Client Component (needed for hooks & Clerk)
 
 // Clerk authentication hooks & components
-import { useUser, useClerk } from "@clerk/nextjs" // Removed UserButton
+import { useUser, useClerk } from "@clerk/nextjs" 
 
 // React hooks
 import { useState, useEffect } from "react"
@@ -9,8 +9,8 @@ import { useState, useEffect } from "react"
 // Next.js routing
 import Link from "next/link"
 
-// Icons
-import { Menu, Home, Settings, LogOut } from "lucide-react"
+// Icons - ✅ Added ShieldCheck for the Admin link
+import { Menu, Home, Settings, LogOut, ShieldCheck } from "lucide-react"
 
 // Store Navbar Component
 const StoreNavbar = ({ onMenuClick }) => {
@@ -22,11 +22,33 @@ const StoreNavbar = ({ onMenuClick }) => {
   // Custom Profile Dropdown State
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  
+  // ✅ NEW: State for the Admin Button
+  const [showAdminBtn, setShowAdminBtn] = useState(false)
 
   // Hydration safety
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // ✅ NEW: Fetch admin role to conditionally show the dashboard link
+  useEffect(() => {
+    const checkRoles = async () => {
+      if (user) {
+        try {
+          const adminRes = await fetch('/api/admin/is-admin')
+          const adminData = await adminRes.json()
+          setShowAdminBtn(adminData.isAdmin === true)
+        } catch (error) {
+          console.error("Role verification failed", error)
+        }
+      }
+    }
+
+    if (mounted && user) {
+      checkRoles()
+    }
+  }, [mounted, user])
 
   return (
     // Sticky top navigation bar
@@ -101,7 +123,18 @@ const StoreNavbar = ({ onMenuClick }) => {
                         <Settings size={16} className="text-slate-500" /> Manage Account
                       </button>
 
-                      {/* --- NEW: TRUE LINK FOR HOMEPAGE (Supports Right-Click) --- */}
+                      {/* --- NEW: SECURE ADMIN LINK --- */}
+                      {showAdminBtn && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                        >
+                          <ShieldCheck size={16} className="text-slate-500" /> Admin Dashboard
+                        </Link>
+                      )}
+
+                      {/* --- TRUE LINK FOR HOMEPAGE --- */}
                       <Link
                         href="/"
                         onClick={() => setIsProfileOpen(false)}

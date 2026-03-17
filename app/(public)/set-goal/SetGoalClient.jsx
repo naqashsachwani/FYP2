@@ -81,7 +81,6 @@ export default function SetGoalClient() {
     setCouponMessage({ type: '', text: '' });
 
     try {
-      // ✅ CHANGED: Now hitting the unified /api/coupon route with POST
       const res = await fetch('/api/coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -189,7 +188,8 @@ export default function SetGoalClient() {
 
              <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                 <span className="font-bold text-slate-800">Final Goal Amount</span>
-                <span className="text-xl font-extrabold text-blue-600">PKR {finalTargetAmount.toLocaleString()}</span>
+                {/* ✅ UPDATED: Changed text-blue-600 to text-green-600 */}
+                <span className="text-xl font-extrabold text-green-600">PKR {finalTargetAmount.toLocaleString()}</span>
              </div>
           </div>
         </div>
@@ -266,7 +266,7 @@ export default function SetGoalClient() {
           <button
             onClick={startGoal}
             disabled={loading || !product}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:scale-100 active:scale-95 text-lg flex justify-center items-center gap-2"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:scale-100 active:scale-95 text-lg flex justify-center items-center gap-2"
           >
             {loading && <Loader2 size={20} className="animate-spin"/>}
             {loading ? "Creating Goal..." : "Start Goal Now"}

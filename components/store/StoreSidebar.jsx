@@ -11,11 +11,13 @@ import {
   Menu, 
   X, 
   Store, 
-  DollarSign 
+  DollarSign,
+  LogOut // ✅ Imported LogOut for the footer
 } from "lucide-react"
 
 import Image from "next/image"
 import Link from "next/link"
+import { SignOutButton } from "@clerk/nextjs" // ✅ Imported for the footer
 
 const StoreSidebar = ({ storeInfo }) => {
   const pathname = usePathname()
@@ -63,20 +65,16 @@ const StoreSidebar = ({ storeInfo }) => {
 
       {/* ================= SIDEBAR CONTAINER ================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen w-[280px] bg-white border-r border-slate-100 shadow-2xl lg:shadow-none
+        className={`fixed lg:sticky top-0 left-0 h-[100dvh] w-[280px] bg-white border-r border-slate-100 shadow-2xl lg:shadow-none
           transform transition-transform duration-300 z-50
-          flex flex-col /* ✅ Essential for scrolling layout */
+          flex flex-col 
           ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
         `}
       >
         {/* ================= 1. FIXED HEADER (Does Not Scroll) ================= */}
         <div className="relative pt-8 pb-6 px-6 flex flex-col items-center border-b border-slate-50 shrink-0"> 
-          {/* shrink-0 ensures header stays fixed size even on short screens */}
-
-          {/* Decorative gradient */}
           <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-blue-50/50 to-transparent -z-10" />
 
-          {/* Store Logo */}
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-violet-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition"></div>
             <div className="relative w-20 h-20 rounded-2xl p-1 bg-white shadow-sm ring-1 ring-slate-100">
@@ -90,7 +88,6 @@ const StoreSidebar = ({ storeInfo }) => {
             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white" />
           </div>
 
-          {/* Store Name & Role */}
           <div className="mt-4 text-center">
             <h3 className="text-slate-900 font-bold text-lg truncate max-w-[200px]">
               {storeInfo?.name || "My Store"}
@@ -101,7 +98,6 @@ const StoreSidebar = ({ storeInfo }) => {
             </span>
           </div>
 
-          {/* Close button (mobile only) */}
           <button
             onClick={() => setIsOpen(false)}
             className="absolute top-4 right-4 lg:hidden p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
@@ -111,8 +107,7 @@ const StoreSidebar = ({ storeInfo }) => {
         </div>
 
         {/* ================= 2. SCROLLABLE NAVIGATION ================= */}
-        {/* flex-1: fills remaining height. overflow-y-auto: enables scrolling */}
-        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 min-h-0 py-6 px-4 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent] pr-2">
           
           <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Store Management
@@ -145,6 +140,17 @@ const StoreSidebar = ({ storeInfo }) => {
           })}
         </nav>
         
+        {/* ================= 3. FIXED FOOTER (Sign Out) ================= */}
+        {/* ✅ ADDED: This provides a consistent layout with your Admin Sidebar */}
+        <div className="p-4 border-t border-slate-50 shrink-0 bg-white">
+            <SignOutButton>
+                <button className="flex items-center justify-center gap-3 px-4 py-3 w-full rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 font-medium group">
+                    <LogOut size={20} className="group-hover:stroke-red-600" />
+                    <span>Sign Out</span>
+                </button>
+            </SignOutButton>
+        </div>
+
       </aside>
     </>
   )

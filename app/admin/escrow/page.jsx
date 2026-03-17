@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { 
   Loader2, DollarSign, ArrowDownLeft, AlertCircle, RefreshCw, 
   Search, Copy, CheckCircle, ChevronLeft, ChevronRight, X, 
-  User, Store, CreditCard, Calendar, ShieldAlert 
+  User, Store, CreditCard, Calendar, ShieldAlert, Download 
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-// ... (Keep GoalDetailsModal Component exactly as it is) ...
+// PDF Generation Libraries
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// ... (GoalDetailsModal Component) ...
 const GoalDetailsModal = ({ goalId, onClose }) => {
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -95,6 +99,9 @@ export default function AdminEscrowPage() {
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("ALL");
   const [selectedGoalId, setSelectedGoalId] = useState(null);
+  
+  // ✅ NEW STATE: Loading state for the PDF generation
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -125,15 +132,14 @@ export default function AdminEscrowPage() {
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
 
-  // ✅ UPDATED SEARCH LOGIC
   const matchesSearch = (item) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
         (item.goalId && item.goalId.toLowerCase().includes(term)) ||
         (item.customerName && item.customerName.toLowerCase().includes(term)) ||
-        (item.productName && item.productName.toLowerCase().includes(term)) || // Added Product Search
-        (item.storeName && item.storeName.toLowerCase().includes(term))       // Added Store Search
+        (item.productName && item.productName.toLowerCase().includes(term)) ||
+        (item.storeName && item.storeName.toLowerCase().includes(term))
     );
   };
 
@@ -141,6 +147,128 @@ export default function AdminEscrowPage() {
   const pendingRefunds = data?.actionable?.filter(i => i.type === "REFUND" && matchesSearch(i)) || [];
   const historyData = data?.history?.data?.filter(matchesSearch) || [];
   const totalPages = data?.history?.totalPages || 1;
+
+  // ================= PDF GENERATION LOGIC (UPDATED) =================
+  const generatePDF = async () => {
+    setIsGeneratingPDF(true);
+    const toastId = toast.loading("Compiling full report...");
+
+    try {
+      // ✅ Fetch ALL data ignoring pagination just for the PDF
+      const res = await fetch(`/api/admin/escrow?page=1&limit=10000&filter=${filter}`);
+      const fullData = await res.json();
+      
+      const allHistoryData = fullData?.history?.data || [];
+      const allPendingReleases = fullData?.actionable?.filter(i => i.type === "RELEASE") || [];
+      const allPendingRefunds = fullData?.actionable?.filter(i => i.type === "REFUND") || [];
+
+      const doc = new jsPDF();
+      let currentY = 20;
+
+      // 1. Report Header
+      doc.setFontSize(22);
+      doc.setTextColor(31, 41, 55); 
+      doc.text("DreamSaver - Escrow Management Report", 14, currentY);
+      currentY += 8;
+
+      doc.setFontSize(10);
+      doc.setTextColor(107, 114, 128); 
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, currentY);
+      currentY += 15;
+
+      // 2. Statistics Section
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text("1. Overall Statistics", 14, currentY);
+      currentY += 8;
+
+      doc.setFontSize(11);
+      doc.setTextColor(75, 85, 99);
+      doc.text(`Platform Earnings: Rs ${fullData?.stats?.totalEarnings?.toLocaleString() || 0}`, 14, currentY);
+      currentY += 6;
+      doc.text(`Funds in Escrow: Rs ${fullData?.stats?.totalHeld?.toLocaleString() || 0}`, 14, currentY);
+      currentY += 6;
+      doc.text(`Pending Actions: ${fullData?.stats?.pendingActions || 0}`, 14, currentY);
+      currentY += 15;
+
+      // 3. Pending Payouts Table
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text(`2. Pending Payouts (Total: ${allPendingReleases.length})`, 14, currentY);
+      currentY += 6;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Goal ID', 'Product', 'Amount', 'Fee (5%)', 'Net Payout']],
+        body: allPendingReleases.map(i => [
+          i.goalId?.slice(0, 8) + '...', 
+          i.productName, 
+          `Rs ${i.amount?.toLocaleString()}`, 
+          `- Rs ${(i.amount * 0.05).toLocaleString()}`, 
+          `Rs ${(i.amount * 0.95).toLocaleString()}`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [34, 197, 94] }, 
+        emptyRecordMessage: "No pending payouts at this time."
+      });
+      currentY = doc.lastAutoTable.finalY + 15;
+
+      // 4. Pending Refunds Table
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text(`3. Pending Refunds (Total: ${allPendingRefunds.length})`, 14, currentY);
+      currentY += 6;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Goal ID', 'Product', 'Amount', 'Penalty (20%)', 'Refund User']],
+        body: allPendingRefunds.map(i => [
+          i.goalId?.slice(0, 8) + '...', 
+          i.productName, 
+          `Rs ${i.amount?.toLocaleString()}`, 
+          `- Rs ${(i.amount * 0.20).toLocaleString()}`, 
+          `Rs ${(i.amount * 0.80).toLocaleString()}`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [239, 68, 68] }, 
+        emptyRecordMessage: "No pending refunds at this time."
+      });
+      currentY = doc.lastAutoTable.finalY + 15;
+
+      // 5. Transaction History Table (Using all fetched records)
+      doc.setFontSize(14);
+      doc.setTextColor(31, 41, 55);
+      doc.text(`4. Transaction History (Filter: ${filter} | Total: ${allHistoryData.length})`, 14, currentY);
+      currentY += 6;
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Date', 'Goal ID', 'Status', 'Product', 'Total Amount', 'Platform Fee', 'Net Exchanged']],
+        body: allHistoryData.map(h => [
+          new Date(h.date).toLocaleDateString(),
+          h.goalId?.slice(0, 8) + '...',
+          h.status,
+          h.productName,
+          `Rs ${h.amount?.toLocaleString()}`,
+          h.status === 'HELD' ? 'Pending' : `+ Rs ${h.platformFee?.toLocaleString()}`,
+          h.status === 'HELD' ? 'Pending' : `Rs ${h.netAmount?.toLocaleString()}`
+        ]),
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [99, 102, 241] }, 
+        emptyRecordMessage: "No transaction history available."
+      });
+
+      // Save and Trigger Download
+      doc.save(`Escrow_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success("PDF Downloaded!", { id: toastId });
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to generate report", { id: toastId });
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   if (loading && !data) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
 
@@ -150,7 +278,7 @@ export default function AdminEscrowPage() {
 
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* HEADER */}
+        {/* HEADER & CONTROLS */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div><h1 className="text-2xl font-bold text-gray-900">Escrow Management</h1><p className="text-sm text-gray-500">Admin Panel</p></div>
           <div className="flex gap-2 w-full md:w-auto">
@@ -158,7 +286,17 @@ export default function AdminEscrowPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input type="text" placeholder="Search ID, Product..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
-             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50"><RefreshCw size={20} /></button>
+             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50" title="Refresh Data"><RefreshCw size={20} /></button>
+             
+             {/* ✅ BUTTON NOW HAS LOADING STATE */}
+             <button 
+                onClick={generatePDF} 
+                disabled={isGeneratingPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition shadow-sm disabled:opacity-70"
+             >
+                {isGeneratingPDF ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                <span className="hidden sm:inline">{isGeneratingPDF ? 'Compiling...' : 'Export Report'}</span>
+             </button>
           </div>
         </div>
 
@@ -259,7 +397,7 @@ export default function AdminEscrowPage() {
                         <td className="px-6 py-4 font-mono text-xs text-blue-600 group-hover:underline">
                             <div className="flex items-center gap-1">
                                 {h.goalId ? h.goalId.slice(0, 8) : 'N/A'}...
-                                <button onClick={(e) => copyToClipboard(e, h.goalId)} className="p-1 hover:bg-blue-100 rounded"><Copy size={12} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); copyToClipboard(h.goalId); }} className="p-1 hover:bg-blue-100 rounded"><Copy size={12} /></button>
                             </div>
                         </td>
                         <td className="px-6 py-4 text-gray-500">{new Date(h.date).toLocaleDateString()}</td>

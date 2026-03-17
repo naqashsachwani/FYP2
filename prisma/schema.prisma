@@ -85,7 +85,7 @@ model User {
   name  String
   email String
   image String
-  cart  Json   @default("{}")
+  isActive  Boolean  @default(true)
 
   // Relations
   ratings           Rating[]
@@ -102,6 +102,14 @@ model User {
   couponUsages      CouponUsage[]
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tracks how many times an email has been deleted
+model DeletionTracker {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  count     Int      @default(0)
   updatedAt DateTime @updatedAt
 }
 
