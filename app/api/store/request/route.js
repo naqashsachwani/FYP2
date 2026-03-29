@@ -1,0 +1,84 @@
+import prisma from "@/lib/prisma";
+import { getAuth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+export async function GET(req) {
+  try {
+    const { userId } = getAuth(req);
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // 1. Get the Store ID linked to this user
+    const store = await prisma.store.findUnique({ where: { userId } });
+    if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
+
+    // 2. Fetch complaints filed by this store
+    const requests = await prisma.complaint.findMany({
+      where: { filerStoreId: store.id },
+      include: {
+        targetUser: { select: { name: true, email: true } },
+        goal: { 
+          select: { 
+            id: true, 
+            targetAmount: true,
+            product: { select: { name: true } } 
+          } 
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // 3. Fetch active goals for the dropdown (so they can request price lock changes)
+    const activeGoals = await prisma.goal.findMany({
+      where: { 
+        product: { storeId: store.id },
+        status: "ACTIVE" 
+      },
+      include: { 
+        product: { select: { name: true } },
+        user: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json({ requests, activeGoals });
+  } catch (error) {
+    console.error("Fetch Store Requests Error:", error);
+    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+  }
+}
+
+export async function POST(req) {
+  try {
+    const { userId } = getAuth(req);
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const store = await prisma.store.findUnique({ where: { userId } });
+    if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
+
+    const { title, description, type, goalId, targetUserId } = await req.json();
+
+    if (!title || !description || !type) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Create the request/complaint
+    const newRequest = await prisma.complaint.create({
+      data: {
+        title,
+        description,
+        type,
+        filerStoreId: store.id,
+        // If it's a buyer issue or price lock, link the user/goal
+        targetUserId: targetUserId || null,
+        goalId: goalId || null,
+        status: "OPEN"
+      }
+    });
+
+    return NextResponse.json({ success: true, request: newRequest });
+
+  } catch (error) {
+    console.error("Create Store Request Error:", error);
+    return NextResponse.json({ error: "Failed to submit request" }, { status: 500 });
+  }
+}

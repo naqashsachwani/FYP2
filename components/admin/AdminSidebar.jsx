@@ -8,7 +8,8 @@ import {
   LayoutGrid, 
   Wallet, 
   LogOut,
-  Users // ✅ Added Users Icon
+  Users,
+  MessageSquareWarning // ✅ Added Icon for Complaints
 } from "lucide-react"
 
 import Image from "next/image"
@@ -21,11 +22,13 @@ export default function AdminSidebar({ isOpen, onClose }) {
 
   const sidebarLinks = [
     { name: 'Dashboard', href: '/admin', icon: LayoutGrid },
-    { name: 'Users', href: '/admin/users', icon: Users }, // ✅ Added Users Link
+    { name: 'Users', href: '/admin/users', icon: Users }, 
     { name: 'Stores', href: '/admin/stores', icon: StoreIcon },
     { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
     { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
     { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, 
+    // ✅ ADDED: Requests & Complaints
+    { name: 'Requests & Complaints', href: '/admin/complaints', icon: MessageSquareWarning }, 
   ]
 
   return (
@@ -63,13 +66,13 @@ export default function AdminSidebar({ isOpen, onClose }) {
           <div className="relative group cursor-pointer">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl opacity-75 group-hover:opacity-100 transition duration-200 blur-[2px]" />
             <Image
-              className="relative w-16 h-16 rounded-2xl border-2 border-white object-cover"
+              className="relative w-16 h-16 rounded-2xl border-2 border-white object-cover z-10 bg-white"
               src={user?.imageUrl || "/default-avatar.png"}
               alt="Admin profile"
               width={64}
               height={64}
             />
-            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white" />
+            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white z-20" />
           </div>
 
           {/* Name & Role */}
@@ -86,7 +89,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
         {/* ======================================================
             2. SCROLLABLE NAVIGATION (Middle Section)
         ======================================================= */}
-        {/* ✅ UPDATED: Built-in Tailwind scrollbar styling ensures it works everywhere */}
         <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 pr-2">
           <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Main Menu

@@ -12,12 +12,13 @@ import {
   X, 
   Store, 
   DollarSign,
-  LogOut // ✅ Imported LogOut for the footer
+  LogOut,
+  MessageSquareWarning // ✅ Imported new icon for the requests page
 } from "lucide-react"
 
 import Image from "next/image"
 import Link from "next/link"
-import { SignOutButton } from "@clerk/nextjs" // ✅ Imported for the footer
+import { SignOutButton } from "@clerk/nextjs"
 
 const StoreSidebar = ({ storeInfo }) => {
   const pathname = usePathname()
@@ -30,6 +31,8 @@ const StoreSidebar = ({ storeInfo }) => {
     { name: 'Orders', href: '/store/orders', icon: LayoutListIcon },
     { name: 'Revenue', href: '/store/revenue', icon: DollarSign },
     { name: 'Location Settings', href: '/store/store-settings', icon: Settings },
+    // ✅ ADDED: Requests link
+    { name: 'Requests & Support', href: '/store/request', icon: MessageSquareWarning },
   ]
 
   return (
@@ -141,7 +144,6 @@ const StoreSidebar = ({ storeInfo }) => {
         </nav>
         
         {/* ================= 3. FIXED FOOTER (Sign Out) ================= */}
-        {/* ✅ ADDED: This provides a consistent layout with your Admin Sidebar */}
         <div className="p-4 border-t border-slate-50 shrink-0 bg-white">
             <SignOutButton>
                 <button className="flex items-center justify-center gap-3 px-4 py-3 w-full rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 font-medium group">

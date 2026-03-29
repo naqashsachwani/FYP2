@@ -45,6 +45,8 @@ const Footer = () => {
       links: [
         { text: "Home", path: "/" },
         { text: "Create Your Store", path: "/create-store" },
+        // ✅ ADDED: Link to the User Complaints page
+        { text: "Support & Complaints", path: "/complaints" }, 
       ],
     },
     {
@@ -52,7 +54,7 @@ const Footer = () => {
       links: [
         { text: "+92-301-467-7899", path: "/", icon: Phone },
         { text: "contact@dreamsaver.com", path: "/", icon: Mail },
-        { text: "ABC Street, 94102", path: "/", icon: MapPin },
+        { text: "ABC Street, Karachi", path: "/", icon: MapPin },
       ],
     },
   ]
@@ -94,15 +96,15 @@ const Footer = () => {
             <div className="mt-6 p-4 bg-white rounded-3xl shadow-md border">
               <p className="text-sm font-semibold mb-2">Stay Updated</p>
               <div className="flex gap-2">
-                <input type="email" placeholder="Enter your email" className="flex-1 px-4 py-2 border rounded-xl" />
-                <button className="px-4 py-2 bg-green-500 text-white rounded-xl">Join</button>
+                <input type="email" placeholder="Enter your email" className="flex-1 px-4 py-2 border rounded-xl outline-none focus:border-green-500" />
+                <button className="px-4 py-2 bg-green-500 hover:bg-green-600 transition text-white rounded-xl font-medium">Join</button>
               </div>
             </div>
 
             {/* Social Media Links */}
             <div className="flex gap-3 mt-6">
               {socialIcons.map((item, i) => (
-                <Link key={i} href={item.link} target="_blank" className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md">
+                <Link key={i} href={item.link} target="_blank" className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md border hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
                   <item.icon />
                 </Link>
               ))}
@@ -113,16 +115,16 @@ const Footer = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {linkSections.map((section, index) => (
               <div key={index}>
-                <h3 className="font-bold mb-4 border-b-2 border-green-500/30 inline-block">
+                <h3 className="font-bold mb-4 border-b-2 border-green-500/30 inline-block text-slate-800">
                   {section.title}
                 </h3>
                 <ul className="space-y-3">
                   {section.links.map((link, i) => (
                     <li key={i}>
-                      <Link href={link.path} className="flex items-center gap-2 hover:translate-x-1 transition">
+                      <Link href={link.path} className="flex items-center gap-2 text-slate-600 hover:text-green-600 hover:translate-x-1 transition font-medium text-sm group">
                         {link.icon && <link.icon size={16} className="text-green-500" />}
                         {link.text}
-                        <ArrowRight size={12} className="opacity-0 group-hover:opacity-70" />
+                        <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-green-500" />
                       </Link>
                     </li>
                   ))}
@@ -134,9 +136,9 @@ const Footer = () => {
 
         {/* ================= FOOTER BOTTOM BAR ================= */}
         <div className="border-t py-6 flex flex-col sm:flex-row justify-between gap-4 text-sm text-slate-600">
-          <span>© 2025 DreamSaver. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} DreamSaver. All rights reserved.</span>
           <span className="flex items-center gap-1">
-            Made with <Heart size={14} className="text-red-500" /> for amazing shoppers
+            Made with <Heart size={14} className="text-red-500 fill-red-500" /> for amazing shoppers
           </span>
         </div>
 

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getAuth } from '@clerk/nextjs/server';
 
 export const dynamic = 'force-dynamic';
+
 // ==========================================
 // GET: Fetch and sort all coupons for the user
 // ==========================================
@@ -13,9 +14,14 @@ export async function GET(req) {
 
         const now = new Date();
 
-        // 1. Fetch all public coupons
+        // 1. ✅ Fetch public coupons OR private coupons assigned to this user
         const allCoupons = await prisma.coupon.findMany({
-            where: { isPublic: true },
+            where: { 
+                OR: [
+                    { isPublic: true },
+                    { userId: userId } // Grabs their apology coupons!
+                ]
+            },
             orderBy: { expiresAt: 'desc' }
         });
 
@@ -26,13 +32,13 @@ export async function GET(req) {
             _count: { couponCode: true }
         });
 
-        // Convert array to a quick lookup object { "SUMMER20": 1, "WELCOME": 2 }
+        // Convert array to a quick lookup object
         const usageMap = {};
         usageRecords.forEach(record => {
             usageMap[record.couponCode] = record._count.couponCode;
         });
 
-        // 3. Check if they are a "New User" (0 active/completed goals)
+        // 3. Check if they are a "New User"
         const goalCount = await prisma.goal.count({ where: { userId } });
         const isNewUser = goalCount === 0;
 
@@ -82,6 +88,11 @@ export async function POST(req) {
         });
 
         if (!coupon) return NextResponse.json({ error: "Invalid coupon code" }, { status: 404 });
+
+        // ✅ SECURITY: Check if it's a private apology coupon assigned to someone else
+        if (!coupon.isPublic && coupon.userId && coupon.userId !== userId) {
+            return NextResponse.json({ error: "This coupon is not assigned to your account." }, { status: 403 });
+        }
 
         // 2. Check Expiry
         if (new Date(coupon.expiresAt) < new Date()) {

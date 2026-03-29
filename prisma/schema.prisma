@@ -91,6 +91,7 @@ enum ComplaintType {
   USER_BEHAVIOR
   STORE_BEHAVIOR
   OTHER
+  PRICE_LOCK
 }
 
 enum WalletTransactionType {
@@ -305,7 +306,7 @@ model Coupon {
   usageLimit  Int      @default(1) 
   expiresAt   DateTime
   createdAt   DateTime @default(now())
-
+  userId      String?
   // Relations
   goals       Goal[]
   usages      CouponUsage[]
