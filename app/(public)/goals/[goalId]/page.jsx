@@ -4,14 +4,15 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
-import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift } from "lucide-react";
+import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift, Wallet } from "lucide-react";
 import GoalCard from "@/components/GoalCard";
 import RedeemAction from "@/components/RedeemAction";
 import { useUser } from "@clerk/nextjs";
+import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* ================= JSPDF GENERATORS ================= */
+/* ================= JSPDF GENERATORS (Unchanged) ================= */
 const generateInvoicePDF = (transaction, product, userName) => {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -137,7 +138,7 @@ const generateReportPDF = (deposits, goalName) => {
   doc.save("DreamSaver_Detailed_Report.pdf");
 };
 
-/* ================= MODAL COMPONENT ================= */
+/* ================= INVOICE MODAL COMPONENT (Unchanged) ================= */
 const InvoiceModal = ({ transaction, product, onClose, userName }) => {
   if (!transaction) return null;
   return (
@@ -213,6 +214,12 @@ export default function GoalDetails() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [addresses, setAddresses] = useState([]); 
 
+  // Wallet Deposit Modal State
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [isProcessingWallet, setIsProcessingWallet] = useState(false);
+
   const handledRef = useRef(false);
 
   const fetchGoal = async () => {
@@ -238,6 +245,16 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
+  const fetchWalletBalance = async () => {
+    try {
+        const res = await fetch(`/api/wallet`); 
+        if(res.ok) {
+            const data = await res.json();
+            setWalletBalance(Number(data.balance) || 0);
+        }
+    } catch (error) { console.error(error); }
+  };
+
   const normalizeAndSetGoal = (goalData) => {
     const deposits = (goalData.deposits || []).map((d) => ({
       ...d,
@@ -254,7 +271,6 @@ export default function GoalDetails() {
       deposits: deposits,
       saved: calculatedSaved,
       endDate: validEndDate,
-      // ✅ delivery will now be present thanks to the API fix
       delivery: goalData.delivery, 
       status: goalData.status
     };
@@ -265,7 +281,10 @@ export default function GoalDetails() {
 
   useEffect(() => {
     fetchGoal();
-    if (user) fetchAddresses();
+    if (user) {
+      fetchAddresses();
+      fetchWalletBalance();
+    }
   }, [goalId, user]);
 
   // Handle Stripe Success
@@ -290,6 +309,40 @@ export default function GoalDetails() {
     }
   }, [searchParams, goalId, router]);
 
+  const handleWalletDepositSubmit = async (e) => {
+    e.preventDefault();
+    const amountNum = Number(walletAmount);
+    const remaining = Math.max(0, goal.targetAmount - goal.saved);
+
+    if (amountNum <= 0) return toast.error("Enter a valid amount");
+    if (amountNum > walletBalance) return toast.error("Insufficient wallet balance");
+    if (amountNum > remaining) return toast.error(`Maximum allowed is Rs ${remaining}`);
+
+    setIsProcessingWallet(true);
+    const toastId = toast.loading("Processing wallet deposit...");
+
+    try {
+      const res = await fetch(`/api/goals/${goalId}/deposit/wallet`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amountNum })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      toast.success(data.goalCompleted ? "🎉 Goal Completed!" : "✅ Deposit Added via Wallet!", { id: toastId });
+      normalizeAndSetGoal(data.goal);
+      setIsWalletModalOpen(false);
+      setWalletAmount("");
+      fetchWalletBalance(); // Update balance
+    } catch (error) {
+      toast.error(error.message || "Failed to process deposit", { id: toastId });
+    } finally {
+      setIsProcessingWallet(false);
+    }
+  };
+
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" /></div>;
   if (!goal) return <p className="p-4 text-red-500">Goal not found</p>;
 
@@ -299,13 +352,12 @@ export default function GoalDetails() {
   const chartData = { labels: chartPoints.map((p) => p.date), datasets: [{ label: "Total Saved", data: cumulativeData, fill: true, backgroundColor: "rgba(16,185,129,0.1)", borderColor: "rgba(5,150,105,1)", tension: 0.3 }] };
   const userName = user ? (user.fullName || user.firstName) : "Valued User";
   
-  // ✅ LOGIC
   const isGoalCompleted = goal.status === "COMPLETED" || goal.status === "REDEEMED";
-  // ✅ Redemeed if status matches OR if delivery object exists
   const isRedeemed = goal.status === "REDEEMED" || !!goal.delivery;
+  const remainingTarget = Math.max(0, goal.targetAmount - goal.saved);
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto p-4 max-w-4xl relative">
       {selectedInvoice && <InvoiceModal transaction={selectedInvoice} product={goal.product} onClose={() => setSelectedInvoice(null)} userName={userName} />}
       {successMessage && <div className="mb-4 bg-green-50 text-green-700 p-3 rounded border border-green-200">{successMessage}</div>}
 
@@ -344,13 +396,23 @@ export default function GoalDetails() {
       {/* ✅✅✅ ACTION BUTTONS ✅✅✅ */}
       <div className="mt-6 flex flex-col sm:flex-row gap-4 flex-wrap">
         
-        {/* 1. Deposit Button */}
+        {/* 1. Deposit Button (Stripe) */}
         <button
           disabled={savingDeposit || isGoalCompleted}
           onClick={() => router.push(`/goals/${goalId}/deposit`)}
-          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all ${savingDeposit || isGoalCompleted ? "bg-slate-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all ${savingDeposit || isGoalCompleted ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
         >
-          {savingDeposit ? "Processing..." : isGoalCompleted ? "Goal Completed" : "Add Deposit via Stripe"}
+          {savingDeposit ? "Processing..." : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
+        </button>
+
+        {/* ✅ NEW: Deposit Button (Wallet) */}
+        <button
+          disabled={savingDeposit || isGoalCompleted}
+          onClick={() => setIsWalletModalOpen(true)}
+          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold shadow-md transition-all flex items-center justify-center gap-2 ${savingDeposit || isGoalCompleted ? "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300" : "bg-white text-emerald-700 border-2 border-emerald-600 hover:bg-emerald-50"}`}
+        >
+          <Wallet size={18} />
+          Deposit via Wallet
         </button>
 
         {/* 2. Redeem Button (Active) or Disabled "Redeemed" Button */}
@@ -369,7 +431,7 @@ export default function GoalDetails() {
             </button>
         ) : null}
 
-        {/* 3. Track Button (Side-by-side with Disabled Redeem) */}
+        {/* 3. Track Button */}
         {isRedeemed && goal.delivery && (
             <button
                 onClick={() => router.push(`/tracking/${goal.delivery.id}`)}
@@ -394,7 +456,7 @@ export default function GoalDetails() {
             {sortedDeposits.map((d) => (
               <li key={d.id} className="p-5 border border-slate-200 rounded-xl flex items-center justify-between bg-white shadow-sm">
                 <div>
-                  <span className="text-slate-900 font-bold block">Deposit</span>
+                  <span className="text-slate-900 font-bold block">{d.paymentMethod === "WALLET" ? "Wallet Deposit" : "Deposit"}</span>
                   <span className="text-slate-500 text-sm">{d.createdAt.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -408,6 +470,59 @@ export default function GoalDetails() {
           </ul>
         </div>
       )}
+
+      {/* ✅ NEW: WALLET DEPOSIT MODAL */}
+      {isWalletModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h3 className="font-bold text-xl text-gray-900 flex items-center gap-2">
+                <Wallet className="text-emerald-600" /> Pay with Wallet
+              </h3>
+              <button onClick={() => setIsWalletModalOpen(false)} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition"><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleWalletDepositSubmit} className="p-6 space-y-5">
+              
+              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <span className="text-sm font-medium text-slate-600">Remaining Target:</span>
+                <span className="font-bold text-slate-900">Rs {remainingTarget.toLocaleString()}</span>
+              </div>
+
+              <div className={`p-4 rounded-xl text-sm border flex items-center justify-between font-medium ${walletBalance > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                <span>Available Wallet Balance:</span>
+                <span className="font-mono font-bold text-lg">Rs {walletBalance.toLocaleString()}</span>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Amount to Deposit (Rs)</label>
+                <input 
+                  type="number" 
+                  required
+                  min="1"
+                  max={Math.min(walletBalance, remainingTarget)}
+                  value={walletAmount}
+                  onChange={(e) => setWalletAmount(e.target.value)}
+                  placeholder={`Max: Rs ${Math.min(walletBalance, remainingTarget).toLocaleString()}`}
+                  className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button type="button" onClick={() => setIsWalletModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition">Cancel</button>
+                <button 
+                  type="submit" 
+                  disabled={isProcessingWallet || walletBalance <= 0 || !walletAmount || Number(walletAmount) > remainingTarget || Number(walletAmount) > walletBalance} 
+                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  {isProcessingWallet ? <Loader2 size={18} className="animate-spin" /> : "Confirm Payment"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

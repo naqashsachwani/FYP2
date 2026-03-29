@@ -3,7 +3,7 @@ import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 export async function POST(req, { params }) {
-  const { id } = await params; // Can be EscrowID or RefundRequestID
+  const { id } = await params; 
   const { userId } = getAuth(req);
 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,16 +13,12 @@ export async function POST(req, { params }) {
 
     // ====================================================
     // ✅ CASE 1: RELEASE FUNDS (Product DELIVERED)
-    // ----------------------------------------------------
-    // Logic: Apply 5% Platform Fee.
     // ====================================================
     if (action === "RELEASE") {
         const escrow = await prisma.escrow.findUnique({ where: { id } });
         if (!escrow) return NextResponse.json({ error: "Escrow record not found" }, { status: 404 });
 
         const totalAmount = Number(escrow.amount);
-        
-        // --- 5% FEE APPLIES HERE ONLY ---
         const platformFee = totalAmount * 0.05; 
         const netAmount = totalAmount - platformFee;
 
@@ -30,8 +26,8 @@ export async function POST(req, { params }) {
             where: { id },
             data: {
                 status: "RELEASED",
-                platformFee, // Records the 5% fee
-                netAmount,   // Records the 95% payout to store
+                platformFee, 
+                netAmount,   
                 releasedAt: new Date(),
                 releasedBy: userId,
                 notes: "Released to Store (5% Platform Fee Applied)"
@@ -43,9 +39,6 @@ export async function POST(req, { params }) {
 
     // ====================================================
     // ❌ CASE 2: REFUND FUNDS (Goal CANCELLED)
-    // ----------------------------------------------------
-    // Logic: Apply 20% Penalty (10% Admin, 10% Store).
-    // NO 5% Platform Fee is added here.
     // ====================================================
     if (action === "REFUND") {
         const request = await prisma.refundRequest.findUnique({ 
@@ -60,12 +53,9 @@ export async function POST(req, { params }) {
         const realStoreId = request.goal?.product?.storeId; 
         
         // --- PENALTY LOGIC ---
-        // Penalty: 20% (Taken from user)
-        // Split: 10% to Admin, 10% to Store
         const penaltyRate = totalAmount > 0 ? 0.20 : 0; 
-        
-        const adminShareRate = 0.10; // 10%
-        const userRefundRate = 1 - penaltyRate; // 80% (User gets back)
+        const adminShareRate = 0.10; 
+        const userRefundRate = 1 - penaltyRate; // 80% 
         
         const adminFee = totalAmount * adminShareRate; 
         const userRefundAmount = totalAmount * userRefundRate;
@@ -79,34 +69,33 @@ export async function POST(req, { params }) {
                     status: "APPROVED",
                     processedAt: new Date(),
                     adminId: userId,
-                    responseNote: `Refund Approved. 20% Penalty Applied (10% Admin, 10% Store).`
+                    responseNote: `Refund Approved. 20% Penalty Applied.`
                 }
             });
 
-            // B. Create Refund Record (User View)
+            // B. Create Refund Record
             if (realStoreId) {
                 await tx.refund.create({
                     data: {
                         userId: request.userId,
                         goalId: goalId,
                         storeId: realStoreId,
-                        amount: userRefundAmount, // 80% back to user
+                        amount: userRefundAmount, 
                         reason: request.reason || "Goal Cancellation",
                         status: "COMPLETED",
                     }
                 });
             }
 
-            // C. Update Escrow (Money Movement)
+            // C. Update Escrow
             const escrowRecord = await tx.escrow.findUnique({ where: { goalId: goalId } });
-            
             if (escrowRecord) {
                 await tx.escrow.update({
                     where: { id: escrowRecord.id },
                     data: {
                         status: "REFUNDED",
-                        platformFee: adminFee, // Records Admin's 10% Share
-                        netAmount: userRefundAmount, // Records User's 80% Refund
+                        platformFee: adminFee, 
+                        netAmount: userRefundAmount, 
                         releasedAt: new Date(),
                         releasedBy: userId,
                         notes: `Refunded. Split: 80% User, 10% Admin, 10% Store.`
@@ -119,9 +108,36 @@ export async function POST(req, { params }) {
                 where: { id: goalId },
                 data: { status: "REFUNDED" }
             });
+
+            // ==========================================
+            // ✅ E. NEW: UPSERT USER WALLET
+            // ==========================================
+            const wallet = await tx.wallet.upsert({
+                where: { userId: request.userId },
+                create: { 
+                    userId: request.userId, 
+                    balance: userRefundAmount 
+                },
+                update: { 
+                    balance: { increment: userRefundAmount } 
+                }
+            });
+
+            // ==========================================
+            // ✅ F. NEW: RECORD WALLET TRANSACTION
+            // ==========================================
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: wallet.id,
+                    amount: userRefundAmount,
+                    type: "REFUND_CREDIT",
+                    description: `Refund for Cancelled Goal (${request.goal?.product?.name || 'Item'})`,
+                    referenceId: goalId
+                }
+            });
         });
 
-        return NextResponse.json({ success: true, message: "Refund Processed" });
+        return NextResponse.json({ success: true, message: "Refund Processed & Wallet Credited" });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

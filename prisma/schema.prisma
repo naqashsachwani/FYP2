@@ -65,7 +65,6 @@ enum DeliveryStatus {
 enum NotificationChannel {
   IN_APP
   EMAIL
-  // SMS removed
 }
 
 enum NotificationType {
@@ -76,30 +75,58 @@ enum NotificationType {
   PAYMENT_CONFIRMATION
 }
 
-// DepositFrequency enum removed
+// --- NEW ENUMS ---
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum ComplaintType {
+  DELIVERY
+  PAYMENT
+  REFUND
+  PRODUCT_ISSUE
+  USER_BEHAVIOR
+  STORE_BEHAVIOR
+  OTHER
+}
+
+enum WalletTransactionType {
+  REFUND_CREDIT     // Money added back from a cancelled goal/order
+  DEPOSIT_PAYMENT   // Money used from wallet to pay for a new goal
+  WITHDRAWAL        // User withdrew money to their bank
+}
 
 // ---------- MODELS ----------
 
 model User {
-  id    String @id
-  name  String
-  email String
-  image String
-  isActive  Boolean  @default(true)
-
+  id        String   @id
+  name      String
+  email     String   @unique
+  image     String
+  isActive  Boolean  @default(true) // Keeps track of admin bans
+  cart      Json?    @default("[]")
+  
   // Relations
-  ratings           Rating[]
-  addresses         Address[]
-  store             Store?
-  buyerOrders       Order[]            @relation("BuyerRelation")
-  goals             Goal[]
-  deposits          Deposit[]
-  transactions      Transaction[]
-  refundRequests    RefundRequest[]
-  refunds           Refund[]           @relation("UserRefunds")
-  storeApplications StoreApplication[]
-  notifications     Notification[]
-  couponUsages      CouponUsage[]
+  ratings            Rating[]
+  addresses          Address[]
+  store              Store?
+  buyerOrders        Order[]            @relation("BuyerRelation")
+  goals              Goal[]
+  deposits           Deposit[]
+  transactions       Transaction[]
+  refundRequests     RefundRequest[]
+  refunds            Refund[]           @relation("UserRefunds")
+  storeApplications  StoreApplication[]
+  notifications      Notification[]
+  couponUsages       CouponUsage[]
+
+  // --- NEW: WALLET & COMPLAINTS ---
+  wallet             Wallet?
+  filedComplaints    Complaint[]        @relation("ComplaintsFiledByUser")
+  targetedComplaints Complaint[]        @relation("ComplaintsAgainstUser")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,14 +146,14 @@ model Store {
   name        String
   description String
   username    String   @unique
-  address     String   // Existing address field
+  address     String   
   
-  // ✅ NEW FIELDS FOR DELIVERY MAP & SETTINGS
+  // Delivery Map & Settings
   city        String?
   zip         String?
   country     String?  @default("Pakistan")
-  latitude    Float?   // For GPS Map
-  longitude   Float?   // For GPS Map
+  latitude    Float?   
+  longitude   Float?   
 
   status      String   @default("pending")
   isActive    Boolean  @default(false)
@@ -143,6 +170,10 @@ model Store {
   storeApplication StoreApplication? @relation("Store_Application")
   priceLocks       PriceLock[]
   refunds          Refund[]
+
+  // --- NEW: COMPLAINTS ---
+  filedComplaints    Complaint[]       @relation("ComplaintsFiledByStore")
+  targetedComplaints Complaint[]       @relation("ComplaintsAgainstStore")
 
   @@index([status])
   @@index([isActive])
@@ -196,7 +227,9 @@ model Order {
   refundRequests RefundRequest[]
   escrows        Escrow[]
   priceLocks     PriceLock[]
-  // ratings Rating[] -> REMOVED
+  
+  // --- NEW: COMPLAINTS ---
+  complaints     Complaint[]
 
   @@index([userId])
   @@index([storeId])
@@ -219,11 +252,10 @@ model OrderItem {
 model Rating {
   id         String   @id @default(cuid())
   rating     Int
-  review     String?  // Made optional so users can leave just a star rating
+  review     String?  
   userId     String
   productId  String
   images     String[]
-  // --- EDITED FOR GOAL/DELIVERY LOGIC ---
   goalId     String
   deliveryId String
   
@@ -231,12 +263,11 @@ model Rating {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  goal       Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  goal     Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
-  // A user can only leave one review per goal/product combination
   @@unique([userId, productId, goalId])
 }
 
@@ -271,11 +302,11 @@ model Coupon {
   forNewUser  Boolean
   forMember   Boolean  @default(false)
   isPublic    Boolean
-  usageLimit  Int      @default(1) // NEW: Enforces how many times it can be used
+  usageLimit  Int      @default(1) 
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 
-  // NEW RELATIONS
+  // Relations
   goals       Goal[]
   usages      CouponUsage[]
 
@@ -296,21 +327,21 @@ model CouponUsage {
 }
 
 model Goal {
-  id           String     @id @default(cuid())
-  userId       String
-  productId    String?
-  targetAmount Decimal    @db.Decimal(18, 2)
-  saved        Decimal    @db.Decimal(18, 2) @default(0)
-  status       GoalStatus @default(ACTIVE)
-  startDate    DateTime?  @default(now())
-  endDate      DateTime?
+  id             String     @id @default(cuid())
+  userId         String
+  productId      String?
+  targetAmount   Decimal    @db.Decimal(18, 2)
+  saved          Decimal    @db.Decimal(18, 2) @default(0)
+  status         GoalStatus @default(ACTIVE)
+  startDate      DateTime?  @default(now())
+  endDate        DateTime?
   
-  priceLocked  Boolean    @default(true)
-  lockedPrice  Decimal    @db.Decimal(18, 2)
-  couponCode    String?
-  coupon        Coupon?  @relation(fields: [couponCode], references: [code])
-  deliveryFee   Decimal  @db.Decimal(18, 2) @default(0)
-  discountAmount Decimal @db.Decimal(18, 2) @default(0)
+  priceLocked    Boolean    @default(true)
+  lockedPrice    Decimal    @db.Decimal(18, 2)
+  couponCode     String?
+  coupon         Coupon?    @relation(fields: [couponCode], references: [code])
+  deliveryFee    Decimal    @db.Decimal(18, 2) @default(0)
+  discountAmount Decimal    @db.Decimal(18, 2) @default(0)
 
   // Relations
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -323,9 +354,10 @@ model Goal {
   transactions  Transaction[]
   escrow        Escrow?        @relation("GoalEscrow")
   priceLock     PriceLock?     @relation("GoalPriceLock")
-  
-  // --- ADDED ---
   ratings       Rating[]
+  
+  // --- NEW: COMPLAINTS ---
+  complaints    Complaint[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -371,23 +403,21 @@ model Delivery {
   trackingNumber String?
   carrier        String?
   
-  // --- Customer Location (Static) ---
+  // --- Customer Location ---
   shippingAddress String?
-  coordinates     String?        // Legacy field (optional to keep)
-  destinationLat  Float?         // Where the package is going
-  destinationLng  Float?         // Where the package is going
+  coordinates     String?        
+  destinationLat  Float?         
+  destinationLng  Float?         
 
-  // --- ✅ NEW: Driver Location (Dynamic) ---
-  latitude        Float?         // Driver's current Latitude
-  longitude       Float?         // Driver's current Longitude
-  location        String?        // e.g. "Driver En Route" or "Simulated Driver"
+  // --- Driver Location ---
+  latitude        Float?         
+  longitude       Float?         
+  location        String?        
 
   // Relations
   goal              Goal               @relation(fields: [goalId], references: [id], onDelete: Cascade)
   notifications     Notification[]
   deliveryTrackings DeliveryTracking[]
-  
-  // --- ADDED ---
   ratings           Rating[]
 
   createdAt DateTime @default(now())
@@ -512,8 +542,8 @@ model Escrow {
   orderId     String?
   amount      Decimal      @db.Decimal(18, 2)
   
-  platformFee Decimal      @db.Decimal(18, 2) @default(0) // Stores the 5% or 20% cut
-  netAmount   Decimal      @db.Decimal(18, 2) @default(0) // Stores the actual amount sent to user/store
+  platformFee Decimal      @db.Decimal(18, 2) @default(0) 
+  netAmount   Decimal      @db.Decimal(18, 2) @default(0) 
   
   currency    String       @default("PKR")
   status      EscrowStatus @default(HELD)
@@ -574,8 +604,8 @@ model RefundRequest {
   responseNote String?
 
   // Relations
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal  Goal?  @relation("GoalRefundRequest", fields: [goalId], references: [id])
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal  Goal? @relation("GoalRefundRequest", fields: [goalId], references: [id])
   order Order? @relation(fields: [orderId], references: [id])
 
   createdAt DateTime @default(now())
@@ -601,4 +631,77 @@ model DeliveryTracking {
 
   @@index([deliveryId])
   @@index([recordedAt])
+}
+
+// ================= NEW: DIGITAL WALLET =================
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Decimal  @db.Decimal(18, 2) @default(0)
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  amount      Decimal               @db.Decimal(18, 2) // Positive for credit, Negative for debit
+  type        WalletTransactionType
+  description String?               
+  referenceId String?               
+
+  // Relations
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  
+  @@index([walletId])
+}
+
+// ================= NEW: COMPLAINTS =================
+
+model Complaint {
+  id              String          @id @default(cuid())
+  title           String
+  description     String
+  
+  type            ComplaintType
+  status          ComplaintStatus @default(OPEN)
+
+  // WHO IS COMPLAINING? 
+  filerUserId     String?
+  filerStoreId    String?
+
+  // WHO ARE THEY COMPLAINING ABOUT? 
+  targetUserId    String?
+  targetStoreId   String?
+
+  // SPECIFIC TRANSACTION 
+  goalId          String?
+  orderId         String?
+
+  adminNotes      String?
+  resolvedAt      DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  filerUser       User?    @relation("ComplaintsFiledByUser", fields: [filerUserId], references: [id])
+  filerStore      Store?   @relation("ComplaintsFiledByStore", fields: [filerStoreId], references: [id])
+  targetUser      User?    @relation("ComplaintsAgainstUser", fields: [targetUserId], references: [id])
+  targetStore     Store?   @relation("ComplaintsAgainstStore", fields: [targetStoreId], references: [id])
+
+  goal            Goal?    @relation(fields: [goalId], references: [id])
+  order           Order?   @relation(fields: [orderId], references: [id])
+
+  @@index([filerUserId])
+  @@index([filerStoreId])
+  @@index([status])
 }

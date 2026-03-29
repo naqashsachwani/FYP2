@@ -1,11 +1,10 @@
 'use client';
 
-// Added Ticket icon for My Coupons
-import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket } from "lucide-react";
+// Added Wallet icon
+import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-// Removed UserButton, SignedIn, SignedOut since we are building our own
 import { useUser, useClerk } from "@clerk/nextjs";
 
 const Navbar = () => {
@@ -186,6 +185,15 @@ const Navbar = () => {
                           </Link>
                         )}
 
+                        {/* ✅ NEW: Wallet Link */}
+                        <Link
+                          href="/wallet"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                        >
+                          <Wallet size={16} className="text-slate-500" /> My Wallet
+                        </Link>
+
                         <Link
                           href="/my-coupons"
                           onClick={() => setIsProfileOpen(false)}
@@ -297,6 +305,15 @@ const Navbar = () => {
                     <Store size={18} className="text-slate-500" /> Store Dashboard
                   </Link>
                 )}
+
+                {/* ✅ NEW: Wallet Link (Mobile) */}
+                <Link
+                  href="/wallet"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                >
+                  <Wallet size={18} className="text-slate-500" /> My Wallet
+                </Link>
 
                 <Link
                   href="/my-coupons"
