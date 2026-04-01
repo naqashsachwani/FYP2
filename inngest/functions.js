@@ -1,6 +1,10 @@
 import { inngest } from "./client"
 import prisma from "@/lib/prisma"
 
+// ✅ NEW IMPORTS FOR NOTIFICATIONS
+import { sendNotification } from "@/lib/sendNotification"
+import { depositReminderTemplate } from "@/lib/emailTemplates"
+
 // Create user
 export const syncUserCreation = inngest.createFunction(
   { id: "sync-user-create" },
@@ -69,5 +73,63 @@ export const deleteCouponOnExpiry = inngest.createFunction(
         where: { code: data.code },
       })
     })
+  }
+)
+
+// ==========================================
+// ✅ NEW: WEEKLY DEPOSIT REMINDER CRON JOB
+// ==========================================
+export const weeklyDepositReminder = inngest.createFunction(
+  { id: "weekly-deposit-reminder" },
+  { cron: "0 9 * * 1" }, // Runs every Monday at 9:00 AM
+  async ({ step }) => {
+    
+    const remindersSent = await step.run("find-and-email-neglected-goals", async () => {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      // Find goals that haven't been deposited into in 7 days
+      const neglectedGoals = await prisma.goal.findMany({
+        where: {
+          status: "ACTIVE",
+          updatedAt: { lt: sevenDaysAgo }
+        },
+        include: { 
+          product: true, 
+          user: true 
+        }
+      });
+
+      let emailsSentCount = 0;
+
+      for (const goal of neglectedGoals) {
+        if (goal.user?.email) {
+          const remainingAmount = Number(goal.targetAmount) - Number(goal.saved);
+          
+          await sendNotification({
+            userId: goal.userId,
+            email: goal.user.email,
+            title: "Keep your DreamSaver goal on track! ⏳",
+            message: `You have Rs ${remainingAmount} left to save for ${goal.product?.name}.`,
+            html: depositReminderTemplate(
+              goal.user.name, 
+              goal.product?.name || "your goal", 
+              remainingAmount, 
+              goal.endDate || new Date()
+            ),
+            type: "DEPOSIT_REMINDER",
+            goalId: goal.id,
+            notifyInApp: true,
+            notifyEmail: true
+          });
+          
+          emailsSentCount++;
+        }
+      }
+
+      return emailsSentCount;
+    });
+
+    return { message: `Successfully sent ${remindersSent} weekly reminder emails.` };
   }
 )

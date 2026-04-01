@@ -1,19 +1,20 @@
-import { serve } from "inngest/next";              // Inngest helper for Next.js API routes
-import { inngest } from "@/inngest/client";        // Your configured Inngest client
+import { serve } from "inngest/next";               
+import { inngest } from "@/inngest/client";        
 import {
   syncUserCreation,
   syncUserUpdation,
   syncUserDeletion,
   deleteCouponOnExpiry,
-} from "@/inngest/functions";                     // Your event functions
-
+  weeklyDepositReminder // ✅ NEW: Import the reminder function
+} from "@/inngest/functions";                      
 
 export const { GET, POST, PUT } = serve({
-  client: inngest,                                // Inngest client to handle incoming events
+  client: inngest,                                 
   functions: [
-    syncUserCreation,     // Triggered when a new user is created
-    syncUserUpdation,     // Triggered when a user is updated
-    syncUserDeletion,     // Triggered when a user is deleted
-    deleteCouponOnExpiry, // Triggered when a coupon expires
+    syncUserCreation,     
+    syncUserUpdation,     
+    syncUserDeletion,     
+    deleteCouponOnExpiry, 
+    weeklyDepositReminder // ✅ NEW: Register the function
   ],
 });

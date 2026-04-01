@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "test": "jest",           
+    "test": "jest",
     "test:watch": "jest --watch"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "lucide-react": "^0.561.0",
     "mapbox-gl": "^3.18.1",
     "next": "15.4.10",
+    "nodemailer": "^8.0.4",
     "react": "19.1.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "19.1.0",
