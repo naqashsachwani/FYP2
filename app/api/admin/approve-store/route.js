@@ -1,7 +1,8 @@
-import prisma from "@/lib/prisma"; // Prisma client for database operations
-import authAdmin from "@/middlewares/authAdmin"; // Middleware to check if user is admin
-import { getAuth } from "@clerk/nextjs/server"; // Clerk server-side auth helper
-import { NextResponse } from "next/server"; // Next.js response helper
+import prisma from "@/lib/prisma"; 
+import authAdmin from "@/middlewares/authAdmin"; 
+import { getAuth } from "@clerk/nextjs/server"; 
+import { NextResponse } from "next/server"; 
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // ================================
 // POST: Approve or Reject a Store
@@ -45,6 +46,46 @@ export async function POST(request) {
             }
         });
     });
+
+    // ✅ FIRE ENGINE: Notify the Store Owner
+    const storeInfo = await prisma.store.findUnique({
+      where: { id: storeId },
+      include: { user: true }
+    });
+
+    if (storeInfo && storeInfo.user) {
+      const isApproved = status === "approved";
+      
+      // Build a dynamic HTML template right here for the store update
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: ${isApproved ? '#16a34a' : '#dc2626'}; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;">
+            Store Application ${isApproved ? 'Approved! 🎉' : 'Update'}
+          </h2>
+          <p>Hi ${storeInfo.user.name},</p>
+          <p>We have reviewed your application for <strong>${storeInfo.name}</strong>.</p>
+          <p style="padding: 15px; background-color: #f8fafc; border-left: 4px solid ${isApproved ? '#16a34a' : '#dc2626'};">
+            Status: <strong>${status.toUpperCase()}</strong>
+          </p>
+          ${isApproved 
+            ? '<p>Congratulations! You can now access your vendor dashboard and start adding products.</p>' 
+            : '<p>Unfortunately, your application was not approved at this time. Please contact support if you have any questions.</p>'}
+          <br/>
+          <p>Best regards,<br/>The DreamSaver Team</p>
+        </div>
+      `;
+
+      await sendNotification({
+        userId: storeInfo.userId,
+        email: storeInfo.user.email,
+        title: isApproved ? "Your Store is Approved! 🎉" : "Store Application Update",
+        message: `Your store application for ${storeInfo.name} has been ${status}.`,
+        html: emailHtml,
+        type: "SYSTEM_ALERT",
+        notifyInApp: true,
+        notifyEmail: true
+      });
+    }
 
     //  Return success message
     return NextResponse.json({ message: `Store ${status} successfully` });

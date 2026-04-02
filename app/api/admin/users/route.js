@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import authAdmin from "@/middlewares/authAdmin";
 import { getAuth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // Prevent Next.js from caching this route so the admin panel always shows fresh data
 export const dynamic = 'force-dynamic'; 
@@ -54,6 +55,22 @@ export async function PATCH(request) {
       data: { isActive: newStatus }
     });
 
+    // ✅ FIRE ENGINE: Notify User of Account Status Change
+    const title = newStatus ? "Account Restored ✅" : "Account Suspended ⚠️";
+    const message = newStatus 
+        ? "Your account access has been fully restored by an administrator."
+        : "Your account has been temporarily suspended by an administrator due to a policy violation. Please contact support.";
+
+    await sendNotification({
+        userId: updatedUser.id,
+        email: updatedUser.email,
+        title: title,
+        message: message,
+        type: "SYSTEM_ALERT",
+        notifyInApp: false, // They are banned, so they can't log in to see the app alert. Send to Email.
+        notifyEmail: true
+    });
+
     return NextResponse.json({ 
         message: newStatus ? "User account restored and enabled." : "User account suspended.", 
         user: updatedUser 
@@ -89,6 +106,8 @@ export async function DELETE(request) {
     const currentCount = tracker ? tracker.count : 0;
 
     let actionMessage = "";
+    let emailTitle = "";
+    let emailBody = "";
 
     if (currentCount === 0) {
       // FIRST OFFENSE: Delete from Clerk. This frees the email so they can sign up exactly ONE more time.
@@ -100,6 +119,9 @@ export async function DELETE(request) {
       });
       
       actionMessage = "User deleted. They are permitted to recreate their account one more time.";
+      emailTitle = "Account Deleted - Second Chance Available ⚠️";
+      emailBody = "Your DreamSaver account has been deleted due to a severe policy violation. Because this is your first offense, you are permitted to recreate your account using this email address ONE time. Any further violations will result in a permanent ban.";
+
     } else {
       // SECOND OFFENSE: They used their second chance. Permanently Ban them in Clerk.
       await client.users.banUser(id);
@@ -111,7 +133,20 @@ export async function DELETE(request) {
       });
 
       actionMessage = "User permanently BANNED. They have exhausted their recreations.";
+      emailTitle = "Account Permanently Banned 🚫";
+      emailBody = "Your DreamSaver account has been permanently banned. You have exhausted your second chance and are no longer permitted to use our services.";
     }
+
+    // ✅ FIRE ENGINE: Send the final email before deleting their local DB record
+    await sendNotification({
+        userId: userToDelete.id, // Will be deleted from DB soon, but needed for the function signature
+        email: email,
+        title: emailTitle,
+        message: emailBody,
+        type: "SYSTEM_ALERT",
+        notifyInApp: false, // They can't log in
+        notifyEmail: true
+    });
 
     // 3. Delete from Local Database
     await prisma.user.delete({ where: { id } });

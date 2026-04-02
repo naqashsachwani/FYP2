@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { depositConfirmationTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
 
 // Helper: Normalize Prisma Decimals
 const normalize = (obj) => JSON.parse(
@@ -79,7 +81,8 @@ export async function POST(req, { params }) {
           status: newStatus,
           endDate: isCompleted ? new Date() : undefined,
         },
-        include: { deposits: true, product: true },
+        // ✅ ADDED USER TO INCLUDE FOR NOTIFICATION EMAILS
+        include: { deposits: true, product: true, user: true },
       });
 
       // F. ✅ CRITICAL: Sync with Escrow Table (For Admin Dashboard)
@@ -100,25 +103,58 @@ export async function POST(req, { params }) {
          });
       }
 
-      // G. Create Notification (Only if completed)
-      if (isCompleted) {
-        await tx.notification.create({
-          data: {
-            userId,
-            goalId,
-            type: "GOAL_COMPLETE",
-            title: "Goal Completed 🎉",
-            message: "Congratulations! Your savings goal is now complete.",
-          },
-        });
-      }
-
       return updatedGoal;
 
     }, {
       maxWait: 5000, 
       timeout: 20000 // ✅ FIXED: Increased timeout to 20s to prevent crashes
     });
+
+    // ==========================================
+    // ✅ FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    // ==========================================
+    
+    // 1. Send Deposit Confirmation
+    if (result.user) {
+        await sendNotification({
+            userId: result.user.id,
+            email: result.user.email,
+            title: "Payment Received! 💰",
+            message: `Your deposit of Rs ${amount} was successful.`,
+            html: depositConfirmationTemplate(
+                result.user.name, 
+                amount, 
+                result.product?.name || "your goal", 
+                result.saved, 
+                result.targetAmount
+            ),
+            type: "DEPOSIT_CONFIRMATION",
+            goalId: result.id,
+            notifyInApp: true,
+            notifyEmail: true
+        });
+
+        // 2. If Completed, Send Celebration Email!
+        if (result.status === "COMPLETED") {
+            await sendNotification({
+                userId: result.user.id,
+                email: result.user.email,
+                title: "Goal Completed! 🎉",
+                message: "Congratulations! Your savings goal is now complete. You can now redeem your product.",
+                html: `
+                  <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #16a34a;">Congratulations, ${result.user.name}! 🎊</h2>
+                    <p>You did it! You have successfully reached your savings target of <strong>Rs ${Number(result.targetAmount).toLocaleString()}</strong> for your <strong>${result.product?.name}</strong>.</p>
+                    <p>Log into your dashboard now to enter your shipping address and redeem your item!</p>
+                  </div>
+                `,
+                type: "GOAL_COMPLETE",
+                goalId: result.id,
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function POST(req) {
   try {
@@ -19,7 +20,11 @@ export async function POST(req) {
     }
 
     // 1. Check wallet balance
-    const wallet = await prisma.wallet.findUnique({ where: { userId } });
+    const wallet = await prisma.wallet.findUnique({ 
+        where: { userId },
+        include: { user: true } // ✅ INCLUDE USER FOR EMAIL
+    });
+    
     if (!wallet || Number(wallet.balance) < withdrawAmount) {
       return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 400 });
     }
@@ -42,6 +47,19 @@ export async function POST(req) {
         },
       });
     });
+
+    // ✅ FIRE ENGINE: Notify user that the withdrawal request was received
+    if (wallet.user) {
+        await sendNotification({
+            userId: wallet.user.id,
+            email: wallet.user.email,
+            title: "Withdrawal Requested 🏦",
+            message: `Your request to withdraw Rs ${withdrawAmount.toLocaleString()} to your ${payoutMethod} account has been received and is pending admin approval.`,
+            type: "SYSTEM_ALERT",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ 
       success: true, 

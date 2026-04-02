@@ -1,7 +1,6 @@
 'use client';
 
-// Added Wallet icon
-import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket, Wallet } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket, Wallet, Bell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -15,49 +14,88 @@ const Navbar = () => {
   const [search, setSearch] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Custom Profile Dropdown State
+  // Dropdown States
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isBellOpen, setIsBellOpen] = useState(false);
 
   const [mounted, setMounted] = useState(false); 
 
-  // State for role-based dashboard buttons
+  // Role & Notification States
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [showSellerBtn, setShowSellerBtn] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Safely show client-only UI to prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Fetch roles from custom API routes
+  // Fetch roles (once) and notifications (polling)
   useEffect(() => {
-    const checkRoles = async () => {
-      if (user) {
-        try {
-          const adminRes = await fetch('/api/admin/is-admin');
-          const adminData = await adminRes.json();
-          setShowAdminBtn(adminData.isAdmin === true);
+    let intervalId;
 
-          const sellerRes = await fetch('/api/store/is-seller');
-          const sellerData = await sellerRes.json();
-          setShowSellerBtn(!!sellerData.isSeller);
-        } catch (error) {
-          console.error("Role verification failed", error);
+    const checkRoles = async () => {
+      try {
+        const adminRes = await fetch('/api/admin/is-admin');
+        const adminData = await adminRes.json();
+        setShowAdminBtn(adminData.isAdmin === true);
+
+        const sellerRes = await fetch('/api/store/is-seller');
+        const sellerData = await sellerRes.json();
+        setShowSellerBtn(!!sellerData.isSeller);
+      } catch (error) {
+        console.error("Role verification failed", error);
+      }
+    };
+
+    const fetchNotifications = async () => {
+      try {
+        const notifRes = await fetch('/api/notifications');
+        const notifData = await notifRes.json();
+        if (notifData.notifications) {
+          setNotifications(notifData.notifications);
+          setUnreadCount(notifData.notifications.filter(n => !n.isRead).length);
         }
+      } catch (error) {
+        console.error("Notification fetch failed", error);
       }
     };
 
     if (mounted && user) {
-      checkRoles();
+      checkRoles(); // Only needs to be checked once when the component mounts
+      fetchNotifications(); // Initial fetch immediately
+
+      // ✅ AUTO-REFRESH: Poll every 30 seconds (30000ms)
+      intervalId = setInterval(fetchNotifications, 30000);
     }
+
+    // Cleanup interval when component unmounts or user logs out
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [mounted, user]);
+
+  const markAsRead = async (id) => {
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      // Update local state immediately for snappy UI
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
     if (search.trim()) {
       router.push(`/shop?search=${encodeURIComponent(search)}`);
       setSearch("");
-      setIsMobileMenuOpen(false); // Close mobile menu if searching from it
+      setIsMobileMenuOpen(false); 
     }
   };
 
@@ -121,9 +159,58 @@ const Navbar = () => {
               <span className="hidden sm:block text-sm font-medium">My Goals</span>
             </Link>
 
-            {/* Authentication & Custom Profile Dropdown */}
+            {/* ✅ NOTIFICATION BELL (DESKTOP & MOBILE) */}
+            {mounted && user && (
+              <div className="relative">
+                <button
+                  onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
+                  className="relative p-2 text-slate-600 hover:text-green-600 transition rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {isBellOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
+                    <div className="absolute right-[-60px] sm:right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <p className="text-sm font-semibold text-slate-800">Notifications</p>
+                      </div>
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <p className="px-4 py-6 text-sm text-slate-500 text-center">You have no notifications.</p>
+                        ) : (
+                          notifications.map(notif => (
+                            <div key={notif.id} className={`px-4 py-3 border-b border-slate-50 ${!notif.isRead ? 'bg-green-50/40' : ''}`}>
+                              <div className="flex justify-between items-start mb-1">
+                                <p className="text-sm font-semibold text-slate-800">{notif.title}</p>
+                                {!notif.isRead && (
+                                  <button onClick={() => markAsRead(notif.id)} className="text-[10px] text-green-600 font-medium hover:underline shrink-0 ml-2">
+                                    Mark Read
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
+                              <span className="text-[10px] text-slate-400 block mt-1">
+                                {new Date(notif.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Authentication & Profile Dropdown */}
             {!mounted ? (
-              // Safe Hydration Skeleton
               <div className="hidden sm:block w-9 h-9 bg-slate-200 rounded-full animate-pulse ml-2"></div>
             ) : !user ? (
               <button
@@ -133,10 +220,9 @@ const Navbar = () => {
                 Sign In
               </button>
             ) : (
-              // --- 100% CUSTOM PROFILE DROPDOWN ---
               <div className="relative hidden sm:block ml-2 mt-1.5">
                 <button
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
                   className="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-200 hover:border-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
                 >
                   <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
@@ -144,13 +230,8 @@ const Navbar = () => {
 
                 {isProfileOpen && (
                   <>
-                    {/* Invisible overlay to close dropdown when clicking anywhere else */}
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-
-                    {/* Dropdown Menu Container */}
                     <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
-                      
-                      {/* User Info Header */}
                       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1">
                         <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                         <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -164,54 +245,31 @@ const Navbar = () => {
                           <Settings size={16} className="text-slate-500" /> Manage Account
                         </button>
 
-                        {/* --- THESE ARE NOW REAL LINKS! --- */}
                         {showAdminBtn && (
-                          <Link
-                            href="/admin"
-                            onClick={() => setIsProfileOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                          >
+                          <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                             <ShieldCheck size={16} className="text-slate-500" /> Admin Dashboard
                           </Link>
                         )}
 
                         {showSellerBtn && (
-                          <Link
-                            href="/store"
-                            onClick={() => setIsProfileOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                          >
+                          <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                             <Store size={16} className="text-slate-500" /> Store Dashboard
                           </Link>
                         )}
 
-                        {/* ✅ NEW: Wallet Link */}
-                        <Link
-                          href="/wallet"
-                          onClick={() => setIsProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                        >
+                        <Link href="/wallet" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                           <Wallet size={16} className="text-slate-500" /> My Wallet
                         </Link>
 
-                        <Link
-                          href="/my-coupons"
-                          onClick={() => setIsProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                        >
+                        <Link href="/my-coupons" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                           <Ticket size={16} className="text-slate-500" /> My Coupons
                         </Link>
 
-                        <Link
-                          href="/goal-history"
-                          onClick={() => setIsProfileOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                        >
+                        <Link href="/goal-history" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                           <History size={16} className="text-slate-500" /> Goal History
                         </Link>
                       </div>
 
-                      {/* Sign Out Section */}
                       <div className="border-t border-slate-100 mt-2 pt-2 px-2">
                         <button
                           onClick={() => signOut({ redirectUrl: '/' })}
@@ -260,16 +318,12 @@ const Navbar = () => {
               <div className="w-full h-12 bg-slate-200 rounded-xl animate-pulse"></div>
             ) : !user ? (
               <button
-                onClick={() => {
-                  openSignIn();
-                  setIsMobileMenuOpen(false);
-                }}
+                onClick={() => { openSignIn(); setIsMobileMenuOpen(false); }}
                 className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold shadow-md hover:scale-105 transition"
               >
                 Sign In
               </button>
             ) : (
-              // --- CUSTOM MOBILE PROFILE MENU ---
               <div className="flex flex-col space-y-1">
                 <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-slate-50 rounded-xl border border-slate-100">
                   <img src={user?.imageUrl} alt="User" className="w-10 h-10 rounded-full border border-slate-200" />
@@ -279,62 +333,35 @@ const Navbar = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => { openUserProfile(); setIsMobileMenuOpen(false); }}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                >
+                <button onClick={() => { openUserProfile(); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                   <Settings size={18} className="text-slate-500" /> Manage Account
                 </button>
 
                 {showAdminBtn && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                  >
+                  <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                     <ShieldCheck size={18} className="text-slate-500" /> Admin Dashboard
                   </Link>
                 )}
 
                 {showSellerBtn && (
-                  <Link
-                    href="/store"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                  >
+                  <Link href="/store" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                     <Store size={18} className="text-slate-500" /> Store Dashboard
                   </Link>
                 )}
 
-                {/* ✅ NEW: Wallet Link (Mobile) */}
-                <Link
-                  href="/wallet"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                >
+                <Link href="/wallet" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                   <Wallet size={18} className="text-slate-500" /> My Wallet
                 </Link>
 
-                <Link
-                  href="/my-coupons"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                >
+                <Link href="/my-coupons" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                   <Ticket size={18} className="text-slate-500" /> My Coupons
                 </Link>
 
-                <Link
-                  href="/goal-history"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                >
+                <Link href="/goal-history" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                   <History size={18} className="text-slate-500" /> Goal History
                 </Link>
 
-                <button
-                  onClick={() => signOut({ redirectUrl: '/' })}
-                  className="flex items-center gap-3 px-3 py-2.5 mt-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                >
+                <button onClick={() => signOut({ redirectUrl: '/' })} className="flex items-center gap-3 px-3 py-2.5 mt-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
                   <LogOut size={18} className="text-red-500" /> Sign Out
                 </button>
               </div>

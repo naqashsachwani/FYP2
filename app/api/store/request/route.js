@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function GET(req) {
   try {
@@ -74,6 +75,20 @@ export async function POST(req) {
         status: "OPEN"
       }
     });
+
+    // ✅ FIRE ENGINE: Acknowledge the store owner's request
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+        await sendNotification({
+            userId: user.id,
+            email: user.email,
+            title: "Request Submitted 📝",
+            message: `Your request regarding "${title}" has been successfully submitted to the admin team for review.`,
+            type: "COMPLAINT_POSTED",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ success: true, request: newRequest });
 

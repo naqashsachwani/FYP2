@@ -1,7 +1,8 @@
-import prisma from "@/lib/prisma";                 // Prisma client for DB operations
-import authAdmin from "@/middlewares/authAdmin";   // Middleware to check admin access
-import { getAuth } from "@clerk/nextjs/server";   // Clerk server-side authentication
-import { NextResponse } from "next/server";       // Next.js response helper
+import prisma from "@/lib/prisma";                 
+import authAdmin from "@/middlewares/authAdmin";   
+import { getAuth } from "@clerk/nextjs/server";   
+import { NextResponse } from "next/server";       
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // ================= TOGGLE STORE ACTIVE STATUS =================
 // Only admins can toggle a store's isActive flag
@@ -25,19 +26,42 @@ export async function POST(request) {
       return NextResponse.json({ error: "missing storeId" }, { status: 400 });
     }
 
-    // Find store in the database
-    const store = await prisma.store.findUnique({ where: { id: storeId } });
+    // Find store in the database AND grab the user info for the email
+    const store = await prisma.store.findUnique({ 
+        where: { id: storeId },
+        include: { user: true } // ✅ Include user for notification
+    });
 
     // Return error if store doesn't exist
     if (!store) {
       return NextResponse.json({ error: "store not found" }, { status: 400 });
     }
 
+    const newStatus = !store.isActive;
+
     // Toggle isActive field: true -> false, false -> true
     await prisma.store.update({
       where: { id: storeId },
-      data: { isActive: !store.isActive },
+      data: { isActive: newStatus },
     });
+
+    // ✅ FIRE ENGINE: Notify Store Owner of Suspension/Reactivation
+    if (store.user) {
+        const title = newStatus ? "Store Reactivated ✅" : "Store Suspended ⚠️";
+        const message = newStatus 
+            ? `Good news! Your store "${store.name}" has been reactivated by an admin. You can now resume operations.`
+            : `Important: Your store "${store.name}" has been temporarily suspended by an admin. Please contact support for details.`;
+
+        await sendNotification({
+            userId: store.userId,
+            email: store.user.email,
+            title: title,
+            message: message,
+            type: "SYSTEM_ALERT",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     // Success response
     return NextResponse.json({ message: "Store updated successfully" });

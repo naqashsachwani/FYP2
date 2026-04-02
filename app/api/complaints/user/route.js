@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // ==============================
 // GET: Fetch User's Complaints
@@ -99,6 +100,20 @@ export async function POST(req) {
         status: "OPEN"
       }
     });
+
+    // ✅ FIRE ENGINE: Acknowledge the user's complaint
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+        await sendNotification({
+            userId: user.id,
+            email: user.email,
+            title: "Complaint Received 📝",
+            message: `We have received your complaint regarding "${title}". Our admin team will review it shortly.`,
+            type: "COMPLAINT_POSTED",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ success: true, complaint: newComplaint });
 

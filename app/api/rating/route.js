@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import imagekit from "@/configs/imageKit";
 import { revalidatePath } from "next/cache";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function POST(req) {
     try {
@@ -84,6 +85,24 @@ export async function POST(req) {
             },
             include: { user: true }
         });
+
+        // 6. ✅ FIRE ENGINE: Notify the Store Owner
+        const productWithStore = await prisma.product.findUnique({
+            where: { id: productId },
+            include: { store: { include: { user: true } } }
+        });
+
+        if (productWithStore?.store?.user) {
+            await sendNotification({
+                userId: productWithStore.store.userId,
+                email: productWithStore.store.user.email,
+                title: "New Product Review! ⭐",
+                message: `Your product "${productWithStore.name}" just received a ${rating}-star review.`,
+                type: "SYSTEM_ALERT",
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
 
         // Clear cache for this product page
         revalidatePath(`/product/${productId}`);

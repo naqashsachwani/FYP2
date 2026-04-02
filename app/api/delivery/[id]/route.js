@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // GET: Fetch Delivery Details
 export async function GET(request, { params }) {
@@ -82,6 +83,31 @@ export async function POST(request, { params }) {
           status: status || updatedDelivery.status, 
         }
       });
+    }
+
+    // ✅ FIRE ENGINE: Notify User on Major Status Changes (Dispatched or Delivered)
+    if (status && ['DISPATCHED', 'DELIVERED'].includes(status)) {
+        const deliveryInfo = await prisma.delivery.findUnique({
+            where: { id: id },
+            include: { goal: { include: { user: true, product: true } } }
+        });
+
+        if (deliveryInfo?.goal?.user) {
+            const isDelivered = status === 'DELIVERED';
+            await sendNotification({
+                userId: deliveryInfo.goal.userId,
+                email: deliveryInfo.goal.user.email,
+                title: isDelivered ? "Order Delivered! 📦" : "Order Dispatched! 🚚",
+                message: isDelivered 
+                    ? `Your order for ${deliveryInfo.goal.product?.name} has been delivered successfully. Enjoy!` 
+                    : `Your order for ${deliveryInfo.goal.product?.name} has been dispatched and is on its way.`,
+                type: "DELIVERY_UPDATE",
+                deliveryId: id,
+                goalId: deliveryInfo.goalId,
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
     }
 
     // Sanitize response

@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"; // Prisma client for DB operations
 import authSeller from "@/middlewares/authSeller"; // Middleware to check if user is a seller
 import { getAuth } from "@clerk/nextjs/server"; // Clerk server-side authentication
 import { NextResponse } from "next/server"; // Next.js response helper
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // ================== POST: Update Order Status ==================
 export async function POST(request) {
@@ -20,11 +21,30 @@ export async function POST(request) {
     //  Extract orderId and new status from request body
     const { orderId, status } = await request.json();
 
+    // ✅ Grab order and user details BEFORE updating so we can notify them
+    const orderToUpdate = await prisma.order.findFirst({
+        where: { id: orderId, storeId },
+        include: { user: true }
+    });
+
     //  Update the order status, ensuring it belongs to this store
     await prisma.order.updateMany({
       where: { id: orderId, storeId }, // Only allow updating orders for this store
       data: { status },
     });
+
+    // ✅ FIRE ENGINE: Notify customer of order status update
+    if (orderToUpdate?.user) {
+        await sendNotification({
+            userId: orderToUpdate.userId,
+            email: orderToUpdate.user.email,
+            title: "Order Status Updated 📦",
+            message: `The status of your recent order has been updated to: ${status.toUpperCase()}.`,
+            type: "DELIVERY_UPDATE", // Using a relevant type
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     // Return success message
     return NextResponse.json({ message: "Order status updated successfully" });

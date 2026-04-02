@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma"; // Prisma client for DB
 import { getAuth } from "@clerk/nextjs/server"; // Clerk auth for server
 import { NextResponse } from "next/server"; // Next.js response helper
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { goalStartedTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
 
 // ---------------- Normalize Decimal to Number ----------------
 // Prisma stores decimals as objects; this converts them to normal numbers for JSON
@@ -125,6 +127,7 @@ export async function POST(request) {
           lockedPrice: product.price,
           priceLocked: true,
         },
+        include: { user: true } // ✅ INCLUDE USER FOR NOTIFICATION
       });
 
       // Create linked PriceLock
@@ -143,6 +146,21 @@ export async function POST(request) {
 
       return newGoal;
     });
+
+    // ✅ FIRE ENGINE: Send Welcome Email
+    if (result.user && status === "ACTIVE") {
+        await sendNotification({
+            userId: result.user.id,
+            email: result.user.email,
+            title: "Your Goal is Live! 🎯",
+            message: `You started saving for ${product.name}. Target: Rs ${amountNum.toLocaleString()}`,
+            html: goalStartedTemplate(result.user.name, product.name, amountNum),
+            type: "GOAL_START",
+            goalId: result.id,
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ message: "Goal created", goal: normalize(result) });
 

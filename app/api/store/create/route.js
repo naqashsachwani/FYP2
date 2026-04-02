@@ -1,7 +1,8 @@
-import prisma from "@/lib/prisma" // Prisma client for DB operations
-import { getAuth } from "@clerk/nextjs/server" // Clerk for server-side authentication
-import { NextResponse } from "next/server" // Next.js response helper
-import imagekit from "@/configs/imageKit" // ImageKit for image uploads
+import prisma from "@/lib/prisma" 
+import { getAuth } from "@clerk/nextjs/server" 
+import { NextResponse } from "next/server" 
+import imagekit from "@/configs/imageKit" 
+import { sendNotification } from "@/lib/sendNotification" // ✅ IMPORT ENGINE
 
 // ================== POST: Create or Resubmit Store Application ==================
 export async function POST(request) {
@@ -103,6 +104,20 @@ export async function POST(request) {
         })
       })
 
+      // ✅ FIRE ENGINE: Notify user of resubmission
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+          await sendNotification({
+              userId: user.id,
+              email: user.email,
+              title: "Store Application Resubmitted 🏪",
+              message: `Your revised application for "${name}" has been received. Our team will review it shortly.`,
+              type: "SYSTEM_ALERT",
+              notifyInApp: true,
+              notifyEmail: true
+          });
+      }
+
       return NextResponse.json({ message: "Application resubmitted successfully!" })
     }
 
@@ -142,6 +157,20 @@ export async function POST(request) {
         }
       })
     })
+
+    // ✅ FIRE ENGINE: Notify user of initial submission
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (user) {
+        await sendNotification({
+            userId: user.id,
+            email: user.email,
+            title: "Store Application Received 🏪",
+            message: `Your application to open "${name}" has been received successfully! Our team is currently reviewing your details.`,
+            type: "SYSTEM_ALERT",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ message: "Store application submitted successfully!" })
 

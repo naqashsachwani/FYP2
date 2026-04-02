@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { depositConfirmationTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
 
 // Helper: Normalize Prisma Decimals to Numbers
 const normalize = (obj) => JSON.parse(
@@ -98,7 +100,7 @@ export async function POST(req, { params }) {
             status: newStatus,
             endDate: newStatus === "COMPLETED" ? new Date() : null,
           },
-          include: { deposits: true, product: true },
+          include: { deposits: true, product: true, user: true }, // ✅ INCLUDED USER
         });
 
         // 4. ✅ CRITICAL: Sync Escrow Table (So Admin sees funds immediately)
@@ -119,21 +121,46 @@ export async function POST(req, { params }) {
             });
         }
 
-        // 5. Notification
-        if (newStatus === "COMPLETED") {
-          await tx.notification.create({
-            data: {
-              userId,
-              goalId,
-              type: "GOAL_COMPLETE",
-              title: "Goal Completed 🎉",
-              message: "Congratulations! Your savings goal is now complete.",
-            },
-          });
-        }
-
         return { updatedGoal, deposit };
     });
+
+    // ==========================================
+    // ✅ FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    // ==========================================
+    const savedGoal = result.updatedGoal;
+    
+    if (savedGoal.user) {
+        await sendNotification({
+            userId: savedGoal.user.id,
+            email: savedGoal.user.email,
+            title: "Payment Received! 💰",
+            message: `Your deposit of Rs ${amount} was successful.`,
+            html: depositConfirmationTemplate(
+                savedGoal.user.name, 
+                amount, 
+                savedGoal.product?.name || "your goal", 
+                savedGoal.saved, 
+                savedGoal.targetAmount
+            ),
+            type: "DEPOSIT_CONFIRMATION",
+            goalId: savedGoal.id,
+            notifyInApp: true,
+            notifyEmail: true
+        });
+
+        if (savedGoal.status === "COMPLETED") {
+            await sendNotification({
+                userId: savedGoal.user.id,
+                email: savedGoal.user.email,
+                title: "Goal Completed! 🎉",
+                message: "Congratulations! Your savings goal is now complete. You can now redeem your product.",
+                type: "GOAL_COMPLETE",
+                goalId: savedGoal.id,
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
+    }
 
     return NextResponse.json({
       success: true,
@@ -158,7 +185,7 @@ export async function DELETE(req, { params }) {
   try {
     const goal = await prisma.goal.findUnique({ 
         where: { id: goalId },
-        include: { escrow: true, refundRequest: true }
+        include: { escrow: true, refundRequest: true, user: true, product: true } // ✅ INCUDED USER/PRODUCT
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
@@ -209,6 +236,20 @@ export async function DELETE(req, { params }) {
             });
         }
       });
+
+      // ✅ FIRE ENGINE: Notify user that their cancellation/refund is processing
+      if (goal.user) {
+          await sendNotification({
+              userId: goal.user.id,
+              email: goal.user.email,
+              title: "Cancellation & Refund Initiated 🔄",
+              message: `You have successfully cancelled your goal for ${goal.product?.name}. Your refund request for Rs ${savedAmount.toLocaleString()} is now processing.`,
+              type: "SYSTEM_ALERT",
+              goalId: goal.id,
+              notifyInApp: true,
+              notifyEmail: true
+          });
+      }
 
       return NextResponse.json({ message: "Cancellation initiated. Refund Request created." });
     }

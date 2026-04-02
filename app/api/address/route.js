@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server"; 
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 // ===========================
 // GET: Fetch all addresses
@@ -63,6 +64,16 @@ export async function POST(request) {
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
       }
+    });
+
+    // ✅ FIRE ENGINE: Quiet in-app notification (No email spam for minor updates)
+    await sendNotification({
+      userId: user.id,
+      title: "New Address Added 📍",
+      message: `Your address at ${street}, ${city} was saved successfully.`,
+      type: "SYSTEM_ALERT",
+      notifyInApp: true,
+      notifyEmail: false // Keep their inbox clean
     });
 
     console.log("✅ Address Saved Successfully:", newAddress.id);

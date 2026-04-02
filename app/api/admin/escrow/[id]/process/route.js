@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function POST(req, { params }) {
   const { id } = await params; 
@@ -15,7 +16,18 @@ export async function POST(req, { params }) {
     // ✅ CASE 1: RELEASE FUNDS (Product DELIVERED)
     // ====================================================
     if (action === "RELEASE") {
-        const escrow = await prisma.escrow.findUnique({ where: { id } });
+        const escrow = await prisma.escrow.findUnique({ 
+            where: { id },
+            // ✅ Include relations so we can notify the Store Owner
+            include: { 
+                goal: { 
+                    include: { 
+                        product: { include: { store: { include: { user: true } } } } 
+                    } 
+                } 
+            }
+        });
+        
         if (!escrow) return NextResponse.json({ error: "Escrow record not found" }, { status: 404 });
 
         const totalAmount = Number(escrow.amount);
@@ -34,6 +46,20 @@ export async function POST(req, { params }) {
             }
         });
         
+        // ✅ FIRE ENGINE: Notify the Store Owner they got paid!
+        const storeOwner = escrow.goal?.product?.store?.user;
+        if (storeOwner) {
+            await sendNotification({
+                userId: storeOwner.id,
+                email: storeOwner.email,
+                title: "Funds Released! 💸",
+                message: `Rs ${netAmount.toLocaleString()} has been successfully released to your account for the sale of ${escrow.goal?.product?.name}.`,
+                type: "SYSTEM_ALERT",
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
+
         return NextResponse.json({ success: true, message: "Funds Released" });
     }
 
@@ -43,7 +69,8 @@ export async function POST(req, { params }) {
     if (action === "REFUND") {
         const request = await prisma.refundRequest.findUnique({ 
             where: { id }, 
-            include: { goal: { include: { product: true } } }
+            // ✅ Include the user object to get their email address
+            include: { user: true, goal: { include: { product: true } } }
         });
         
         if (!request) return NextResponse.json({ error: "Refund request not found" }, { status: 404 });
@@ -136,6 +163,20 @@ export async function POST(req, { params }) {
                 }
             });
         });
+
+        // ✅ FIRE ENGINE: Notify Customer that funds are in their wallet
+        if (request.user) {
+            await sendNotification({
+                userId: request.userId,
+                email: request.user.email,
+                title: "Refund Processed 💳",
+                message: `Rs ${userRefundAmount.toLocaleString()} has been credited to your Digital Wallet for your cancelled goal.`,
+                type: "REFUND_ISSUED",
+                goalId: goalId,
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
 
         return NextResponse.json({ success: true, message: "Refund Processed & Wallet Credited" });
     }

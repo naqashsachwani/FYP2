@@ -2,7 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { inngest } from "@/inngest/client"; // ✅ Imported Inngest for expiration
+import { inngest } from "@/inngest/client"; 
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function GET(req) {
   try {
@@ -17,7 +18,7 @@ export async function GET(req) {
         goal: { 
           include: { 
             product: true,
-            user: { select: { name: true, id: true } },
+            user: { select: { name: true, id: true, email: true } }, // ✅ Added email
             escrow: true 
           } 
         }
@@ -37,13 +38,18 @@ export async function PATCH(req) {
 
     const complaint = await prisma.complaint.findUnique({
       where: { id: complaintId },
-      include: { goal: true, filerStore: true, filerUser: true }
+      include: { 
+        goal: { include: { user: true } }, // ✅ Ensure user email is available
+        filerStore: true, 
+        filerUser: true,
+        targetUser: true
+      }
     });
 
     if (!complaint) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // We will store the generated coupon data here so we can send it to Inngest AFTER the transaction succeeds
     let successfulCoupon = null;
+    let pendingNotifications = []; // ✅ QUEUE NOTIFICATIONS TO SEND AFTER TX
 
     await prisma.$transaction(async (tx) => {
       // 1. Update Complaint Status
@@ -53,7 +59,7 @@ export async function PATCH(req) {
       });
 
       // =========================================================
-      // 🎁 LOGIC 1: ISSUE APOLOGY COUPON (MATCHING YOUR SCHEMA)
+      // 🎁 LOGIC 1: ISSUE APOLOGY COUPON
       // =========================================================
       let generatedCouponCode = null;
       const validDays = Number(expiryDays) || 30; 
@@ -64,22 +70,21 @@ export async function PATCH(req) {
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + validDays);
 
-        // ✅ EXACT match to your database requirements + userId
         const newCoupon = await tx.coupon.create({
           data: {
             code: generatedCouponCode,
             description: `Apology for complaint: ${complaint.title}`,
             discount: Number(couponValue), 
-            usageLimit: 1,           // Single use for the complaining user
-            forNewUser: false,       // Not a sign-up promo
-            forMember: false,        // Standard
-            isPublic: false,         // Hide from public pages
-            userId: complaint.filerUserId, // ✅ LOCKS THIS COUPON TO THE USER
+            usageLimit: 1,           
+            forNewUser: false,       
+            forMember: false,        
+            isPublic: false,         
+            userId: complaint.filerUserId, 
             expiresAt: expiryDate
           }
         });
 
-        successfulCoupon = newCoupon; // Save for Inngest
+        successfulCoupon = newCoupon; 
       }
 
       // =========================================================
@@ -123,13 +128,13 @@ export async function PATCH(req) {
             message += ` As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days!`;
           }
 
-          await tx.notification.create({
-            data: {
-              userId: complaint.goal.userId,
-              type: "SYSTEM_ALERT",
-              title: "Refund Approved 💰",
-              message: message,
-            }
+          // ✅ Queue the Refund Notification
+          pendingNotifications.push({
+            userId: complaint.goal.userId,
+            email: complaint.goal.user?.email, // Only available if requested in findUnique
+            type: "REFUND_ISSUED", // Match Enum
+            title: "Refund Approved 💰",
+            message: message
           });
         }
       } 
@@ -140,8 +145,22 @@ export async function PATCH(req) {
         const adjustedPrice = Number(newPrice);
         await tx.goal.update({ where: { id: complaint.goalId }, data: { targetAmount: adjustedPrice } });
 
-        await tx.notification.create({ data: { userId: complaint.filerStore.userId, type: "SYSTEM_ALERT", title: "Price Lock Updated", message: `New price: Rs ${adjustedPrice.toLocaleString()}` } });
-        await tx.notification.create({ data: { userId: complaint.goal.userId, type: "SYSTEM_ALERT", title: "Price Adjustment Alert", message: `The price for your goal has been adjusted to Rs ${adjustedPrice.toLocaleString()}`, goalId: complaint.goalId } });
+        // ✅ Queue Price Lock Notifications
+        pendingNotifications.push({ 
+          userId: complaint.filerStore.userId, 
+          type: "SYSTEM_ALERT", 
+          title: "Price Lock Updated", 
+          message: `New price: Rs ${adjustedPrice.toLocaleString()}` 
+        });
+
+        pendingNotifications.push({ 
+          userId: complaint.goal.userId, 
+          email: complaint.goal.user?.email,
+          type: "SYSTEM_ALERT", 
+          title: "Price Adjustment Alert", 
+          message: `The price for your goal has been adjusted to Rs ${adjustedPrice.toLocaleString()}`, 
+          goalId: complaint.goalId 
+        });
       } 
       // =========================================================
       // 📝 LOGIC 4: STANDARD COMPLAINT / BEHAVIOR RESPONSE
@@ -155,21 +174,46 @@ export async function PATCH(req) {
                  message = `Your complaint was resolved. As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days! Admin Note: ${adminNotes}`;
               }
 
-              await tx.notification.create({ data: { userId: filerUserId, type: "SYSTEM_ALERT", title: `Complaint ${status}`, message: message } });
+              // ✅ Queue Filer Notification
+              pendingNotifications.push({ 
+                userId: filerUserId, 
+                email: complaint.filerUser?.email,
+                type: status === "RESOLVED" ? "COMPLAINT_RESOLVED" : "SYSTEM_ALERT", 
+                title: `Complaint ${status}`, 
+                message: message 
+              });
           }
 
           if (status === "RESOLVED") {
              const warningTargetId = complaint.targetUserId || complaint.targetStore?.userId;
              if (warningTargetId) {
-                await tx.notification.create({ data: { userId: warningTargetId, type: "SYSTEM_ALERT", title: "⚠️ Official Admin Warning", message: `A complaint against your account was reviewed. Admin Note: ${adminNotes}` } });
+                // ✅ Queue Target Notification
+                pendingNotifications.push({ 
+                  userId: warningTargetId, 
+                  email: complaint.targetUser?.email,
+                  type: "SYSTEM_ALERT", 
+                  title: "⚠️ Official Admin Warning", 
+                  message: `A complaint against your account was reviewed. Admin Note: ${adminNotes}` 
+                });
              }
           }
       }
     });
 
     // =========================================================
-    // ⏰ SEND TO INNGEST AFTER SUCCESSFUL TRANSACTION
+    // ⏰ FIRE ALL ASYNC EVENTS AFTER SUCCESSFUL DB TRANSACTION
     // =========================================================
+    
+    // 1. Send all queued notifications
+    for (const notif of pendingNotifications) {
+      await sendNotification({
+        ...notif,
+        notifyInApp: true,
+        notifyEmail: !!notif.email // Only trigger email if we fetched their email address
+      });
+    }
+
+    // 2. Schedule coupon expiration in Inngest
     if (successfulCoupon) {
       await inngest.send({
         name: "app/coupon.expired",

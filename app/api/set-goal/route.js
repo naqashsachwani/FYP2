@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma"; // Import Prisma client to interact with the database
 import { getAuth } from "@clerk/nextjs/server"; // Import Clerk for server-side authentication
 import { NextResponse } from "next/server"; // Import Next.js response helper
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { goalStartedTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
 
 export const dynamic = 'force-dynamic'; 
 // Ensures this route is always treated as dynamic, disabling static optimization
@@ -166,6 +168,24 @@ export async function POST(request) {
 
       return newGoal; 
     });
+
+    // ✅ FIRE ENGINE: Send Welcome Email (Only if they actually activated the goal)
+    if (status === "ACTIVE") {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user) {
+            await sendNotification({
+                userId: user.id,
+                email: user.email,
+                title: "Your DreamSaver Goal is Live! 🎯",
+                message: `You started saving for ${product.name}. Target: Rs ${finalTargetAmount.toLocaleString()}`,
+                html: goalStartedTemplate(user.name, product.name, finalTargetAmount),
+                type: "GOAL_START",
+                goalId: result.id,
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
+    }
 
     return NextResponse.json({ message: "New goal created", goal: normalize(result) });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
 
 export async function POST(request, { params }) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request, { params }) {
 
     const goal = await prisma.goal.findUnique({
       where: { id: goalId },
-      include: { delivery: true }
+      include: { delivery: true, user: true, product: true } // ✅ INCLUDE USER/PRODUCT FOR NOTIFICATION
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
@@ -40,6 +41,21 @@ export async function POST(request, { params }) {
         trackingNumber: `TRK-${Math.floor(Math.random() * 1000000)}`,
       }
     });
+
+    // ✅ FIRE ENGINE: Notify user that redemption was successful
+    if (goal.user) {
+        await sendNotification({
+            userId: goal.user.id,
+            email: goal.user.email,
+            title: "Redemption Successful! 📦",
+            message: `Your redemption request for ${goal.product?.name} has been processed. Your tracking number is ${newDelivery.trackingNumber}.`,
+            type: "SYSTEM_ALERT",
+            goalId: goal.id,
+            deliveryId: newDelivery.id,
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ success: true, deliveryId: newDelivery.id });
 
