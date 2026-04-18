@@ -1,17 +1,19 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic'; 
-import { Loader2, Truck, Calendar, Store, MapPin, ArrowLeft, CheckCircle, PlayCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Loader2, Truck, Calendar, Store, MapPin, ArrowLeft, CheckCircle } from 'lucide-react';
+import { useRouter, useParams } from 'next/navigation';
 
 const DeliveryMap = dynamic(() => import('@/components/DeliveryMap'), { 
   ssr: false,
   loading: () => <div className="h-full flex items-center justify-center bg-gray-100 text-gray-400">Loading Map...</div>
 });
 
-export default function TrackingPage({ params }) {
-  const { id } = use(params);
+export default function TrackingPage() {
+  const params = useParams();
+  const id = params?.id; 
+  
   const router = useRouter();
   const [delivery, setDelivery] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,6 +21,7 @@ export default function TrackingPage({ params }) {
 
   // 1. Fetch Delivery Data
   const fetchData = async () => {
+    if (!id) return;
     try {
       const res = await fetch(`/api/delivery/${id}`);
       const data = await res.json();
@@ -63,32 +66,6 @@ export default function TrackingPage({ params }) {
     }
   };
 
-  // 4. Simulation for Testing (Moves driver near the Store)
-  const simulateMovement = async () => {
-    if (!delivery?.goal?.product?.store) return alert("Store coordinates missing");
-    setUpdating(true);
-    
-    const storeLat = Number(delivery.goal.product.store.latitude);
-    const storeLng = Number(delivery.goal.product.store.longitude);
-
-    // Random small movement
-    const randomLat = storeLat + (Math.random() * 0.01 - 0.005); 
-    const randomLng = storeLng + (Math.random() * 0.01 - 0.005);
-    
-    await fetch(`/api/delivery/${id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        latitude: randomLat, 
-        longitude: randomLng, 
-        location: 'Driver En Route (Simulated)' 
-      })
-    });
-    
-    setUpdating(false);
-    fetchData();
-  };
-
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
   if (!delivery) return <div className="p-10 text-center">Tracking not found</div>;
 
@@ -105,13 +82,6 @@ export default function TrackingPage({ params }) {
           <button onClick={() => router.back()} className="flex items-center text-gray-500 hover:text-gray-900 text-sm font-medium">
             <ArrowLeft size={16} className="mr-1" /> Back
           </button>
-          
-          {/* Debug/Simulation Tools */}
-          {!isDelivered && (
-            <button onClick={simulateMovement} disabled={updating} className="text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1 bg-white px-3 py-1 rounded-full border shadow-sm transition-all">
-              <PlayCircle size={14} /> Driver Update
-            </button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[80vh]">
@@ -129,7 +99,7 @@ export default function TrackingPage({ params }) {
               <div className="flex items-center gap-2 text-xs opacity-80 mt-2">
                 <Calendar size={12} />
                 {isDelivered 
-                  ? `Delivered on ${new Date(delivery.updatedAt).toLocaleDateString()}`
+                  ? `Delivered on ${new Date(delivery.updatedAt).toLocaleDateString('en-GB')}`
                   : `Estimated: ${new Date(delivery.estimatedDate).toDateString()}` 
                 }
               </div>

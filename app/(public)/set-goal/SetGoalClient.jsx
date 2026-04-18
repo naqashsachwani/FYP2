@@ -10,19 +10,40 @@ import { Loader2, Tag, CheckCircle2, XCircle } from "lucide-react";
 function TermsModal({ open, onClose }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-        <h2 className="text-xl font-bold mb-4 text-slate-800">Terms & Conditions</h2>
-        <ul className="text-sm list-disc pl-5 space-y-2 text-slate-600">
-          <li>Deposits are tracked against your savings goal.</li>
-          <li>Products are reserved (price locked) until goal completion.</li>
-          <li>Refunds require admin approval.</li>
-          <li>No hidden charges or interest fees.</li>
-          <li>Delivery charges apply to orders under 5,000 PKR.</li>
-        </ul>
-        <div className="mt-8 text-right">
-          <button onClick={onClose} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all w-full sm:w-auto">
-            I Accept
+    <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col max-h-[85vh]">
+        <h2 className="text-2xl font-bold mb-4 text-slate-800 border-b border-slate-100 pb-4">Terms & Conditions</h2>
+        
+        <div className="overflow-y-auto pr-2 space-y-4 text-sm text-slate-600">
+          <p>By starting a savings goal on DreamSaver, you agree to the following terms:</p>
+          <ul className="list-disc pl-5 space-y-3">
+            <li>
+              <strong className="text-slate-800">Price Lock Guarantee:</strong> The product price is secured and locked the moment you create this goal. Future price increases by the store will not affect your target amount.
+            </li>
+            <li>
+              <strong className="text-slate-800">Flexible Deposits:</strong> You can fund your goal using Stripe or your DreamSaver Wallet at your own pace. There are no hidden interest charges or late fees.
+            </li>
+            <li>
+              <strong className="text-slate-800">Secure Escrow:</strong> Your funds are held securely in an escrow account. The seller only receives payment after you have fully funded the goal, redeemed the item, and it is processed for delivery.
+            </li>
+            <li>
+              <strong className="text-slate-800">Cancellations & Refunds:</strong> If you choose to cancel your goal before completion, a <strong>20% platform penalty fee</strong> will be deducted from your saved amount. The remaining 80% will be credited back to your DreamSaver Wallet. All refunds are subject to admin review.
+            </li>
+            <li>
+              <strong className="text-slate-800">Delivery Fees:</strong> A standard shipping fee of 250 PKR applies to all orders below 5,000 PKR. Orders of 5,000 PKR or more qualify for free delivery.
+            </li>
+            <li>
+              <strong className="text-slate-800">Redemption Process:</strong> Once your goal reaches 100%, the item is not shipped automatically. You must log into your dashboard, click "Redeem Product," and confirm your preferred delivery address and date.
+            </li>
+            <li>
+              <strong className="text-slate-800">Goal Expiration:</strong> Goals that are abandoned or remain unfunded significantly past their selected target timeline may be subject to automatic cancellation and standard refund policies.
+            </li>
+          </ul>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-100 text-right shrink-0">
+          <button onClick={onClose} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all w-full sm:w-auto shadow-md hover:shadow-lg active:scale-95">
+            I Understand & Accept
           </button>
         </div>
       </div>
@@ -188,7 +209,6 @@ export default function SetGoalClient() {
 
              <div className="pt-3 border-t border-slate-200 flex justify-between items-center">
                 <span className="font-bold text-slate-800">Final Goal Amount</span>
-                {/* ✅ UPDATED: Changed text-blue-600 to text-green-600 */}
                 <span className="text-xl font-extrabold text-green-600">PKR {finalTargetAmount.toLocaleString()}</span>
              </div>
           </div>
@@ -210,11 +230,11 @@ export default function SetGoalClient() {
                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                />
                {!appliedCoupon ? (
-                 <button onClick={handleApplyCoupon} disabled={!couponInput || couponLoading} className="px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-black disabled:opacity-50">
+                 <button onClick={handleApplyCoupon} disabled={!couponInput || couponLoading} className="px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-black disabled:opacity-50 transition-colors">
                    {couponLoading ? <Loader2 size={18} className="animate-spin" /> : "Apply"}
                  </button>
                ) : (
-                 <button onClick={removeCoupon} className="px-4 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200">
+                 <button onClick={removeCoupon} className="px-4 bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition-colors">
                    Remove
                  </button>
                )}

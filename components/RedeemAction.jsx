@@ -262,6 +262,10 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             type="date" 
                             min={minDate} 
                             value={selectedDate} 
+                            // ✅ FIXED: showPicker() forces the calendar to pop open instantly on click
+                            onClick={(e) => {
+                              try { e.target.showPicker(); } catch (err) {}
+                            }}
                             onChange={(e) => setSelectedDate(e.target.value)} 
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                         />
