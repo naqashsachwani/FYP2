@@ -1,7 +1,7 @@
 'use client' // Client component (required for interactivity)
 
 import Link from "next/link"
-import { MapPin, Phone, Mail, ArrowRight, Heart } from "lucide-react"
+import { MapPin, Phone, Mail, ArrowRight, Heart, ShieldCheck } from "lucide-react"
 
 // Footer Component
 const Footer = () => {
@@ -24,10 +24,11 @@ const Footer = () => {
     </svg>
   )
 
+  // ✅ FIXED: Updated with standard 24x24 Twitter/X bird path so it renders correctly
   const TwitterIcon = () => (
-    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
-      className="group-hover:scale-110 transition-transform duration-200">
-      <path d="M22.46 6c-.77.35-1.6.59-2.46.7a4.15 4.15 0 0 0 1.82-2.28 8.32 8.32 0 0 1-2.64 1A4.12 4.12 0 0 0 11 8.12a11.7 11.7 0 0 1-8.5-4.3A4.13 4.13 0 0 0 3.9 9a4 4 0 0 1-1.86-.52v.05A4.14 4.14 0 0 0 4.1 12z" />
+    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"
+      className="group-hover:scale-110 transition-transform duration-200 fill-current border-none">
+      <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
     </svg>
   )
 
@@ -44,8 +45,6 @@ const Footer = () => {
       title: "WEBSITE",
       links: [
         { text: "Home", path: "/" },
-        { text: "Create Your Store", path: "/create-store" },
-        // ✅ ADDED: Link to the User Complaints page
         { text: "Support & Complaints", path: "/complaints" }, 
       ],
     },
@@ -78,7 +77,7 @@ const Footer = () => {
         {/* ===================== MAIN FOOTER CONTENT ===================== */}
         <div className="py-12 lg:py-16 flex flex-col lg:flex-row gap-10 lg:gap-16">
 
-          {/* ================= BRAND + NEWSLETTER ================= */}
+          {/* ================= BRAND + TRUST BADGE ================= */}
           <div className="flex-1 max-w-md">
 
             {/* Brand Logo */}
@@ -92,19 +91,23 @@ const Footer = () => {
               Welcome to DreamSaver, where your goals become reality.
             </p>
 
-            {/* Newsletter Subscription */}
-            <div className="mt-6 p-4 bg-white rounded-3xl shadow-md border">
-              <p className="text-sm font-semibold mb-2">Stay Updated</p>
-              <div className="flex gap-2">
-                <input type="email" placeholder="Enter your email" className="flex-1 px-4 py-2 border rounded-xl outline-none focus:border-green-500" />
-                <button className="px-4 py-2 bg-green-500 hover:bg-green-600 transition text-white rounded-xl font-medium">Join</button>
+            {/* ✅ REPLACED: Trust & Security Badge instead of Newsletter */}
+            <div className="mt-6 p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3 transition-all hover:shadow-md">
+              <div className="p-2 bg-green-100 rounded-lg shrink-0">
+                <ShieldCheck className="text-green-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">Secure Layaway Guarantee</p>
+                <p className="text-xs text-slate-600 mt-1">
+                  Your payments are safely held in escrow and only released to the store once your item is delivered.
+                </p>
               </div>
             </div>
 
             {/* Social Media Links */}
             <div className="flex gap-3 mt-6">
               {socialIcons.map((item, i) => (
-                <Link key={i} href={item.link} target="_blank" className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md border hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
+                <Link key={i} href={item.link} target="_blank" aria-label={item.name} className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md border hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
                   <item.icon />
                 </Link>
               ))}

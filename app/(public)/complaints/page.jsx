@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, AlertTriangle, CheckCircle, MessageSquareWarning, X, Package, Clock, ShieldAlert, ChevronDown, Check } from "lucide-react";
 import toast from "react-hot-toast";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, SignInButton } from "@clerk/nextjs";
 
 export default function UserComplaintsPage() {
   const { isLoaded, userId } = useAuth();
@@ -41,7 +41,9 @@ export default function UserComplaintsPage() {
   };
 
   useEffect(() => {
-    if (isLoaded && userId) fetchData();
+    if (isLoaded && userId) {
+      fetchData();
+    }
   }, [isLoaded, userId]);
 
   const handleSubmit = async (e) => {
@@ -77,10 +79,39 @@ export default function UserComplaintsPage() {
     ];
   };
 
-  if (loading || !isLoaded) {
+  // 1. Clerk is still initializing
+  if (!isLoaded) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   }
 
+  // 2. User is NOT logged in - Show Login Prompt
+  if (isLoaded && !userId) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ShieldAlert className="text-green-600 w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Sign In Required</h2>
+          <p className="text-gray-500 mb-8 text-sm">
+            You need to be logged into your account to view your support tickets or file a new complaint.
+          </p>
+          <SignInButton mode="modal" fallbackRedirectUrl="/complaints">
+            <button className="w-full px-6 py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-2">
+              Sign In to Continue
+            </button>
+          </SignInButton>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. User IS logged in, but data is still fetching
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+  }
+
+  // 4. Main Authenticated UI
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-800">
       <div className="max-w-5xl mx-auto space-y-8">
