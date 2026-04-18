@@ -167,7 +167,7 @@ export default function CreateStore() {
     return (
       <div className="min-h-[80vh] flex items-center justify-center text-slate-600 bg-gradient-to-br from-indigo-50 to-purple-100 text-center px-6">
         <h1 className="text-3xl sm:text-4xl font-semibold">
-          Please <span className="text-indigo-600">Login</span> to continue
+          Please <span className="text-indigo-600">Sign In</span> to continue
         </h1>
       </div>
     )

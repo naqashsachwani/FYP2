@@ -2,9 +2,16 @@
 
 import Link from "next/link"
 import { MapPin, Phone, Mail, ArrowRight, Heart, ShieldCheck } from "lucide-react"
+import { useState, useEffect } from "react"
 
 // Footer Component
 const Footer = () => {
+  // Add state to fix Next.js hydration mismatch with the date
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   /* ===================== SOCIAL ICON SVGs ===================== */
   /* Custom SVG icons are used instead of lucide icons
@@ -91,7 +98,7 @@ const Footer = () => {
               Welcome to DreamSaver, where your goals become reality.
             </p>
 
-            {/* ✅ REPLACED: Trust & Security Badge instead of Newsletter */}
+            {/* Trust & Security Badge */}
             <div className="mt-6 p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3 transition-all hover:shadow-md">
               <div className="p-2 bg-green-100 rounded-lg shrink-0">
                 <ShieldCheck className="text-green-600" size={24} />
@@ -139,7 +146,7 @@ const Footer = () => {
 
         {/* ================= FOOTER BOTTOM BAR ================= */}
         <div className="border-t py-6 flex flex-col sm:flex-row justify-between gap-4 text-sm text-slate-600">
-          <span>© {new Date().getFullYear()} DreamSaver. All rights reserved.</span>
+          <span>© {mounted ? new Date().getFullYear() : "2026"} DreamSaver. All rights reserved.</span>
           <span className="flex items-center gap-1">
             Made with <Heart size={14} className="text-red-500 fill-red-500" /> for amazing shoppers
           </span>

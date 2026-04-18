@@ -88,14 +88,14 @@ export async function POST(req, { params }) {
         data: {
           saved: totalSavedAmount,
           status: newStatus,
-          endDate: newStatus === "COMPLETED" ? new Date() : null,
         },
         // ✅ ADDED USER TO INCLUDE
         include: { deposits: true, product: true, user: true },
       });
 
       // E. Sync Escrow
-      const existingEscrow = await tx.escrow.findUnique({ where: { goalId } });
+      // ✅ FIX 1: Changed findUnique to findFirst to avoid strict unique constraint panics
+      const existingEscrow = await tx.escrow.findFirst({ where: { goalId } });
       if (existingEscrow) {
         await tx.escrow.update({
           where: { id: existingEscrow.id },
@@ -113,6 +113,11 @@ export async function POST(req, { params }) {
       }
 
       return { updatedGoal, deposit };
+
+    // ✅ FIX 2: Added explicit timeout options to prevent P2028 crashes
+    }, {
+        maxWait: 5000,   // Wait up to 5 seconds for connection
+        timeout: 15000   // Give transaction up to 15 seconds to complete
     });
 
     // ==========================================

@@ -28,6 +28,14 @@ export async function POST(request) {
         return NextResponse.json({ error: "Missing data" }, { status: 400 });
       }
 
+      // Stripe requires a minimum charge equivalent to $0.50 USD (~150 PKR)
+      if (Number(amount) < 150) {
+        return NextResponse.json(
+          { error: "Minimum payment amount is Rs 150 to meet Stripe processing requirements." },
+          { status: 400 }
+        );
+      }
+
       // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
         mode: "payment", // One-time payment
@@ -37,7 +45,7 @@ export async function POST(request) {
             price_data: {
               currency: "pkr", // Pakistani Rupees
               unit_amount: Math.round(Number(amount) * 100), // Stripe expects amount in smallest unit (paisa)
-              product_data: { name: "Goal Deposit" }, // Name shown on Stripe checkout
+              product_data: { name: "DreamSaver Goal Deposit" }, // Name shown on Stripe checkout
             },
             quantity: 1,
           },
@@ -57,6 +65,7 @@ export async function POST(request) {
       return NextResponse.json({ checkoutUrl: session.url });
     } catch (err) {
       // Handle checkout creation errors
+      console.error("Stripe Checkout Error:", err);
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
   }
@@ -115,9 +124,13 @@ export async function POST(request) {
           //  Update goal status based on total saved
           const status = newSavedTotal >= Number(goal.targetAmount) ? "COMPLETED" : "ACTIVE";
           
+          // ✅ FIXED: Safely update only saved and status. Do NOT touch endDate.
           await prisma.goal.update({
             where: { id: goalId },
-            data: { saved: newSavedTotal, status },
+            data: { 
+                saved: newSavedTotal, 
+                status: status 
+            },
           });
         })
       );

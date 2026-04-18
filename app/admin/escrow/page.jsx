@@ -22,7 +22,8 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/goals/${goalId}`);
+        // ✅ Added cache-busting timestamp
+        const res = await fetch(`/api/goals/${goalId}?_t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.goal) setGoal(data.goal);
       } catch (e) { toast.error("Failed to load details"); }
@@ -100,13 +101,13 @@ export default function AdminEscrowPage() {
   const [filter, setFilter] = useState("ALL");
   const [selectedGoalId, setSelectedGoalId] = useState(null);
   
-  // ✅ NEW STATE: Loading state for the PDF generation
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/escrow?page=${page}&limit=10&filter=${filter}`);
+      // ✅ Added cache-busting timestamp so it NEVER uses stale browser data
+      const res = await fetch(`/api/admin/escrow?page=${page}&limit=10&filter=${filter}&_t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error("Failed");
       const jsonData = await res.json();
       setData(jsonData);
@@ -120,14 +121,29 @@ export default function AdminEscrowPage() {
     const confirmMsg = actionType === 'RELEASE' ? "Release funds (5% fee)?" : "Refund funds (20% penalty)?";
     if (!confirm(confirmMsg)) return;
     setProcessingId(itemId);
+
+    // ✅ OPTIMISTIC UI UPDATE: Instantly remove it from the screen for a snappy feel
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        actionable: prev.actionable.filter(item => item.id !== itemId)
+      };
+    });
+
     try {
       await fetch(`/api/admin/escrow/${itemId}/process`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: actionType, sourceTable }),
       });
       toast.success("Processed Successfully");
-      fetchData(); 
-    } catch (error) { toast.error("Failed"); } finally { setProcessingId(null); }
+      fetchData(); // Fetch fresh stats & history in the background
+    } catch (error) { 
+      toast.error("Failed to process transaction."); 
+      fetchData(); // Revert optimistic update on failure
+    } finally { 
+      setProcessingId(null); 
+    }
   };
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
@@ -154,8 +170,8 @@ export default function AdminEscrowPage() {
     const toastId = toast.loading("Compiling full report...");
 
     try {
-      // ✅ Fetch ALL data ignoring pagination just for the PDF
-      const res = await fetch(`/api/admin/escrow?page=1&limit=10000&filter=${filter}`);
+      // ✅ Added cache-busting timestamp
+      const res = await fetch(`/api/admin/escrow?page=1&limit=10000&filter=${filter}&_t=${Date.now()}`, { cache: 'no-store' });
       const fullData = await res.json();
       
       const allHistoryData = fullData?.history?.data || [];
@@ -235,7 +251,7 @@ export default function AdminEscrowPage() {
       });
       currentY = doc.lastAutoTable.finalY + 15;
 
-      // 5. Transaction History Table (Using all fetched records)
+      // 5. Transaction History Table
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
       doc.text(`4. Transaction History (Filter: ${filter} | Total: ${allHistoryData.length})`, 14, currentY);
@@ -286,9 +302,8 @@ export default function AdminEscrowPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input type="text" placeholder="Search ID, Product..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
-             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50" title="Refresh Data"><RefreshCw size={20} /></button>
+             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50" title="Refresh Data"><RefreshCw size={20} className={loading ? "animate-spin" : ""} /></button>
              
-             {/* ✅ BUTTON NOW HAS LOADING STATE */}
              <button 
                 onClick={generatePDF} 
                 disabled={isGeneratingPDF}
@@ -332,7 +347,7 @@ export default function AdminEscrowPage() {
                                     <td className="px-6 py-4 font-mono">Rs {item.amount.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-red-500">- Rs {(item.amount * 0.05).toLocaleString()}</td>
                                     <td className="px-6 py-4 font-bold text-green-600">Rs {(item.amount * 0.95).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE", "ESCROW")} disabled={processingId === item.id} className="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700">Release</button></td>
+                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE", "ESCROW")} disabled={processingId === item.id} className="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50">Release</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -354,7 +369,7 @@ export default function AdminEscrowPage() {
                                     <td className="px-6 py-4 font-mono">Rs {item.amount.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-red-500">- Rs {(item.amount * 0.20).toLocaleString()}</td>
                                     <td className="px-6 py-4 font-bold text-gray-800">Rs {(item.amount * 0.80).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "REFUND", "REFUND_REQUEST")} disabled={processingId === item.id} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700">Process</button></td>
+                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "REFUND", "REFUND_REQUEST")} disabled={processingId === item.id} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 disabled:opacity-50">Process</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -378,7 +393,7 @@ export default function AdminEscrowPage() {
           </div>
 
           <div className="overflow-x-auto min-h-[300px]">
-             {loading ? <div className="flex h-full items-center justify-center p-10"><Loader2 className="animate-spin text-gray-300"/></div> : (
+             {loading && !data ? <div className="flex h-full items-center justify-center p-10"><Loader2 className="animate-spin text-gray-300"/></div> : (
                 <table className="w-full text-sm text-left">
                   <thead className="bg-gray-50 text-gray-500 uppercase font-medium">
                     <tr>

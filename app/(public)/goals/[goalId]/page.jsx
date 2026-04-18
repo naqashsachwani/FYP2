@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* ================= JSPDF GENERATORS (Unchanged) ================= */
+/* ================= JSPDF GENERATORS ================= */
 const generateInvoicePDF = (transaction, product, userName) => {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -63,7 +63,8 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString()}`, rightEdge, startY + (lineHeight * 2), { align: "right" });
+  // ✅ ENFORCE DD/MM/YYYY
+  doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString('en-GB')}`, rightEdge, startY + (lineHeight * 2), { align: "right" });
   doc.text(`Time: ${new Date(transaction.createdAt).toLocaleTimeString()}`, rightEdge, startY + (lineHeight * 3) - 1, { align: "right" });
 
   autoTable(doc, {
@@ -115,10 +116,12 @@ const generateReportPDF = (deposits, goalName) => {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Goal: ${goalName}`, 14, 27);
-  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 32);
+  // ✅ ENFORCE DD/MM/YYYY
+  doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 14, 32);
 
   const tableData = deposits.map(d => [
-    new Date(d.createdAt).toLocaleDateString(),
+    // ✅ ENFORCE DD/MM/YYYY
+    new Date(d.createdAt).toLocaleDateString('en-GB'),
     new Date(d.createdAt).toLocaleTimeString(),
     d.receiptNumber?.slice(0, 8) || "N/A",
     `Rs ${d.amount.toLocaleString()}`
@@ -138,7 +141,7 @@ const generateReportPDF = (deposits, goalName) => {
   doc.save("DreamSaver_Detailed_Report.pdf");
 };
 
-/* ================= INVOICE MODAL COMPONENT (Unchanged) ================= */
+/* ================= INVOICE MODAL COMPONENT ================= */
 const InvoiceModal = ({ transaction, product, onClose, userName }) => {
   if (!transaction) return null;
   return (
@@ -163,7 +166,8 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
               <p className="text-slate-500 font-medium mb-1">Receipt #</p>
               <p className="font-mono font-bold text-slate-800">{transaction.receiptNumber?.slice(0, 8) || "N/A"}</p>
               <div className="mt-4 text-slate-500">
-                <p>{new Date(transaction.createdAt).toLocaleDateString()}</p>
+                {/* ✅ ENFORCE DD/MM/YYYY */}
+                <p>{new Date(transaction.createdAt).toLocaleDateString('en-GB')}</p>
                 <p>{new Date(transaction.createdAt).toLocaleTimeString()}</p>
               </div>
             </div>
@@ -255,28 +259,43 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
+  // ✅ FIXED: Using setGoal callback to prevent the date from disappearing on re-renders
   const normalizeAndSetGoal = (goalData) => {
-    const deposits = (goalData.deposits || []).map((d) => ({
-      ...d,
-      amount: Number(d.amount),
-      createdAt: new Date(d.createdAt),
-    }));
-    const calculatedSaved = deposits.reduce((sum, dep) => sum + dep.amount, 0);
-    const dateString = goalData.endDate || goalData.targetDate;
-    const validEndDate = dateString ? new Date(dateString) : null;
+    setGoal((prevGoal) => {
+      const deposits = (goalData.deposits || []).map((d) => ({
+        ...d,
+        amount: Number(d.amount),
+        createdAt: new Date(d.createdAt),
+      }));
+      const calculatedSaved = deposits.reduce((sum, dep) => sum + dep.amount, 0);
+      
+      // Preserve date from previous state if the backend accidentally drops it
+      const dateString = goalData.endDate || goalData.targetDate || prevGoal?.endDate || prevGoal?.targetDate;
+      let validEndDate = null;
+      let formattedEndDate = "--";
 
-    const normalizedGoal = {
-      ...goalData,
-      targetAmount: Number(goalData.targetAmount),
-      deposits: deposits,
-      saved: calculatedSaved,
-      endDate: validEndDate,
-      delivery: goalData.delivery, 
-      status: goalData.status
-    };
-    
-    normalizedGoal.progressPercent = normalizedGoal.targetAmount > 0 ? (normalizedGoal.saved / normalizedGoal.targetAmount) * 100 : 0;
-    setGoal(normalizedGoal);
+      if (dateString) {
+          const parsedDate = new Date(dateString);
+          if (!isNaN(parsedDate)) {
+              validEndDate = parsedDate;
+              formattedEndDate = parsedDate.toLocaleDateString('en-GB'); // Enforces DD/MM/YYYY
+          }
+      }
+
+      const normalizedGoal = {
+        ...goalData,
+        targetAmount: Number(goalData.targetAmount),
+        deposits: deposits,
+        saved: calculatedSaved,
+        endDate: validEndDate,
+        formattedEndDate: formattedEndDate !== "--" ? formattedEndDate : prevGoal?.formattedEndDate || "--", 
+        delivery: goalData.delivery, 
+        status: goalData.status
+      };
+      
+      normalizedGoal.progressPercent = normalizedGoal.targetAmount > 0 ? (normalizedGoal.saved / normalizedGoal.targetAmount) * 100 : 0;
+      return normalizedGoal;
+    });
   };
 
   useEffect(() => {
@@ -347,7 +366,12 @@ export default function GoalDetails() {
   if (!goal) return <p className="p-4 text-red-500">Goal not found</p>;
 
   const sortedDeposits = [...goal.deposits].sort((a, b) => b.createdAt - a.createdAt);
-  const chartPoints = [{ date: new Date(goal.createdAt).toLocaleDateString(), amount: 0 }, ...sortedDeposits.map((d) => ({ date: d.createdAt.toLocaleDateString(), amount: d.amount })).reverse()];
+  
+  // ✅ ENFORCE DD/MM/YYYY for the Chart
+  const chartPoints = [
+      { date: new Date(goal.createdAt).toLocaleDateString('en-GB'), amount: 0 }, 
+      ...sortedDeposits.map((d) => ({ date: d.createdAt.toLocaleDateString('en-GB'), amount: d.amount })).reverse()
+  ];
   const cumulativeData = chartPoints.map((p, i, arr) => arr.slice(0, i + 1).reduce((sum, c) => sum + c.amount, 0));
   const chartData = { labels: chartPoints.map((p) => p.date), datasets: [{ label: "Total Saved", data: cumulativeData, fill: true, backgroundColor: "rgba(16,185,129,0.1)", borderColor: "rgba(5,150,105,1)", tension: 0.3 }] };
   const userName = user ? (user.fullName || user.firstName) : "Valued User";
@@ -400,12 +424,12 @@ export default function GoalDetails() {
         <button
           disabled={savingDeposit || isGoalCompleted}
           onClick={() => router.push(`/goals/${goalId}/deposit`)}
-          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all ${savingDeposit || isGoalCompleted ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
+          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all flex justify-center items-center gap-2 ${savingDeposit || isGoalCompleted ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
         >
-          {savingDeposit ? "Processing..." : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
+          {savingDeposit ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
         </button>
 
-        {/* ✅ NEW: Deposit Button (Wallet) */}
+        {/* Deposit Button (Wallet) */}
         <button
           disabled={savingDeposit || isGoalCompleted}
           onClick={() => setIsWalletModalOpen(true)}
@@ -457,7 +481,8 @@ export default function GoalDetails() {
               <li key={d.id} className="p-5 border border-slate-200 rounded-xl flex items-center justify-between bg-white shadow-sm">
                 <div>
                   <span className="text-slate-900 font-bold block">{d.paymentMethod === "WALLET" ? "Wallet Deposit" : "Deposit"}</span>
-                  <span className="text-slate-500 text-sm">{d.createdAt.toLocaleString()}</span>
+                  {/* ✅ ENFORCE DD/MM/YYYY */}
+                  <span className="text-slate-500 text-sm">{new Date(d.createdAt).toLocaleDateString('en-GB')} {new Date(d.createdAt).toLocaleTimeString()}</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="font-bold text-emerald-600 text-xl">+ {d.amount.toLocaleString()}</span>
@@ -471,7 +496,7 @@ export default function GoalDetails() {
         </div>
       )}
 
-      {/* ✅ NEW: WALLET DEPOSIT MODAL */}
+      {/* WALLET DEPOSIT MODAL */}
       {isWalletModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">

@@ -81,34 +81,29 @@ export default function UserComplaintsPage() {
 
   // 1. Clerk is still initializing
   if (!isLoaded) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+    return <div className="min-h-[80vh] flex items-center justify-center"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   }
 
-  // 2. User is NOT logged in - Show Login Prompt
+  // 2. User is NOT logged in - Exact match to your screenshot design
   if (isLoaded && !userId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-sm border border-gray-100 text-center max-w-md w-full animate-in fade-in zoom-in-95 duration-300">
-          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <ShieldAlert className="text-green-600 w-10 h-10" />
-          </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-3">Sign In Required</h2>
-          <p className="text-gray-500 mb-8 text-sm">
-            You need to be logged into your account to view your support tickets or file a new complaint.
-          </p>
+      <div className="min-h-[80vh] flex items-center justify-center bg-[#f4f4f9]">
+        <h2 className="text-3xl sm:text-4xl font-bold text-slate-700 tracking-tight">
+          Please{" "}
           <SignInButton mode="modal" fallbackRedirectUrl="/complaints">
-            <button className="w-full px-6 py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition shadow-lg shadow-green-100 flex items-center justify-center gap-2">
-              Sign In to Continue
+            <button className="text-indigo-600 hover:text-indigo-700 hover:underline decoration-2 underline-offset-4 transition-all">
+              Sign In
             </button>
-          </SignInButton>
-        </div>
+          </SignInButton>{" "}
+          to continue
+        </h2>
       </div>
     );
   }
 
   // 3. User IS logged in, but data is still fetching
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+    return <div className="min-h-[80vh] flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   }
 
   // 4. Main Authenticated UI

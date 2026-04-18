@@ -37,24 +37,24 @@ export async function POST(req) {
         data: { balance: { decrement: withdrawAmount } },
       });
 
-      // Log the withdrawal with the user's bank details so Admin knows where to send it
+      // Log the successful withdrawal transfer
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
           amount: withdrawAmount, 
           type: "WITHDRAWAL",
-          description: `Withdrawal to ${payoutMethod} (${accountNumber} - ${accountName})`,
+          description: `Direct Transfer to ${payoutMethod} (${accountNumber} - ${accountName})`,
         },
       });
     });
 
-    // ✅ FIRE ENGINE: Notify user that the withdrawal request was received
+    // ✅ FIRE ENGINE: Notify user that the withdrawal was successfully processed
     if (wallet.user) {
         await sendNotification({
             userId: wallet.user.id,
             email: wallet.user.email,
-            title: "Withdrawal Requested 🏦",
-            message: `Your request to withdraw Rs ${withdrawAmount.toLocaleString()} to your ${payoutMethod} account has been received and is pending admin approval.`,
+            title: "Withdrawal Successful 🏦",
+            message: `Your withdrawal of Rs ${withdrawAmount.toLocaleString()} has been successfully transferred to your ${payoutMethod} account ending in ${accountNumber.slice(-4)}.`,
             type: "SYSTEM_ALERT",
             notifyInApp: true,
             notifyEmail: true
@@ -63,11 +63,11 @@ export async function POST(req) {
 
     return NextResponse.json({ 
       success: true, 
-      message: "Withdrawal request submitted successfully.",
+      message: "Withdrawal processed successfully.",
     });
 
   } catch (error) {
     console.error("Withdrawal Error:", error);
-    return NextResponse.json({ error: "Failed to process withdrawal request" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to process withdrawal" }, { status: 500 });
   }
 }

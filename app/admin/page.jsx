@@ -16,11 +16,11 @@ import {
   CheckCircle,
   Download,
   RotateCcw,
-  TrendingUp // Added icon
+  TrendingUp 
 } from "lucide-react"
 import {
-  LineChart, // Changed from AreaChart
-  Line,      // Changed from Area
+  LineChart, 
+  Line,      
   XAxis,
   YAxis,
   CartesianGrid,
@@ -87,7 +87,8 @@ export default function AdminDashboard() {
       setLoading(true);
       
       const token = await getToken()
-      const { data } = await axios.get('/api/admin/dashboard', {
+      // ✅ Added cache-busting timestamp so the dashboard is always fresh
+      const { data } = await axios.get(`/api/admin/dashboard?_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       

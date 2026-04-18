@@ -249,9 +249,8 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                   <div>
                     <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2"><Calendar size={16} className="text-indigo-600"/> Preferred Delivery Date</h4>
                     
-                    {/* ✅ SOLUTION: The "Invisible Input" Trick */}
+                    {/* The "Invisible Input" Trick */}
                     <div className="relative w-full">
-                        {/* 1. Visible Text Input (Shows DD-MM-YYYY) */}
                         <input 
                             type="text" 
                             readOnly 
@@ -259,8 +258,6 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             value={formatDateForDisplay(selectedDate)} 
                             className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-indigo-600 outline-none text-gray-700 font-medium" 
                         />
-                        
-                        {/* 2. Invisible Date Picker (Triggers calendar on click) */}
                         <input 
                             type="date" 
                             min={minDate} 
@@ -268,8 +265,6 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             onChange={(e) => setSelectedDate(e.target.value)} 
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                         />
-                        
-                        {/* 3. Icon Overlay */}
                         <div className="absolute right-3 top-3.5 pointer-events-none text-gray-500">
                             <Calendar size={20} />
                         </div>
@@ -299,7 +294,14 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
             <div className="p-5 border-t bg-gray-50 flex gap-3 shrink-0">
               <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
               {isAddingNew ? (
-                 <button type="submit" form="address-form" disabled={loading} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700">{loading ? <Loader2 className="animate-spin w-4 h-4" /> : "Save Address"}</button>
+                 <button 
+                  type="submit" 
+                  form="address-form" 
+                  disabled={loading} 
+                  className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 flex justify-center items-center gap-2 disabled:opacity-75"
+                 >
+                   {loading ? <><Loader2 className="animate-spin w-4 h-4" /> Saving...</> : "Save Address"}
+                 </button>
               ) : (
                  <button onClick={handleRedeem} disabled={loading || !addresses?.length || !selectedDate} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 flex justify-center items-center gap-2">{loading ? <Loader2 className="animate-spin w-4 h-4" /> : "Confirm Redemption"}</button>
               )}
