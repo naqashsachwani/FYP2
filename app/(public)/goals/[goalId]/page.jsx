@@ -1,25 +1,37 @@
-"use client";
+"use client"; // Enforces client-side rendering for this Next.js component to allow hooks and DOM manipulation.
 
+// --- React & Next.js Imports ---
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+
+// --- Third-Party UI & Charting Imports ---
 import { Line } from "react-chartjs-2";
-import "chart.js/auto";
+import "chart.js/auto"; // Automatically registers Chart.js controllers, elements, and scales
 import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift, Wallet } from "lucide-react";
+import toast from "react-hot-toast";
+
+// --- Custom Components ---
 import GoalCard from "@/components/GoalCard";
 import RedeemAction from "@/components/RedeemAction";
+
+// --- Authentication ---
 import { useUser } from "@clerk/nextjs";
-import toast from "react-hot-toast";
+
+// --- PDF Generation Libraries ---
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 /* ================= JSPDF GENERATORS ================= */
+// Utility function to generate a single transaction invoice PDF
 const generateInvoicePDF = (transaction, product, userName) => {
+  // Initialize jsPDF with A5 format for a receipt-like size
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
   const rightEdge = pageWidth - margin;
 
+  // Header Section
   doc.setTextColor(5, 150, 105);
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
@@ -30,6 +42,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setFont("helvetica", "normal");
   doc.text("DreamSaver Payment Receipt", margin, 26);
 
+  // Separator Line
   doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.5);
   doc.line(margin, 32, rightEdge, 32);
@@ -37,6 +50,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
   const startY = 45;
   const lineHeight = 6;
 
+  // Billed To Section
   doc.setFontSize(9);
   doc.setTextColor(148, 163, 184);
   doc.setFont("helvetica", "bold");
@@ -51,6 +65,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setTextColor(100, 116, 139);
   doc.text(`User ID: ${transaction.userId.slice(0, 12)}...`, margin, startY + (lineHeight * 2));
 
+  // Receipt Meta Info Section
   doc.setFontSize(9);
   doc.setTextColor(148, 163, 184);
   doc.setFont("helvetica", "bold");
@@ -63,10 +78,11 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  // ✅ ENFORCE DD/MM/YYYY
+  // ✅ ENFORCE DD/MM/YYYY formatting for standard parsing
   doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString('en-GB')}`, rightEdge, startY + (lineHeight * 2), { align: "right" });
   doc.text(`Time: ${new Date(transaction.createdAt).toLocaleTimeString()}`, rightEdge, startY + (lineHeight * 3) - 1, { align: "right" });
 
+  // Generate Table using autoTable plugin
   autoTable(doc, {
     startY: startY + 25,
     head: [['Description', 'Payment Method', 'Amount']],
@@ -84,6 +100,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
     margin: { left: margin, right: margin }
   });
 
+  // Footer Totals
   const finalY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
@@ -94,6 +111,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setFontSize(14);
   doc.text(`Rs ${transaction.amount.toLocaleString()}`, rightEdge, finalY, { align: "right" });
 
+  // Footer Branding
   doc.setDrawColor(226, 232, 240);
   doc.line(margin, pageHeight - 20, rightEdge, pageHeight - 20);
   doc.setFontSize(8);
@@ -105,6 +123,7 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.save(`Invoice_${transaction.receiptNumber?.slice(0, 8)}.pdf`);
 };
 
+// Utility function to generate a full monthly/goal history report
 const generateReportPDF = (deposits, goalName) => {
   const doc = new jsPDF();
   doc.setTextColor(5, 150, 105);
@@ -119,6 +138,7 @@ const generateReportPDF = (deposits, goalName) => {
   // ✅ ENFORCE DD/MM/YYYY
   doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 14, 32);
 
+  // Map over deposits to construct table rows
   const tableData = deposits.map(d => [
     // ✅ ENFORCE DD/MM/YYYY
     new Date(d.createdAt).toLocaleDateString('en-GB'),
@@ -142,8 +162,9 @@ const generateReportPDF = (deposits, goalName) => {
 };
 
 /* ================= INVOICE MODAL COMPONENT ================= */
+// A UI Modal displaying specific transaction details before downloading
 const InvoiceModal = ({ transaction, product, onClose, userName }) => {
-  if (!transaction) return null;
+  if (!transaction) return null; // Safety check
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden relative">
@@ -194,6 +215,7 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
           </div>
         </div>
         <div className="p-4 bg-slate-50 border-t flex justify-end">
+          {/* Triggers the PDF generation function from above */}
           <button onClick={() => generateInvoicePDF(transaction, product, userName)} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 font-medium transition-colors shadow-sm">
             <Download className="w-4 h-4" /> Download PDF
           </button>
@@ -206,11 +228,13 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
 /* ================= MAIN COMPONENT ================= */
 
 export default function GoalDetails() {
+  // Hooks to grab URL params, routing, query strings, and auth user context
   const { goalId } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
 
+  // Primary State declarations
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingDeposit, setSavingDeposit] = useState(false);
@@ -224,14 +248,16 @@ export default function GoalDetails() {
   const [walletAmount, setWalletAmount] = useState("");
   const [isProcessingWallet, setIsProcessingWallet] = useState(false);
 
+  // useRef to prevent double-firing of Stripe success confirmation
   const handledRef = useRef(false);
 
+  // Fetch the primary goal data
   const fetchGoal = async () => {
     try {
       const res = await fetch(`/api/goals/${goalId}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      normalizeAndSetGoal(data.goal);
+      normalizeAndSetGoal(data.goal); // Processes raw data before setting state
     } catch (err) {
       console.error(err);
     } finally {
@@ -239,6 +265,7 @@ export default function GoalDetails() {
     }
   };
 
+  // Fetch the user's saved addresses for the redemption flow
   const fetchAddresses = async () => {
     try {
         const res = await fetch(`/api/address`); 
@@ -249,6 +276,7 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
+  // Fetch the user's available digital wallet balance
   const fetchWalletBalance = async () => {
     try {
         const res = await fetch(`/api/wallet`); 
@@ -259,7 +287,8 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
-  // ✅ FIXED: Using setGoal callback to prevent the date from disappearing on re-renders
+  // FIXED: Using setGoal callback to prevent the date from disappearing on re-renders
+  // This normalizes the API payload (string to numbers/dates) and safely merges it with existing state
   const normalizeAndSetGoal = (goalData) => {
     setGoal((prevGoal) => {
       const deposits = (goalData.deposits || []).map((d) => ({
@@ -267,9 +296,10 @@ export default function GoalDetails() {
         amount: Number(d.amount),
         createdAt: new Date(d.createdAt),
       }));
+      // Sum all individual deposit amounts to find total saved
       const calculatedSaved = deposits.reduce((sum, dep) => sum + dep.amount, 0);
       
-      // Preserve date from previous state if the backend accidentally drops it
+      // Preserve date from previous state if the backend accidentally drops it during a quick update
       const dateString = goalData.endDate || goalData.targetDate || prevGoal?.endDate || prevGoal?.targetDate;
       let validEndDate = null;
       let formattedEndDate = "--";
@@ -293,11 +323,13 @@ export default function GoalDetails() {
         status: goalData.status
       };
       
+      // Calculate progress percentage, avoiding division by zero
       normalizedGoal.progressPercent = normalizedGoal.targetAmount > 0 ? (normalizedGoal.saved / normalizedGoal.targetAmount) * 100 : 0;
       return normalizedGoal;
     });
   };
 
+  // Initial Data Fetching Effect
   useEffect(() => {
     fetchGoal();
     if (user) {
@@ -306,10 +338,12 @@ export default function GoalDetails() {
     }
   }, [goalId, user]);
 
-  // Handle Stripe Success
+  // Handle Stripe Success Return
+  // Checks URL parameters to see if the user was just redirected back from Stripe
   useEffect(() => {
     const payment = searchParams.get("payment");
     const amount = searchParams.get("amount");
+    // Ensure payment succeeded and we haven't already processed this (using handledRef)
     if (payment === "success" && amount && !handledRef.current) {
       handledRef.current = true; 
       setSavingDeposit(true);
@@ -322,17 +356,20 @@ export default function GoalDetails() {
           if (data.success && data.goal) {
             normalizeAndSetGoal(data.goal); 
             setSuccessMessage(data.goalCompleted ? "🎉 Goal Completed!" : "✅ Deposit Added!");
+            // Clean up the URL to remove the success query params
             router.replace(`/goals/${goalId}`);
           }
         }).finally(() => setSavingDeposit(false));
     }
   }, [searchParams, goalId, router]);
 
+  // Handle Internal Wallet Payment Processing
   const handleWalletDepositSubmit = async (e) => {
     e.preventDefault();
     const amountNum = Number(walletAmount);
     const remaining = Math.max(0, goal.targetAmount - goal.saved);
 
+    // Front-end Validation checks
     if (amountNum <= 0) return toast.error("Enter a valid amount");
     if (amountNum > walletBalance) return toast.error("Insufficient wallet balance");
     if (amountNum > remaining) return toast.error(`Maximum allowed is Rs ${remaining}`);
@@ -351,10 +388,10 @@ export default function GoalDetails() {
       if (!res.ok) throw new Error(data.error);
 
       toast.success(data.goalCompleted ? "🎉 Goal Completed!" : "✅ Deposit Added via Wallet!", { id: toastId });
-      normalizeAndSetGoal(data.goal);
-      setIsWalletModalOpen(false);
-      setWalletAmount("");
-      fetchWalletBalance(); // Update balance
+      normalizeAndSetGoal(data.goal); // Update local state
+      setIsWalletModalOpen(false);    // Close the modal
+      setWalletAmount("");            // Reset input
+      fetchWalletBalance();           // Update balance state to reflect deduction
     } catch (error) {
       toast.error(error.message || "Failed to process deposit", { id: toastId });
     } finally {
@@ -362,9 +399,11 @@ export default function GoalDetails() {
     }
   };
 
+  // Render Guards
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" /></div>;
   if (!goal) return <p className="p-4 text-red-500">Goal not found</p>;
 
+  // Data processing for Chart.js
   const sortedDeposits = [...goal.deposits].sort((a, b) => b.createdAt - a.createdAt);
   
   // ✅ ENFORCE DD/MM/YYYY for the Chart
@@ -372,19 +411,36 @@ export default function GoalDetails() {
       { date: new Date(goal.createdAt).toLocaleDateString('en-GB'), amount: 0 }, 
       ...sortedDeposits.map((d) => ({ date: d.createdAt.toLocaleDateString('en-GB'), amount: d.amount })).reverse()
   ];
+  // Create cumulative data array (e.g., [10, 20, 30] becomes [10, 30, 60])
   const cumulativeData = chartPoints.map((p, i, arr) => arr.slice(0, i + 1).reduce((sum, c) => sum + c.amount, 0));
-  const chartData = { labels: chartPoints.map((p) => p.date), datasets: [{ label: "Total Saved", data: cumulativeData, fill: true, backgroundColor: "rgba(16,185,129,0.1)", borderColor: "rgba(5,150,105,1)", tension: 0.3 }] };
+  
+  // Chart.js Configuration Object
+  const chartData = { 
+    labels: chartPoints.map((p) => p.date), 
+    datasets: [{ 
+      label: "Total Saved", 
+      data: cumulativeData, 
+      fill: true, 
+      backgroundColor: "rgba(16,185,129,0.1)", 
+      borderColor: "rgba(5,150,105,1)", 
+      tension: 0.3 
+    }] 
+  };
+  
   const userName = user ? (user.fullName || user.firstName) : "Valued User";
   
+  // Derived state booleans for controlling UI actions
   const isGoalCompleted = goal.status === "COMPLETED" || goal.status === "REDEEMED";
   const isRedeemed = goal.status === "REDEEMED" || !!goal.delivery;
   const remainingTarget = Math.max(0, goal.targetAmount - goal.saved);
 
   return (
     <div className="container mx-auto p-4 max-w-4xl relative">
+      {/* Conditionally rendered Modals and Alerts */}
       {selectedInvoice && <InvoiceModal transaction={selectedInvoice} product={goal.product} onClose={() => setSelectedInvoice(null)} userName={userName} />}
       {successMessage && <div className="mb-4 bg-green-50 text-green-700 p-3 rounded border border-green-200">{successMessage}</div>}
 
+      {/* Completion Banners */}
       {isGoalCompleted && !isRedeemed && (
         <div className="mb-4 bg-green-100 text-green-800 p-3 rounded font-semibold border border-green-200 flex items-center gap-2">
           <CheckCircle className="w-5 h-5" /> 🎉 Goal completed! Please redeem your product.
@@ -396,9 +452,11 @@ export default function GoalDetails() {
          </div>
       )}
 
+      {/* Primary Goal Card View */}
       <h1 className="text-2xl font-bold mb-4">{goal.product?.name || "Savings Goal"}</h1>
       <GoalCard goal={goal} />
 
+      {/* Progress Bar View */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Progress</h2>
         <div className="w-full bg-slate-200 rounded-full h-6 overflow-hidden relative">
@@ -412,15 +470,16 @@ export default function GoalDetails() {
         </div>
       </div>
 
+      {/* Chart.js Line Chart */}
       <div className="mt-8 p-4 bg-white rounded-xl shadow-sm border border-slate-100">
         <h2 className="text-lg font-semibold mb-4">Savings Growth</h2>
         <div className="h-64 sm:h-80"><Line data={chartData} options={{ maintainAspectRatio: false }} /></div>
       </div>
 
-      {/* ✅✅✅ ACTION BUTTONS ✅✅✅ */}
+      {/* ACTION BUTTONS */}
       <div className="mt-6 flex flex-col sm:flex-row gap-4 flex-wrap">
         
-        {/* 1. Deposit Button (Stripe) */}
+        {/* 1. Deposit Button (Stripe Integration Route) */}
         <button
           disabled={savingDeposit || isGoalCompleted}
           onClick={() => router.push(`/goals/${goalId}/deposit`)}
@@ -429,7 +488,7 @@ export default function GoalDetails() {
           {savingDeposit ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
         </button>
 
-        {/* Deposit Button (Wallet) */}
+        {/* 2. Deposit Button (Internal Wallet Route) */}
         <button
           disabled={savingDeposit || isGoalCompleted}
           onClick={() => setIsWalletModalOpen(true)}
@@ -439,7 +498,7 @@ export default function GoalDetails() {
           Deposit via Wallet
         </button>
 
-        {/* 2. Redeem Button (Active) or Disabled "Redeemed" Button */}
+        {/* 3. Redeem Button (Shows Redeem Component if Complete, otherwise disabled status button) */}
         {!isRedeemed && isGoalCompleted ? (
             <div className="flex-1 sm:flex-none">
                 <RedeemAction 
@@ -455,7 +514,7 @@ export default function GoalDetails() {
             </button>
         ) : null}
 
-        {/* 3. Track Button */}
+        {/* 4. Track Button (Only visible if redeemed and delivery exists) */}
         {isRedeemed && goal.delivery && (
             <button
                 onClick={() => router.push(`/tracking/${goal.delivery.id}`)}
@@ -466,13 +525,13 @@ export default function GoalDetails() {
             </button>
         )}
 
-        {/* 4. Report */}
+        {/* 5. Report Download Button */}
         <button onClick={() => generateReportPDF(sortedDeposits, goal.product?.name)} className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-2">
           <FileBarChart className="w-5 h-5" /> Monthly Report
         </button>
       </div>
 
-      {/* Transactions */}
+      {/* Transaction History List */}
       {goal.deposits.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4 text-slate-900">Recent Transactions</h2>
