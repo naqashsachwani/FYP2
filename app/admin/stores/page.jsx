@@ -1,10 +1,14 @@
+// Designates this file as a Client Component in Next.js, allowing the use of React hooks and interactive state.
 'use client'
-import StoreInfo from "@/components/admin/StoreInfo"
-import Loading from "@/components/Loading"
-import { useEffect, useState } from "react"
-import toast from "react-hot-toast"
-import { useUser, useAuth } from "@clerk/nextjs"
-import axios from "axios"
+
+// --- Imports ---
+import StoreInfo from "@/components/admin/StoreInfo" // Custom component to display standardized store details
+import Loading from "@/components/Loading" // Custom loading spinner component
+import { useEffect, useState } from "react" // Standard React hooks
+import toast from "react-hot-toast" // Notification library for success/error popups
+import { useUser, useAuth } from "@clerk/nextjs" // Clerk hooks for authentication and user session management
+import axios from "axios" // Library for making HTTP requests to the backend
+// Lucide icons for UI enhancement
 import { 
   Store, 
   Activity, 
@@ -19,78 +23,82 @@ import {
   Trash2 
 } from "lucide-react"
 
+// ================= MAIN COMPONENT =================
 export default function AdminStores() {
     
-    // Auth Hooks: 'useUser' for client-side data, 'getToken' for secure API requests.
+    // Auth Hooks: 'useUser' gets client-side user data, 'getToken' fetches a JWT for secure API requests.
     const { user } = useUser()
     const { getToken } = useAuth()
 
-    const [stores, setStores] = useState([])
-    const [loading, setLoading] = useState(true)
+    // --- Core State ---
+    const [stores, setStores] = useState([]) // Holds the master list of stores fetched from the database
+    const [loading, setLoading] = useState(true) // Controls the full-page loading spinner
     
-    // 'searchTerm' is what the user types immediately.
-    // 'debouncedSearch' is the value we actually use for filtering.
+    // --- Search & Filtering State ---
+    // 'searchTerm' updates immediately on every keystroke.
     const [searchTerm, setSearchTerm] = useState("")
+    // 'debouncedSearch' updates only after the user stops typing, preventing excessive re-filtering.
     const [debouncedSearch, setDebouncedSearch] = useState("") 
-    
+    // Tracks the current status filter dropdown (all, active, inactive).
     const [statusFilter, setStatusFilter] = useState("all")
 
     // --- MODAL STATES ---
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-    const [selectedStore, setSelectedStore] = useState(null)
-    const [editFormData, setEditFormData] = useState({ name: "", isActive: false })
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false) // Controls Edit modal visibility
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false) // Controls View modal visibility
+    const [selectedStore, setSelectedStore] = useState(null) // Holds the specific store object currently being viewed/edited
+    const [editFormData, setEditFormData] = useState({ name: "", isActive: false }) // Holds the draft state of the edit form
 
     /**
      * Fetch Stores from Backend
-     * fetch inside a function so we can reuse it (e.g., for refresh).
-     * pass the Bearer token in headers because the backend API route is protected.
+     * This logic is wrapped in a function so it can be reused (e.g., if we want a manual refresh button).
+     * It passes the Bearer token in the headers to authenticate against the protected API route.
      */
     const fetchStores = async () => {
-        try{
+        try {
             const token = await getToken()
             const { data } = await axios.get('/api/admin/stores', {
                 headers: { Authorization: `Bearer ${token}` }
             })
-            setStores(data.stores)
+            setStores(data.stores) // Populate the state with the returned array
         } catch (error) {
             toast.error(error?.response?.data?.error || error.message)
         }
-        setLoading(false)
+        setLoading(false) // Turn off the spinner regardless of success or failure
     }
 
-    // Opens the Edit Modal and pre-fills the form with existing data
+    // Opens the Edit Modal and pre-fills the form state with the existing store data.
     const handleEditClick = (store) => {
         setSelectedStore(store)
         setEditFormData({ name: store.name, isActive: store.isActive })
         setIsEditModalOpen(true)
     }
 
+    // Opens the View Details modal for a specific store.
     const handleViewClick = (store) => {
         setSelectedStore(store)
         setIsViewModalOpen(true)
     }
 
- 
+    // Deletes a store from the platform
     const handleDeleteStore = async (storeId) => {
-        // Safety Check: Prevent accidental clicks
+        // Safety Check: Native browser confirm dialog to prevent accidental deletions
         if(!confirm("Are you sure you want to delete this store? This action cannot be undone.")) return;
 
-        // Snapshot: Save current state before modifying it 
+        // Snapshot: Save the current state in memory before modifying it (Optimistic UI preparation)
         const previousStores = [...stores];
 
-        // Remove from UI immediately so it feels "instant"
+        // Optimistic UI Update: Remove the store from the screen immediately so the app feels instant
         setStores(prev => prev.filter(s => s.id !== storeId));
 
         try {
             const token = await getToken();
-            // API Call: We send the ID as a query param 
+            // API Call: Send a DELETE request with the storeId as a query parameter
             await axios.delete(`/api/admin/store?id=${storeId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success("Store deleted successfully");
         } catch (error) {
-            // If API failed, put the data back so the user isn't lied to
+            // If the API failed, put the data back so the user isn't lied to
             setStores(previousStores); 
             toast.error(error?.response?.data?.error || "Failed to delete store");
         }
@@ -98,25 +106,27 @@ export default function AdminStores() {
 
     /**
      * UPDATE STORE (Optimistic UI Pattern)
-     * INTERVIEW NOTE: Explain that we construct the 'updatedStore' manually on the client
-     * to avoid waiting for a backend response before updating the screen.
+     * We construct the 'updatedStore' manually on the client to update the screen instantly,
+     * avoiding the delay of waiting for the backend response.
      */
     const handleUpdateStore = async (e) => {
-        e.preventDefault()
+        e.preventDefault() // Stop the HTML form from refreshing the page
         
-        const previousStores = [...stores]
+        const previousStores = [...stores] // Snapshot for rollback
     
+        // Merge the existing store data with the new changes from the form
         const updatedStore = { ...selectedStore, ...editFormData }
-        // Update the specific item in the array while keeping others the same
+        
+        // Map over the state array: replace the edited store with the new object, leave others alone.
         setStores(prev => prev.map(s => s.id === selectedStore.id ? updatedStore : s))
         
-        setIsEditModalOpen(false)
+        setIsEditModalOpen(false) // Close the modal immediately
         toast.success("Store details updated successfully")
 
         try {
             const token = await getToken()
             
-            //Background API Call
+            // Background API Call to save the changes permanently in the database
             await axios.post('/api/admin/toggle-store', { 
                 storeId: selectedStore.id,
                 name: editFormData.name,
@@ -126,27 +136,28 @@ export default function AdminStores() {
             });
 
         } catch (error) {
-            // Rollback on failure
+            // Rollback the UI if the background network request fails
             setStores(previousStores)
             toast.error("Failed to update store on server")
         }
     }
 
     /**
-     * This prevents the app from filtering/lagging on every single keystroke.
-     * It waits for 500ms of silence from the user before running the search logic.
+     * Debounce Effect
+     * This prevents the app from filtering the array on every single keystroke.
+     * It waits for 500ms of silence from the user before finalizing the 'debouncedSearch' value.
      */
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchTerm);
         }, 500);
 
-        // Cleanup Function: If user types 'A' then 'B' quickly, this runs before 'A' finishes,
-        // cancelling the first timeout so only the final result matters.
+        // Cleanup Function: If the user types a new letter before 500ms is up,
+        // this cancels the previous timeout, ensuring only the final complete word triggers the update.
         return () => clearTimeout(handler);
     }, [searchTerm]);
 
-    // Initial Data Fetch
+    // Initial Data Fetch: Runs once when Clerk verifies the user session is active.
     useEffect(() => {
         if(user){
             fetchStores()
@@ -154,37 +165,41 @@ export default function AdminStores() {
     }, [user])
 
     /**
-     *  We filter based on 'debouncedSearch' (the delayed value),
-     * not 'searchTerm' (the immediate value), to keep performance high.
+     * Client-Side Filtering
+     * We filter based on 'debouncedSearch' (the delayed value),
+     * not 'searchTerm' (the immediate value), keeping CPU usage low.
      */
     const filteredStores = stores.filter(store => {
-        // Search Name OR Username
+        // Search Name OR Username (case-insensitive)
         const matchesSearch = store.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
                               store.username.toLowerCase().includes(debouncedSearch.toLowerCase())
         
-        // Check Filter Dropdown
+        // Evaluate the Status dropdown (All, Active, or Inactive)
         const matchesStatus = statusFilter === "all" || 
                               (statusFilter === "active" && store.isActive) ||
                               (statusFilter === "inactive" && !store.isActive)
         
+        // Store must pass both checks to remain visible
         return matchesSearch && matchesStatus
     })
 
-    // Calculated Stats for Top Cards
+    // Calculated Statistics for the top dashboard cards
     const totalStores = stores.length
     const activeStores = stores.filter(store => store.isActive).length
     const inactiveStores = stores.filter(store => !store.isActive).length
 
+    // Render Guard: Full-page spinner while fetching initial data
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <Loading />
         </div>
     )
 
+    // --- MAIN RENDER ---
     return (
         <div className="space-y-8 mb-28 relative">
             
-            {/* Header Section */}
+            {/* ================= Header Section ================= */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-800 tracking-tight">
@@ -194,7 +209,7 @@ export default function AdminStores() {
                         Monitor and manage your platform's store ecosystem.
                     </p>
                 </div>
-                {/* Live System Badge */}
+                {/* Live System Pulse Badge */}
                 <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-full shadow-sm border border-slate-200">
                     <span className="relative flex h-3 w-3">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -204,16 +219,19 @@ export default function AdminStores() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
+            {/* ================= Stats Cards ================= */}
+            {/* Uses the reusable StatCard component defined at the bottom of the file */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard label="Total Stores" value={totalStores} icon={Store} color="blue" bg="bg-blue-50" text="text-blue-600" />
                 <StatCard label="Active Stores" value={activeStores} icon={Activity} color="green" bg="bg-green-50" text="text-green-600" />
                 <StatCard label="Inactive Stores" value={inactiveStores} icon={Users} color="orange" bg="bg-orange-50" text="text-orange-600" />
             </div>
 
-            {/* Filters */}
+            {/* ================= Filters Toolbar ================= */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                    
+                    {/* Search Bar Input */}
                     <div className="relative w-full md:max-w-md">
                         <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             
@@ -225,7 +243,9 @@ export default function AdminStores() {
                             className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-slate-50/50 focus:bg-white"
                         />
                     </div>
+
                     <div className="flex items-center gap-4 w-full md:w-auto">
+                        {/* Status Filter Dropdown */}
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -235,6 +255,7 @@ export default function AdminStores() {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </select>
+                        {/* Dynamic Count of filtered results */}
                         <span className="hidden md:block text-sm font-medium text-slate-500 whitespace-nowrap">
                             {filteredStores.length} Result{filteredStores.length !== 1 && 's'}
                         </span>
@@ -242,27 +263,31 @@ export default function AdminStores() {
                 </div>
             </div>
 
-            {/* Stores List */}
+            {/* ================= Stores List Feed ================= */}
             <div className="space-y-4">
+                {/* Check if the filtered array has data */}
                 {filteredStores.length > 0 ? (
+                    // Map over the filtered array to render store cards
                     filteredStores.map((store) => (
                         <div key={store.id} className="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-300">
                             <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                                 
-                                {/* Store Info (Logo, Name) */}
+                                {/* Store Info Container (Left side) */}
                                 <div className="flex-1 min-w-0">
+                                    {/* Reusable component handling the heavy lifting of displaying owner/legal info */}
                                     <StoreInfo store={store} />
                                 </div>
 
-                                {/* Controls (Vertical Buttons) */}
+                                {/* Controls Container (Right side / Vertical stack) */}
                                 <div className="flex flex-col items-stretch sm:items-end gap-3 lg:border-l lg:border-slate-100 lg:pl-6 min-w-[140px] pt-4 lg:pt-0">
                                     
-                                    {/* Status Badge */}
+                                    {/* Dynamic Status Badge */}
                                     <div className={`self-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${store.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         {store.isActive ? 'Active' : 'Inactive'}
                                     </div>
 
                                     {/* Action Buttons */}
+                                    {/* Trigger View Modal */}
                                     <button 
                                         onClick={() => handleViewClick(store)}
                                         className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors border border-slate-100"
@@ -270,6 +295,7 @@ export default function AdminStores() {
                                         <Eye size={16} />
                                         View
                                     </button>
+                                    {/* Trigger Edit Modal */}
                                     <button 
                                         onClick={() => handleEditClick(store)}
                                         className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors border border-blue-100"
@@ -278,7 +304,7 @@ export default function AdminStores() {
                                         Edit
                                     </button>
                                     
-                                    {/* Delete Button  */}
+                                    {/* Trigger Delete Handler */}
                                     <button 
                                         onClick={() => handleDeleteStore(store.id)}
                                         className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors border border-red-100"
@@ -291,14 +317,16 @@ export default function AdminStores() {
                         </div>
                     ))
                 ) : (
+                    // Fallback UI if the array is empty (uses the EmptyState component defined below)
                     <EmptyState searchTerm={searchTerm} />
                 )}
             </div>
             
-            {/* Edit Modal */}
+            {/* ================= EDIT MODAL OVERLAY ================= */}
             {isEditModalOpen && selectedStore && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
+                        {/* Modal Header */}
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-xl font-bold text-slate-800">Edit Store</h2>
                             <button 
@@ -309,7 +337,9 @@ export default function AdminStores() {
                             </button>
                         </div>
 
+                        {/* Edit Form */}
                         <form onSubmit={handleUpdateStore} className="space-y-4">
+                            {/* Store Name Input */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Store Name</label>
                                 <input 
@@ -320,6 +350,7 @@ export default function AdminStores() {
                                 />
                             </div>
 
+                            {/* Status Dropdown */}
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
                                 <div className="relative">
@@ -331,7 +362,7 @@ export default function AdminStores() {
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
                                     </select>
-                                    {/* Custom Dropdown Arrow */}
+                                    {/* Custom SVG Dropdown Arrow overlaying the default native arrow */}
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -340,6 +371,7 @@ export default function AdminStores() {
                                 </div>
                             </div>
 
+                            {/* Form Action Buttons */}
                             <div className="pt-4 flex gap-3">
                                 <button 
                                     type="button" 
@@ -361,7 +393,7 @@ export default function AdminStores() {
                 </div>
             )}
 
-            {/* View Modal */}
+            {/* ================= VIEW MODAL OVERLAY ================= */}
             {isViewModalOpen && selectedStore && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-0 overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -374,6 +406,7 @@ export default function AdminStores() {
                         </div>
                         {/* Modal Body */}
                         <div className="p-6 space-y-6">
+                            {/* Store Identity Area */}
                             <div className="flex items-center gap-4">
                                 <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 font-bold text-2xl uppercase">
                                     {selectedStore.name.charAt(0)}
@@ -383,6 +416,7 @@ export default function AdminStores() {
                                     <p className="text-slate-500">@{selectedStore.username}</p>
                                 </div>
                             </div>
+                            {/* Grid of Key-Value Metadata using the DetailItem helper component */}
                             <div className="grid grid-cols-2 gap-4">
                                 <DetailItem label="Store ID" value={selectedStore.id} />
                                 <DetailItem label="Created At" value={new Date(selectedStore.createdAt).toLocaleDateString()} />
@@ -406,7 +440,9 @@ export default function AdminStores() {
     )
 }
 
+// ================= HELPER COMPONENTS =================
 
+// Standardized component to render a statistic box (used at the top of the page)
 const StatCard = ({ label, value, icon: Icon, color, bg, text }) => (
     <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between">
@@ -414,6 +450,7 @@ const StatCard = ({ label, value, icon: Icon, color, bg, text }) => (
                 <p className="text-slate-500 text-sm font-medium">{label}</p>
                 <p className={`text-3xl font-extrabold mt-2 text-slate-800`}>{value}</p>
             </div>
+            {/* Icon container with a subtle rotation animation on group hover */}
             <div className={`w-14 h-14 ${bg} rounded-2xl flex items-center justify-center transform rotate-3 group-hover:rotate-6 transition-transform`}>
                 <Icon className={`w-7 h-7 ${text}`} />
             </div>
@@ -421,6 +458,7 @@ const StatCard = ({ label, value, icon: Icon, color, bg, text }) => (
     </div>
 )
 
+// Standardized component to render a metadata field (used inside the View Modal)
 const DetailItem = ({ label, value }) => (
     <div className="bg-slate-50 p-3 rounded-xl">
         <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">{label}</p>
@@ -428,6 +466,8 @@ const DetailItem = ({ label, value }) => (
     </div>
 )
 
+// Fallback UI rendered when the filtered array is empty.
+// Adjusts its text based on whether the user is actively searching or if the DB is truly empty.
 const EmptyState = ({ searchTerm }) => (
     <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">
         <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-slate-50 flex items-center justify-center">

@@ -1,38 +1,52 @@
-"use client";
+"use client"; // Declares this as a Client Component to enable hooks and interactivity.
 
+// --- Imports ---
 import { useEffect, useState } from "react";
+// UI Icons from lucide-react for visual indicators
 import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "react-hot-toast"; // Notification library
 
 // ==========================================
 // GOAL DETAILS MODAL COMPONENT (Compact)
 // ==========================================
+// This helper component fetches and displays the deep technical details of a 
+// specific savings goal when an admin wants to investigate a dispute.
 const GoalDetailsModal = ({ goalId, onClose }) => {
+  // Local state for the modal's data and loading status
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch the specific goal's details when the modal opens
   useEffect(() => {
     if (!goalId) return;
     const fetchDetails = async () => {
       try {
         setLoading(true);
+        // Fetches full goal data including product info and deposit history
         const res = await fetch(`/api/goals/${goalId}`);
         const data = await res.json();
         if (data.goal) setGoal(data.goal);
-      } catch (e) { toast.error("Failed to load details"); }
-      finally { setLoading(false); }
+      } catch (e) { 
+        toast.error("Failed to load details"); 
+      } finally { 
+        setLoading(false); 
+      }
     };
     fetchDetails();
   }, [goalId]);
 
-  if (!goalId) return null;
+  if (!goalId) return null; // Guard clause
 
+  // Loading state with a blurred backdrop
   if (loading) return <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"><Loader2 className="animate-spin text-white w-10 h-10" /></div>;
-  if (!goal) return null;
+  if (!goal) return null; // Fallback if data fails to load
 
   return (
+    // Modal Overlay
     <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
+        
+        {/* Modal Header */}
         <div className="flex justify-between items-center p-4 border-b bg-slate-50 shrink-0">
           <div>
             <h2 className="text-base font-bold text-slate-900">Goal Details</h2>
@@ -40,7 +54,11 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors text-slate-500"><X size={18} /></button>
         </div>
+        
+        {/* Scrollable Content Area */}
         <div className="p-4 space-y-4 overflow-y-auto">
+            
+            {/* Product Summary Card */}
             <div className="flex gap-3 items-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
                  <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-200">
                     <img src={goal.product?.images?.[0] || "/placeholder.png"} className="w-full h-full object-cover" alt="Product" />
@@ -51,6 +69,7 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                         <StoreIcon size={12} /> {goal.product?.store?.name || "Store Info N/A"}
                     </div>
                  </div>
+                 {/* Dynamic Goal Status Badge */}
                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                    goal.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' : 
                    goal.status === 'REFUNDED' ? 'bg-red-50 text-red-700 border-red-200' : 
@@ -59,6 +78,8 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                     {goal.status}
                  </span>
             </div>
+            
+            {/* Financial Overview (Target vs Saved) */}
             <div className="grid grid-cols-2 gap-3">
                  <div className="p-3 border border-slate-200 rounded-xl bg-white shadow-sm">
                     <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-1">Target Amount</p>
@@ -69,6 +90,8 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                     <p className="text-lg font-mono font-bold text-emerald-700">Rs {Number(goal.saved).toLocaleString()}</p>
                  </div>
             </div>
+            
+            {/* Transaction Ledger Table */}
             <div>
                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5 mb-2 text-xs uppercase tracking-wider">
                     <CreditCard size={14} className="text-slate-400"/> Deposit History
@@ -76,11 +99,11 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
                     <table className="w-full text-xs text-left">
                        <thead className="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider">
-                          <tr>
+                         <tr>
                             <th className="p-2.5">Date</th>
                             <th className="p-2.5">Method</th>
                             <th className="p-2.5 text-right">Amount</th>
-                          </tr>
+                         </tr>
                        </thead>
                        <tbody className="divide-y divide-slate-100">
                           {goal.deposits?.length === 0 ? (
@@ -108,30 +131,32 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
 // MAIN ADMIN COMPLAINTS PAGE
 // ==========================================
 export default function AdminComplaintsPage() {
+  // --- Data State ---
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
+  const [processingId, setProcessingId] = useState(null); // ID of complaint being patched
 
-  // Search & Filter State
+  // --- Search & Filter State ---
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [filerFilter, setFilerFilter] = useState("ALL");
 
-  // Modal State for Viewing Goals
+  // --- Investigation Modal State ---
   const [viewingGoalId, setViewingGoalId] = useState(null);
 
-  // Resolution State
-  const [resolvingId, setResolvingId] = useState(null);
+  // --- Resolution Form State ---
+  const [resolvingId, setResolvingId] = useState(null); // Which complaint card is expanded for action
   const [adminNotes, setAdminNotes] = useState("");
-  const [newPrice, setNewPrice] = useState("");
-  const [processRefund, setProcessRefund] = useState(false);
+  const [newPrice, setNewPrice] = useState(""); // For Price Lock disputes
+  const [processRefund, setProcessRefund] = useState(false); // Trigger digital wallet refund
   
-  // Coupon State
+  // --- Compensation Coupon State ---
   const [issueCoupon, setIssueCoupon] = useState(false);
   const [couponValue, setCouponValue] = useState("");
   const [expiryDays, setExpiryDays] = useState("30"); 
 
+  // Fetch all complaints for the admin view
   const fetchComplaints = async () => {
     try {
       const res = await fetch("/api/admin/complaints");
@@ -141,15 +166,19 @@ export default function AdminComplaintsPage() {
     finally { setLoading(false); }
   };
 
+  // Initial load
   useEffect(() => { fetchComplaints(); }, []);
 
+  // Handler to Resolve or Reject a dispute
   const handleAction = async (id, status) => {
+    // Validation for compensation coupons
     if (status === "RESOLVED" && issueCoupon && (!couponValue || Number(couponValue) <= 0)) {
        return toast.error("Please enter a valid coupon discount value.");
     }
 
     setProcessingId(id);
     try {
+      // Send a PATCH request with all resolution parameters
       const res = await fetch("/api/admin/complaints", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -177,18 +206,23 @@ export default function AdminComplaintsPage() {
       setIssueCoupon(false);
       setCouponValue("");
       setExpiryDays("30");
+      
+      // Re-fetch the list to sync the UI with DB
       fetchComplaints(); 
     } catch (e) { toast.error("Failed to update"); }
     finally { setProcessingId(null); }
   };
 
-  // Filtering Logic
+  // --- Filtering Logic ---
+  // Calculates the active list of complaints based on all current filter states
   const filteredComplaints = complaints.filter(c => {
     const matchStatus = statusFilter === "ALL" || c.status === statusFilter;
     const matchType = typeFilter === "ALL" || c.type === typeFilter;
+    
     let matchFiler = true;
     if (filerFilter === "USER") matchFiler = !!c.filerUserId;
     if (filerFilter === "STORE") matchFiler = !!c.filerStoreId;
+    
     const term = searchTerm.toLowerCase();
     const matchSearch = term === "" || 
       c.title.toLowerCase().includes(term) ||
@@ -200,14 +234,18 @@ export default function AdminComplaintsPage() {
     return matchStatus && matchType && matchFiler && matchSearch;
   });
 
+  // Main Page Loading Guard
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
 
   return (
     <div className="p-4 sm:p-8 bg-slate-50 min-h-screen relative">
       
+      {/* Conditionally render the modal if an ID is selected */}
       {viewingGoalId && <GoalDetailsModal goalId={viewingGoalId} onClose={() => setViewingGoalId(null)} />}
 
       <div className="max-w-6xl mx-auto">
+        
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Dispute Management</h1>
@@ -221,6 +259,7 @@ export default function AdminComplaintsPage() {
 
         {/* SEARCH & FILTER BAR */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4">
+            {/* Search Input */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
@@ -231,6 +270,8 @@ export default function AdminComplaintsPage() {
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
             </div>
+            
+            {/* Dropdown Filters */}
             <div className="flex flex-wrap sm:flex-nowrap gap-3">
               <div className="relative flex-1 sm:w-40">
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full pl-3 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700">
@@ -269,6 +310,7 @@ export default function AdminComplaintsPage() {
 
         {/* COMPLAINTS LIST */}
         <div className="space-y-4">
+          {/* Empty State Handler */}
           {filteredComplaints.length === 0 ? (
              <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
                 <CheckCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
@@ -279,11 +321,15 @@ export default function AdminComplaintsPage() {
                 )}
              </div>
           ) : (
+            // Render list of filtered complaints
             filteredComplaints.map((c) => (
               <div key={c.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
                 <div className="p-6">
+                  
+                  {/* Card Header: Filer Info & Status Badge */}
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
+                      {/* Dynamic icon styling based on whether a User or Store filed the complaint */}
                       <div className={`p-2 rounded-lg ${c.filerUserId ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
                         {c.filerUserId ? <User size={20} /> : <StoreIcon size={20} />}
                       </div>
@@ -301,7 +347,7 @@ export default function AdminComplaintsPage() {
 
                   <p className="text-slate-600 text-sm mb-4 leading-relaxed">{c.description}</p>
 
-                  {/* Linked Goal Block */}
+                  {/* Linked Goal Block: Shows a summary of the associated transaction */}
                   {c.goal && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="space-y-1">
@@ -327,7 +373,7 @@ export default function AdminComplaintsPage() {
                     </div>
                   )}
 
-                  {/* Resolution Controls */}
+                  {/* Resolution Controls: Expand button */}
                   {c.status === 'OPEN' && resolvingId !== c.id && (
                      <div className="flex gap-2">
                         <button onClick={() => { setResolvingId(c.id); setProcessRefund(false); setIssueCoupon(false); setCouponValue(""); setExpiryDays("30"); }} className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800 transition-colors">
@@ -336,9 +382,11 @@ export default function AdminComplaintsPage() {
                      </div>
                   )}
 
+                  {/* DYNAMIC RESOLUTION FORM: Only visible if this specific card is selected */}
                   {resolvingId === c.id && (
                     <div className="mt-4 p-5 bg-slate-50 rounded-xl border-2 border-blue-100 space-y-5 animate-in fade-in slide-in-from-top-2 shadow-inner">
                       
+                      {/* Contextual Action: Adjusting a locked price */}
                       {c.type === "PRICE_LOCK" && (
                          <div>
                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">New Target Price (PKR)</label>
@@ -350,6 +398,7 @@ export default function AdminComplaintsPage() {
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Contextual Action: Reversing funds into user wallet */}
                         {c.filerUserId && c.goal && ["PRODUCT_ISSUE", "REFUND", "DELIVERY"].includes(c.type) && (
                           <div className="bg-white p-4 border border-blue-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors">
                             <label className="flex items-start gap-3 cursor-pointer">
@@ -364,6 +413,7 @@ export default function AdminComplaintsPage() {
                           </div>
                         )}
 
+                        {/* Contextual Action: Compensation via Discount Code */}
                         {c.filerUserId && (
                           <div className={`bg-white p-4 border rounded-lg shadow-sm transition-all ${issueCoupon ? 'border-emerald-400 ring-1 ring-emerald-400' : 'border-emerald-200 hover:border-emerald-300'}`}>
                             <label className="flex items-start gap-3 cursor-pointer mb-3">
@@ -376,6 +426,7 @@ export default function AdminComplaintsPage() {
                               </div>
                             </label>
 
+                            {/* Options to define the generated coupon */}
                             {issueCoupon && (
                               <div className="flex gap-2 animate-in fade-in slide-in-from-top-1 pl-7">
                                 <input type="number" placeholder="Discount Value" value={couponValue} onChange={(e) => setCouponValue(e.target.value)} className="w-1/2 p-2 text-xs border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500" />
@@ -389,6 +440,7 @@ export default function AdminComplaintsPage() {
                         )}
                       </div>
 
+                      {/* Administrative Warning Banner */}
                       {["USER_BEHAVIOR", "STORE_BEHAVIOR", "OTHER", "PAYMENT"].includes(c.type) && (
                         <div className="bg-orange-50 p-4 border border-orange-200 rounded-lg shadow-sm flex gap-3 items-start">
                           <ShieldAlert className="text-orange-600 mt-0.5 shrink-0" size={18} />
@@ -399,10 +451,13 @@ export default function AdminComplaintsPage() {
                         </div>
                       )}
 
+                      {/* Final Notes Textarea for the Admin */}
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Admin Response Note</label>
                         <textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Explain your decision. This will be sent to the parties involved..." className="w-full p-3 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none" />
                       </div>
+                      
+                      {/* Form Actions */}
                       <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-200">
                         <button onClick={() => handleAction(c.id, "RESOLVED")} disabled={processingId === c.id} className="flex-1 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm transition-colors">
                           {processingId === c.id ? <Loader2 size={14} className="animate-spin"/> : <><CheckCircle size={14} /> Approve / Resolve</>}
@@ -415,6 +470,8 @@ export default function AdminComplaintsPage() {
                     </div>
                   )}
 
+                  {/* PERSISTENT RESOLUTION HISTORY */}
+                  {/* Shown only when the ticket is already resolved or rejected */}
                   {c.adminNotes && c.status !== 'OPEN' && (
                      <div className="mt-5 p-4 bg-blue-50 rounded-xl border border-blue-100 flex gap-3 items-start">
                         <FileText size={18} className="text-blue-500 mt-0.5 shrink-0" />

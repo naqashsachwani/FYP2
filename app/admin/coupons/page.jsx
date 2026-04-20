@@ -1,28 +1,36 @@
+// Marks this as a Next.js Client Component to enable interactivity and state hooks.
 'use client'
 
+// --- Dependencies ---
 import { useEffect, useState } from "react"
-import { format } from "date-fns"
-import toast from "react-hot-toast"
-import { Loader2, Trash2 } from "lucide-react" 
-import { useAuth } from "@clerk/nextjs"
-import axios from "axios"
+import { format } from "date-fns" // Utility for human-readable date formatting
+import toast from "react-hot-toast" // Notification library
+import { Loader2, Trash2 } from "lucide-react" // UI Icons
+import { useAuth } from "@clerk/nextjs" // Clerk authentication hook
+import axios from "axios" // HTTP client for API requests
 
 export default function AdminCoupons() {
+  // --- Authentication context ---
   const { getToken } = useAuth()
-  const [coupons, setCoupons] = useState([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // --- Local State Management ---
+  const [coupons, setCoupons] = useState([]) // Stores the list of existing coupons
+  const [isSubmitting, setIsSubmitting] = useState(false) // Tracks form submission status
 
+  // Initial state for the creation form
   const [newCoupon, setNewCoupon] = useState({
     code: '',
     description: '',
     discount: '',
-    usageLimit: 1, // NEW: Added Usage Limit state
+    usageLimit: 1, // Default limit of 1 use per user
     forNewUser: false,
     forMember: false,
     isPublic: false,
     expiresAt: new Date()
   })
 
+  // --- API: Fetching Data ---
+  // Retrieves the current list of coupons from the backend
   const fetchCoupons = async () => {
     try {
       const token = await getToken()
@@ -31,22 +39,26 @@ export default function AdminCoupons() {
       })
       setCoupons(data.coupons)
     } catch (error) {
+      // Handles backend-specific errors or generic network failures
       toast.error(error?.response?.data?.error || error.message)
     }
   }
 
+  // --- API: Adding Data ---
+  // Handles the submission of the "Add Coupon" form
   const handleAddCoupon = async (e) => {
-    e.preventDefault()
-    if (isSubmitting) return;
+    e.preventDefault() // Prevents page reload
+    if (isSubmitting) return; // Prevents double-submission
     setIsSubmitting(true)
 
     try {
       const token = await getToken()
       
+      // Preparation: Sanitize and parse data types before sending to the server
       const couponToSend = { 
         ...newCoupon, 
         discount: Number(newCoupon.discount), 
-        usageLimit: Number(newCoupon.usageLimit), // NEW: Parse limit to number
+        usageLimit: Number(newCoupon.usageLimit),
         expiresAt: new Date(newCoupon.expiresAt) 
       }
 
@@ -55,8 +67,9 @@ export default function AdminCoupons() {
       })
       
       toast.success(data.message)
+      // Reset form to default values upon success
       setNewCoupon({ code: '', description: '', discount: '', usageLimit: 1, forNewUser: false, forMember: false, isPublic: false, expiresAt: new Date() })
-      await fetchCoupons()
+      await fetchCoupons() // Refresh the table list
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     } finally {
@@ -64,17 +77,24 @@ export default function AdminCoupons() {
     }
   }
 
+  // --- UI Logic: Form Handling ---
+  // Synchronizes input field changes with the local 'newCoupon' state
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'code') {
+        // Enforce uppercase codes for consistency (standard e-commerce practice)
         setNewCoupon({ ...newCoupon, [name]: value.toUpperCase() })
     } else {
         setNewCoupon({ ...newCoupon, [name]: value })
     }
   }
 
+  // --- API: Deleting Data ---
+  // Removes a coupon using its unique code
   const deleteCoupon = async (code) => {
     if (!window.confirm("Are you sure you want to delete this coupon?")) return
+    
+    // Optimistic UI update: remove from view immediately
     const previousCoupons = [...coupons]
     setCoupons(coupons.filter(c => c.code !== code))
 
@@ -85,34 +105,39 @@ export default function AdminCoupons() {
       })
       toast.success("Coupon deleted successfully")
     } catch (error) {
+      // Rollback if the server request fails
       setCoupons(previousCoupons)
       toast.error(error?.response?.data?.error || error.message)
     }
   }
 
+  // Initial load on component mount
   useEffect(() => {
     fetchCoupons()
   }, [])
 
+  // --- Main Render Logic ---
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-700">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-8">DreamSaver <span className="text-indigo-600">Admin Panel</span></h1>
 
-        {/* Add Coupon Form */}
+        {/* SECTION: Creation Form */}
         <form onSubmit={handleAddCoupon} className="bg-white shadow-md rounded-xl p-6 md:p-8 mb-10 border border-gray-100">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Add <span className="text-indigo-600">Coupon</span></h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Input: Coupon ID/Code */}
             <input type="text" placeholder="Coupon Code" 
               className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none uppercase"
               name="code" value={newCoupon.code} onChange={handleChange} required />
 
+            {/* Input: Percentage Off */}
             <input type="number" placeholder="Discount (%)" min={1} max={100} 
               className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               name="discount" value={newCoupon.discount} onChange={handleChange} required />
               
-            {/* NEW: Usage Limit Input */}
+            {/* Input: Redemption cap per user */}
             <input type="number" placeholder="Usage Limit (Per User)" min={1} 
               className="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               name="usageLimit" value={newCoupon.usageLimit} onChange={handleChange} required />
@@ -128,6 +153,7 @@ export default function AdminCoupons() {
               name="expiresAt" value={format(newCoupon.expiresAt, 'yyyy-MM-dd')} onChange={(e) => setNewCoupon({...newCoupon, expiresAt: new Date(e.target.value)})} />
           </label>
 
+          {/* Targeted constraints */}
           <div className="flex flex-col md:flex-row md:gap-6 mt-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" name="forNewUser" checked={newCoupon.forNewUser} 
@@ -153,7 +179,7 @@ export default function AdminCoupons() {
           </button>
         </form>
 
-        {/* List Coupons Table */}
+        {/* SECTION: Ledger/Table View */}
         <div className="bg-white shadow-md rounded-xl p-6 md:p-8 overflow-x-auto border border-gray-100">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">List <span className="text-indigo-600">Coupons</span></h2>
           <table className="min-w-full text-sm">
@@ -175,7 +201,10 @@ export default function AdminCoupons() {
                   <td className="py-3 px-4">{coupon.usageLimit}x</td>
                   <td className="py-3 px-4 text-gray-500">{format(new Date(coupon.expiresAt), 'MMM dd, yyyy')}</td>
                   <td className="py-3 px-4">
-                    {coupon.forNewUser ? <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">New User</span> : <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Standard</span>}
+                    {coupon.forNewUser ? 
+                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">New User</span> : 
+                      <span className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Standard</span>
+                    }
                   </td>
                   <td className="py-3 px-4">
                     <button 

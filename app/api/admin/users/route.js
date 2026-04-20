@@ -38,6 +38,11 @@ export async function PATCH(request) {
 
     if (!id) return NextResponse.json({ error: "User ID is required" }, { status: 400 });
 
+    // ✅ BACKEND SAFETY CHECK: Admin cannot suspend themselves
+    if (id === userId) {
+      return NextResponse.json({ error: "You cannot suspend your own account." }, { status: 403 });
+    }
+
     const newStatus = !currentStatus; // Flip the status
     const client = await clerkClient();
 
@@ -93,6 +98,11 @@ export async function DELETE(request) {
     const id = searchParams.get("id");
 
     if (!id) return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+
+    // ✅ BACKEND SAFETY CHECK: Admin cannot delete themselves
+    if (id === userId) {
+      return NextResponse.json({ error: "You cannot delete your own account." }, { status: 403 });
+    }
 
     // 1. Get user details before deleting so we have their email
     const userToDelete = await prisma.user.findUnique({ where: { id } });
