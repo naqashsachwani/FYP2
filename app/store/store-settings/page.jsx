@@ -1,33 +1,24 @@
-// Designates this as a Next.js Client Component, allowing the use of React hooks and interactive state.
 'use client'
 
-// --- Imports ---
-import { useState, useEffect } from "react" // React hooks for state and lifecycle
-import { useAuth } from "@clerk/nextjs" // Clerk hook to get authentication tokens
-import axios from "axios" // HTTP client for API requests
-import toast from "react-hot-toast" // Toast notifications for UI feedback
-import { MapPin, Save, Crosshair, Store, Search, Loader2 } from "lucide-react" // UI Icons
-import Loading from "@/components/Loading" // Custom loading spinner component
-import dynamic from 'next/dynamic' // Next.js utility for lazy-loading components
+import { useState, useEffect } from "react" 
+import { useAuth } from "@clerk/nextjs" 
+import axios from "axios" 
+import toast from "react-hot-toast" 
+import { MapPin, Save, Crosshair, Store, Search, Loader2 } from "lucide-react" 
+import Loading from "@/components/Loading" 
+import dynamic from 'next/dynamic' 
 
-// --- NEW: Reuse our interactive map for the Store Owner! ---
-// Dynamically import the LocationPicker component. 
-// ssr: false is crucial because map libraries (like Leaflet) require the browser's 'window' object, 
-// which causes errors if Next.js attempts to render it on the server during the build.
+
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { 
     ssr: false,
-    // Provide a skeleton UI placeholder while the heavy map library downloads
     loading: () => <div className="h-56 bg-slate-100 rounded-xl animate-pulse mb-2 flex items-center justify-center text-slate-400 border-2 border-slate-200 border-dashed">Loading Map...</div> 
 })
 
 export default function StoreSettings() {
-    // Extract the getToken function from Clerk to securely authorize API calls
     const { getToken } = useAuth()
-    
-    // --- State Management ---
-    const [loading, setLoading] = useState(true) // Controls the full-page initial load spinner
-    const [saving, setSaving] = useState(false)  // Controls the spinner on the save button
-    const [geocoding, setGeocoding] = useState(false) // Controls the spinner on the "Search Address" button
+    const [loading, setLoading] = useState(true) 
+    const [saving, setSaving] = useState(false) 
+    const [geocoding, setGeocoding] = useState(false) 
     
     // Main form state object holding the store's physical and geographical data
     const [formData, setFormData] = useState({
@@ -39,7 +30,6 @@ export default function StoreSettings() {
     })
 
     // 1. Fetch Existing Settings
-    // Retrieves the store's currently saved data from the database when the page loads
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -47,13 +37,11 @@ export default function StoreSettings() {
                 const { data } = await axios.get('/api/store/settings', {
                     headers: { Authorization: `Bearer ${token}` }
                 })
-                // If the store already has data saved, populate the formData state
                 if (data.store) {
                     setFormData({
                         address: data.store.address || "",
                         city: data.store.city || "Karachi",
                         zip: data.store.zip || "",
-                        // Check against null because a coordinate of '0' is technically a valid location on Earth
                         latitude: data.store.latitude !== null ? data.store.latitude : "",
                         longitude: data.store.longitude !== null ? data.store.longitude : ""
                     })
@@ -66,9 +54,7 @@ export default function StoreSettings() {
             }
         }
         fetchSettings()
-    }, [getToken]) // Runs once when the component mounts and the getToken function is available
-
-    // --- Map Integration Logic ---
+    }, [getToken]) 
     
     // Convert formData strings back into the object format {lat, lng} required by the LocationPicker component
     const mapPosition = formData.latitude && formData.longitude 
@@ -76,7 +62,6 @@ export default function StoreSettings() {
         : null;
 
     // Callback fired by the LocationPicker when the user drags the pin or clicks the map.
-    // It receives the new coordinates and updates the main form state.
     const handleMapClick = (pos) => {
         setFormData(prev => ({ ...prev, latitude: pos.lat, longitude: pos.lng }))
     }
@@ -86,18 +71,17 @@ export default function StoreSettings() {
     const fetchCoordsFromAddress = async (currentData) => {
         const query = `${currentData.address}, ${currentData.city}, Pakistan`
         try {
-            // Attempt 1: Search using the full exact address string
+            // Search using the full exact address string
             let res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`)
             if (res.data && res.data.length > 0) {
                 return { lat: parseFloat(res.data[0].lat), lon: parseFloat(res.data[0].lon) }
             }
             
             // Fallback strategy: If the full address fails, split it by commas and try searching the smaller parts.
-            // Example: "Shop 12, Main Street" fails -> Try searching just "Main Street"
             const parts = currentData.address.split(",");
             for (let part of parts) {
                 const cleanPart = part.trim();
-                if (cleanPart.length < 3) continue; // Skip very short, meaningless strings
+                if (cleanPart.length < 3) continue; 
                 
                 const retryQuery = `${cleanPart}, ${currentData.city}, Pakistan`;
                 const retryRes = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(retryQuery)}&limit=1`);
@@ -110,7 +94,7 @@ export default function StoreSettings() {
         } catch (error) {
             console.warn("Geocoding failed", error)
         }
-        return null // Return null if all attempts fail
+        return null 
     }
 
     // Manual "Search Address" Button Handler
@@ -118,9 +102,9 @@ export default function StoreSettings() {
         // Prevent API call if the user hasn't typed an address yet
         if (!formData.address) return toast.error("Please enter an address first")
         
-        setGeocoding(true) // Start the button spinner
+        setGeocoding(true) 
         const coords = await fetchCoordsFromAddress(formData)
-        setGeocoding(false) // Stop the button spinner
+        setGeocoding(false) 
 
         if (coords) {
             // If coordinates were found, update the state, which automatically moves the map pin
@@ -153,7 +137,6 @@ export default function StoreSettings() {
         )
     }
 
-    // --- Save Logic ---
     const handleSave = async (e) => {
         e.preventDefault()
         setSaving(true)

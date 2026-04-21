@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import authAdmin from "@/middlewares/authAdmin";   
 import { getAuth } from "@clerk/nextjs/server";   
 import { NextResponse } from "next/server";       
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; //  IMPORT ENGINE
 
 // ================= TOGGLE STORE ACTIVE STATUS =================
 // Only admins can toggle a store's isActive flag
@@ -14,7 +14,7 @@ export async function POST(request) {
     // Check if user is an admin
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
-      // ❌ Deny access if not admin
+      //  Deny access if not admin
       return NextResponse.json({ error: "not authorized" }, { status: 401 });
     }
 
@@ -29,7 +29,7 @@ export async function POST(request) {
     // Find store in the database AND grab the user info for the email
     const store = await prisma.store.findUnique({ 
         where: { id: storeId },
-        include: { user: true } // ✅ Include user for notification
+        include: { user: true } //  Include user for notification
     });
 
     // Return error if store doesn't exist
@@ -45,9 +45,9 @@ export async function POST(request) {
       data: { isActive: newStatus },
     });
 
-    // ✅ FIRE ENGINE: Notify Store Owner of Suspension/Reactivation
+    //  FIRE ENGINE: Notify Store Owner of Suspension/Reactivation
     if (store.user) {
-        const title = newStatus ? "Store Reactivated ✅" : "Store Suspended ⚠️";
+        const title = newStatus ? "Store Reactivated " : "Store Suspended ";
         const message = newStatus 
             ? `Good news! Your store "${store.name}" has been reactivated by an admin. You can now resume operations.`
             : `Important: Your store "${store.name}" has been temporarily suspended by an admin. Please contact support for details.`;

@@ -124,7 +124,7 @@ export async function POST(request) {
           //  Update goal status based on total saved
           const status = newSavedTotal >= Number(goal.targetAmount) ? "COMPLETED" : "ACTIVE";
           
-          // ✅ FIXED: Safely update only saved and status. Do NOT touch endDate.
+          //  FIXED: Safely update only saved and status. Do NOT touch endDate.
           await prisma.goal.update({
             where: { id: goalId },
             data: { 

@@ -64,7 +64,7 @@ export async function POST(req) {
                     });
                     uploadedImageUrls.push(response.url);
                 } catch (uploadError) {
-                    console.error("❌ IMAGEKIT UPLOAD ERROR:", uploadError);
+                    console.error(" IMAGEKIT UPLOAD ERROR:", uploadError);
                     return NextResponse.json({ 
                         error: `Image upload failed: ${uploadError.message || 'Unknown error'}` 
                     }, { status: 500 });
@@ -86,7 +86,7 @@ export async function POST(req) {
             include: { user: true }
         });
 
-        // 6. ✅ FIRE ENGINE: Notify the Store Owner
+        // 6. FIRE ENGINE: Notify the Store Owner
         const productWithStore = await prisma.product.findUnique({
             where: { id: productId },
             include: { store: { include: { user: true } } }
@@ -96,7 +96,7 @@ export async function POST(req) {
             await sendNotification({
                 userId: productWithStore.store.userId,
                 email: productWithStore.store.user.email,
-                title: "New Product Review! ⭐",
+                title: "New Product Review! ",
                 message: `Your product "${productWithStore.name}" just received a ${rating}-star review.`,
                 type: "SYSTEM_ALERT",
                 notifyInApp: true,

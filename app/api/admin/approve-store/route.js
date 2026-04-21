@@ -2,65 +2,64 @@ import prisma from "@/lib/prisma";
 import authAdmin from "@/middlewares/authAdmin"; 
 import { getAuth } from "@clerk/nextjs/server"; 
 import { NextResponse } from "next/server"; 
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; 
 
-// ================================
 // POST: Approve or Reject a Store
-// ================================
 export async function POST(request) {
   try {
-    // Get authenticated user ID
     const { userId } = getAuth(request);
 
-    // Check if user is an admin
+    // Authorization (Role-Based Access Control)
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json({ error: "not-authorized" }, { status: 401 });
     }
 
-    // Parse storeId and status ('approved' or 'rejected') from request body
     const { storeId, status } = await request.json();
 
-    //  Execute transactional update to ensure consistency
+    // Database Transaction
     await prisma.$transaction(async (tx) => {
-        // ---- Update the store's status and active flag ----
         const storeUpdateData = {
-            status: status, // store status = 'approved' or 'rejected'
-            isActive: status === "approved" // Only active if approved
+            status: status, 
+            isActive: status === "approved" 
         };
+        
+        // Update the main Store record
         await tx.store.update({
             where: { id: storeId },
             data: storeUpdateData
         });
 
-        // ---- Update the associated store application ----
+        // Map the lowercase status to the uppercase ENUM required by the StoreApplication table
         const appStatus = status === "approved" ? "APPROVED" : "REJECTED";
         
-        // Use updateMany in case there are multiple applications for the same store (edge case)
+        // Use updateMany in case there are multiple applications for the same store (edge case prevention)
         await tx.storeApplication.updateMany({
             where: { storeId: storeId },
             data: { 
                 status: appStatus,
-                reviewedBy: userId, // Track which admin reviewed it
-                reviewedAt: new Date() // Timestamp of review
+                reviewedBy: userId, 
+                reviewedAt: new Date() 
             }
         });
     });
 
-    // ✅ FIRE ENGINE: Notify the Store Owner
+    // Notification System
+    // Fetch the store's details and include the associated user object to get their email and name
     const storeInfo = await prisma.store.findUnique({
       where: { id: storeId },
       include: { user: true }
     });
 
+    // If the store and user exist, proceed to send the notification
     if (storeInfo && storeInfo.user) {
       const isApproved = status === "approved";
       
-      // Build a dynamic HTML template right here for the store update
+      // Build a dynamic HTML email template based on the approval status
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
           <h2 style="color: ${isApproved ? '#16a34a' : '#dc2626'}; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px;">
-            Store Application ${isApproved ? 'Approved! 🎉' : 'Update'}
+            Store Application ${isApproved ? 'Approved!' : 'Update'}
           </h2>
           <p>Hi ${storeInfo.user.name},</p>
           <p>We have reviewed your application for <strong>${storeInfo.name}</strong>.</p>
@@ -75,10 +74,11 @@ export async function POST(request) {
         </div>
       `;
 
+      // Trigger the custom notification engine to send both an in-app alert and the HTML email
       await sendNotification({
         userId: storeInfo.userId,
         email: storeInfo.user.email,
-        title: isApproved ? "Your Store is Approved! 🎉" : "Store Application Update",
+        title: isApproved ? "Your Store is Approved!" : "Store Application Update",
         message: `Your store application for ${storeInfo.name} has been ${status}.`,
         html: emailHtml,
         type: "SYSTEM_ALERT",
@@ -87,7 +87,8 @@ export async function POST(request) {
       });
     }
 
-    //  Return success message
+    // Success Response
+    // Return a success message back to the frontend dashboard
     return NextResponse.json({ message: `Store ${status} successfully` });
   } catch (error) {
     console.error(error);
@@ -98,31 +99,28 @@ export async function POST(request) {
   }
 }
 
-// ==========================================
+
 // GET: Fetch all pending or rejected stores
-// ==========================================
 export async function GET(request) {
   try {
-    // 1️⃣ Get authenticated user ID
+    // Get authenticated user ID from Clerk
     const { userId } = getAuth(request);
 
-    // 2️⃣ Ensure user is an admin
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json({ error: "not authorized" }, { status: 401 });
     }
 
-    // 3️⃣ Fetch stores with status 'pending' or 'rejected'
-    // Include user and storeApplication data for admin panel display
+    // Fetch stores with status 'pending' or 'rejected'
     const stores = await prisma.store.findMany({
       where: { status: { in: ["pending", "rejected"] } },
       include: { 
-          user: true, // Include user info (name, email)
-          storeApplication: true // Include application info (CNIC, bank, etc.)
+          user: true, 
+          storeApplication: true 
       },
     });
 
-    // 4️⃣ Return stores data
+    // Return the fetched array of stores
     return NextResponse.json({ stores });
   } catch (error) {
     console.error(error);

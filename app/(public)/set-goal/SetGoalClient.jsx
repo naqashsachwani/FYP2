@@ -1,26 +1,19 @@
-// Marks this as a Next.js Client Component, allowing the use of browser APIs and React hooks.
 'use client';
 
-// --- Imports ---
-import { useSearchParams, useRouter } from "next/navigation"; // Hooks for routing and URL query parameters
+import { useSearchParams, useRouter } from "next/navigation"; 
 import { useEffect, useState } from "react";
-import Image from "next/image"; // Optimized image component
-import { useUser } from "@clerk/nextjs"; // Authentication hook from Clerk
-import { Loader2, Tag, CheckCircle2, XCircle } from "lucide-react"; // SVG Icons for UI
+import Image from "next/image"; 
+import { useUser } from "@clerk/nextjs"; 
+import { Loader2, Tag, CheckCircle2, XCircle } from "lucide-react"; 
 
 /* ================= TERMS MODAL ================= */
-// A reusable modal component to display the application's terms and conditions.
 function TermsModal({ open, onClose }) {
-  // If the 'open' prop is false, render nothing.
   if (!open) return null;
   return (
-    // Outer overlay: Fixed position, semi-transparent black background, backdrop blur, and fade-in animation.
     <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      {/* Modal Container: White background, rounded corners, shadow, and restricted max-height. */}
       <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col max-h-[85vh]">
         <h2 className="text-2xl font-bold mb-4 text-slate-800 border-b border-slate-100 pb-4">Terms & Conditions</h2>
         
-        {/* Scrollable Content Area for the terms text. */}
         <div className="overflow-y-auto pr-2 space-y-4 text-sm text-slate-600">
           <p>By starting a savings goal on DreamSaver, you agree to the following terms:</p>
           <ul className="list-disc pl-5 space-y-3">
@@ -48,7 +41,6 @@ function TermsModal({ open, onClose }) {
           </ul>
         </div>
 
-        {/* Modal Footer containing the accept/close button. */}
         <div className="mt-6 pt-4 border-t border-slate-100 text-right shrink-0">
           <button onClick={onClose} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all w-full sm:w-auto shadow-md hover:shadow-lg active:scale-95">
             I Understand & Accept
@@ -59,40 +51,34 @@ function TermsModal({ open, onClose }) {
   );
 }
 
-/* ================= MAIN PAGE ================= */
 export default function SetGoalClient() {
   // Extract user info from Clerk and routing tools from Next.js.
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Extract the specific 'productId' from the URL query string (e.g., ?productId=123).
+  // Extract the specific 'productId' from the URL query string.
   const productId = searchParams.get("productId");
 
-  /* ================= STATE ================= */
+
   // Product data fetched from the API.
   const [product, setProduct] = useState(null);
-  // User's selected saving duration (e.g., "3", "6", "12" months).
   const [period, setPeriod] = useState("");
-  // Calculated target completion date based on the chosen period.
   const [targetDate, setTargetDate] = useState(""); 
-  // Boolean tracking if the user checked the terms agreement box.
   const [termsAccepted, setTermsAccepted] = useState(false);
-  // Controls the visibility of the TermsModal component.
   const [showTerms, setShowTerms] = useState(false);
   
   // Coupon State
-  const [couponInput, setCouponInput] = useState(""); // The raw text typed by the user.
-  const [appliedCoupon, setAppliedCoupon] = useState(null); // The successfully validated coupon object.
-  const [couponLoading, setCouponLoading] = useState(false); // Spinner state for coupon validation.
-  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' }); // Feedback message (success/error).
+  const [couponInput, setCouponInput] = useState(""); 
+  const [appliedCoupon, setAppliedCoupon] = useState(null); 
+  const [couponLoading, setCouponLoading] = useState(false); 
+  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
 
   // Form submission state
-  const [error, setError] = useState(null); // General form errors.
-  const [loading, setLoading] = useState(false); // Spinner state during form submission.
+  const [error, setError] = useState(null); 
+  const [loading, setLoading] = useState(false); 
 
-  // --- Utility Functions ---
-  // Calculates a future date in ISO format (YYYY-MM-DD) based on the selected months.
+  // Calculates a future date in based on the selected months.
   const calcDate = (m) => {
     if (!m) return "";
     const d = new Date();
@@ -100,14 +86,12 @@ export default function SetGoalClient() {
     return d.toISOString().split("T")[0]; 
   };
 
-  // Reformats the ISO date string (YYYY-MM-DD) into a more readable format (DD-MM-YYYY).
   const formatDateForDisplay = (isoDate) => {
     if (!isoDate) return "";
     const [year, month, day] = isoDate.split("-");
     return `${day}-${month}-${year}`;
   };
 
-  // --- Data Fetching ---
   // Fetches the product details from the backend based on the URL query parameter.
   useEffect(() => {
     if (!productId) return;
@@ -115,15 +99,14 @@ export default function SetGoalClient() {
       .then(r => r.json())
       .then(d => setProduct(d.product))
       .catch(err => console.error("Failed to load product", err));
-  }, [productId]); // Re-runs only if the productId changes.
+  }, [productId]); 
 
-  /* ================= COUPON HANDLER ================= */
   // Validates the user's coupon code against the backend API.
   const handleApplyCoupon = async () => {
-    if (!couponInput) return; // Do nothing if input is empty.
+    if (!couponInput) return; 
     
     setCouponLoading(true);
-    setCouponMessage({ type: '', text: '' }); // Clear previous messages.
+    setCouponMessage({ type: '', text: '' }); 
 
     try {
       // Send a POST request to validate the coupon.
@@ -141,41 +124,27 @@ export default function SetGoalClient() {
       setAppliedCoupon({ code: couponInput.toUpperCase(), discount: data.discount });
       setCouponMessage({ type: 'success', text: `Coupon applied! ${data.discount}% off.` });
     } catch (err) {
-      // On failure, clear any applied coupon and show the error message.
       setAppliedCoupon(null);
       setCouponMessage({ type: 'error', text: err.message });
     } finally {
-      // Always turn off the loading spinner.
       setCouponLoading(false);
     }
   };
 
-  // Removes an active coupon, clearing the state and resetting math.
   const removeCoupon = () => {
     setAppliedCoupon(null);
     setCouponInput("");
     setCouponMessage({ type: '', text: '' });
   };
 
-  /* ================= FINANCIAL MATH ================= */
-  // Base price defaults to 0 if product data hasn't loaded yet.
   const basePrice = product?.price || 0;
-  
-  // Delivery Fee Logic: Hardcoded business rule. Free if > 5000 PKR, else 250 PKR.
   const deliveryFee = basePrice > 5000 ? 0 : 250;
-  
-  // Discount Math: Calculates the monetary discount based on the percentage returned by the coupon API.
   const discountAmount = appliedCoupon ? (basePrice * (appliedCoupon.discount / 100)) : 0;
-  
-  // Final Total: Base price minus the calculated discount, plus any applicable delivery fees.
   const finalTargetAmount = basePrice - discountAmount + deliveryFee;
 
-  /* ================= START GOAL ================= */
-  // Final submission handler.
   const startGoal = async () => {
-    setError(null); // Clear previous errors.
+    setError(null); 
     
-    // Front-end Validation checks.
     if (!period) return setError("Please select a time period.");
     if (!targetDate) return setError("Target date is invalid.");
     if (!termsAccepted) return setError("You must accept the terms first.");
@@ -194,31 +163,26 @@ export default function SetGoalClient() {
       });
 
       const data = await res.json();
-      // Catch specific backend errors.
       if (!res.ok) throw new Error(data.error || "Failed to create goal");
 
-      // On success, refresh the router context and redirect to the newly created goal's detail page.
       router.refresh();
       router.push(`/goals/${data.goal.id}`);
     } catch (err) {
-      // Handle network or logic errors during submission.
+     
       setLoading(false);
       setError(err.message);
     }
   };
 
-  // Render Guard: Show a full-page spinner until the product data has been fetched.
+  //Show a full-page spinner until the product data has been fetched.
   if (!product) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" /></div>;
 
   return (
-    // Main container layout.
     <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 mt-6 mb-12">
       <h1 className="text-3xl font-extrabold mb-8 text-slate-900">Set Savings Goal</h1>
 
-      {/* Two-column grid layout for desktop, single column for mobile. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        {/* === LEFT COLUMN: Product Overview & Mathematical Breakdown === */}
         <div className="space-y-6">
           
           {/* Product Header Card */}
@@ -235,7 +199,7 @@ export default function SetGoalClient() {
             </div>
           </div>
 
-          {/* MATH BREAKDOWN: Visually details how the final target amount is calculated. */}
+          {/*  Visually details how the final target amount is calculated. */}
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-sm">
              <div className="flex justify-between text-slate-600">
                 <span>Product Value</span>
@@ -262,7 +226,7 @@ export default function SetGoalClient() {
           </div>
         </div>
 
-        {/* === RIGHT COLUMN: Interactive Settings & Coupon Input === */}
+    
         <div className="space-y-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           
           {/* Coupon Input Section */}
@@ -307,9 +271,8 @@ export default function SetGoalClient() {
                 className="w-full border border-slate-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-white"
                 onChange={e => {
                   setPeriod(e.target.value);
-                  // Automatically calculates the target date based on the chosen dropdown value.
                   setTargetDate(calcDate(e.target.value));
-                  if (error) setError(null); // Clear errors upon valid interaction.
+                  if (error) setError(null); 
                 }}
               >
                 <option value="">Select timeline...</option>
@@ -331,7 +294,7 @@ export default function SetGoalClient() {
             <input type="checkbox" className="w-4 h-4 text-blue-600 rounded mt-0.5" onChange={e => setTermsAccepted(e.target.checked)} />
             <span className="text-slate-600 leading-tight">
               I accept the 
-              {/* Clickable text that opens the TermsModal component. */}
+              
               <span className="text-blue-600 font-bold hover:underline ml-1" onClick={(e) => { e.preventDefault(); setShowTerms(true); }}>Terms & Conditions</span>
             </span>
           </label>
@@ -339,7 +302,7 @@ export default function SetGoalClient() {
           {/* General form error display. */}
           {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 font-medium">{error}</div>}
 
-          {/* Main Submit Button */}
+         
           <button
             onClick={startGoal}
             disabled={loading || !product} // Disabled during network requests.

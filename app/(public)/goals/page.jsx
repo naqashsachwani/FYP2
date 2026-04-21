@@ -5,7 +5,7 @@ import GoalCard from "@/components/GoalCard";
 import ProgressChart from "@/components/ProgressChart";
 
 /**
- * It is responsible for fetching raw data, normalizing it (calculating totals/percentages),
+ * responsible for fetching raw data, normalizing it (calculating totals/percentages),
  * and distributing it to presentation components (Cards and Charts).
  */
 export default function GoalsPage() {
@@ -13,42 +13,35 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ================= DATA FETCHING & TRANSFORMATION =================
   useEffect(() => {
     fetch("/api/goals")
       .then((res) => res.json())
       .then((data) => {
         const rawGoals = data.goals || [];
 
-        /**
-         * DATA NORMALIZATION LOGIC:
-         * Instead of forcing child components to calculate totals, we process
-         * the raw data here. This ensures the UI is "dumb" and simply renders values.
-         */
         const calculatedGoals = rawGoals.map((goal) => {
           
-          // 1. Financial Calculation: Sum up all deposit history for this goal
+          // Financial Calculation: Sum up all deposit history for this goal
           const totalSaved = (goal.deposits || []).reduce(
             (sum, dep) => sum + Number(dep.amount),
             0
           );
 
-          // 2. Progress Logic: Avoid division by zero
+          // 2Progress Logic: Avoid division by zero
           const target = Number(goal.targetAmount);
           const percent = target > 0 ? (totalSaved / target) * 100 : 0;
 
-          // APIs often return dates as strings. We convert them to Date objects here
-          // so the DateFormatter in the UI doesn't crash or show "Invalid Date".
-          const dateString = goal.endDate || goal.targetDate; // Fallback support for legacy field names
+        
+          const dateString = goal.endDate || goal.targetDate; 
           const validDate = dateString ? new Date(dateString) : null;
 
-          // 4. Return the enriched object
+          // Return the enriched object
           return {
             ...goal,
             saved: totalSaved,
             targetAmount: target,
             progressPercent: percent,
-            endDate: validDate, // Now guarantees a valid Date object or null
+            endDate: validDate,
           };
         });
 
@@ -58,15 +51,12 @@ export default function GoalsPage() {
       .finally(() => setLoading(false)); // Ensure loading state clears even on error
   }, []);
 
-  // ================= RENDER LOGIC =================
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">My Savings Goals</h1>
 
-      {/* UX: Show Loading Feedback */}
       {loading && <p className="text-gray-500 animate-pulse">Loading goals...</p>}
 
-      {/* UX: Empty State Handling */}
       {!loading && goals.length === 0 && (
         <div className="p-6 bg-gray-50 rounded-lg text-center border border-dashed border-gray-300">
              <p className="text-gray-600">No goals found. Start a new goal from your cart!</p>

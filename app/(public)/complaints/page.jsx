@@ -1,38 +1,24 @@
-// Enforces client-side hydration for this module, enabling the utilization of react's standard Hooks API and DOM event listeners within the Next.js App Router paradigm.
 "use client";
 
-// --- DEPENDENCY INJECTIONS ---
-// React core hooks for managing component lifecycle (useEffect), local state (useState), and performance optimization via memoization (useMemo).
 import { useEffect, useState, useMemo } from "react";
-// Lucide React library for scalable vector graphics (SVG). Utilized to enhance UX without significant bundle size overhead.
 import { Loader2, AlertTriangle, CheckCircle, MessageSquareWarning, X, Package, Clock, ShieldAlert, ChevronDown, Check, Filter } from "lucide-react";
-// react-hot-toast library for implementing non-blocking, asynchronous UI notifications.
 import toast from "react-hot-toast";
-// Clerk authentication context providers. useAuth hook extracts JWT-based session data to verify user authorization state prior to rendering secure components.
 import { useAuth, SignInButton } from "@clerk/nextjs";
 
 export default function UserComplaintsPage() {
   
-  // Destructures the authentication payload. 
+  
   const { isLoaded, userId } = useAuth();
   
   // Initializes state for the core datasets using empty array defaults to prevent 
-  // undefined reference errors during the initial render cycle.
   const [complaints, setComplaints] = useState([]);
   const [goals, setGoals] = useState([]);
   
-  // Boolean state to manage the UI skeleton/loader during asynchronous network requests.
   const [loading, setLoading] = useState(true);
-
-  // State variables bound to the filtering UI, dictating the criteria for data projection.
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterType, setFilterType] = useState("ALL");
-
-  // Boolean flags managing the conditional rendering of the modal and custom dropdown DOM elements.
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOrderDropdownOpen, setIsOrderDropdownOpen] = useState(false);
-  
-  // State to manage form submission lifecycle, utilized to disable rapid sequential HTTP requests.
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Implements a controlled component architecture. This object holds the mutable state for the form inputs, ensuring single-source-of-truth data binding.
@@ -43,37 +29,25 @@ export default function UserComplaintsPage() {
     description: ""            
   });
 
-  // --- DERIVED STATE ---
-  // Executes a search through the goals array to locate the object matching the currently selected goalId. Used to dynamically update the custom UI.
   const selectedGoal = goals.find(g => g.id === formData.goalId);
 
   // ================= DATA FETCHING & API CONSUMPTION =================
   // wrapper for executing HTTP GET requests to the internal API endpoint.
   const fetchData = async () => {
     try {
-      // Initiates a network request to the backend service.
       const res = await fetch("/api/complaints/user");
-      
-      // Validates the HTTP response status code.
       if (!res.ok) throw new Error("Failed to load data");
-      
-      // Parses the incoming JSON payload into native JavaScript objects.
       const data = await res.json();
       
-      // Mutates component state with the fetched datasets, triggering a reconciliation cycle.
       setComplaints(data.complaints);
       setGoals(data.goals);
     } catch (error) {
-      // Catch block to handle network timeouts.
       toast.error("Could not load complaints.");
     } finally {
-      // Ensures the loading state is strictly resolved to false, mitigating infinite loading UX issues.
       setLoading(false);
     }
   };
 
-  // ================= LIFECYCLE HOOKS =================
-  // Executes side-effects post-render. The dependency array ensures this effect only fires when the authentication context resolves and a valid user session is detected.
   useEffect(() => {
     if (isLoaded && userId) {
       fetchData();
@@ -84,12 +58,8 @@ export default function UserComplaintsPage() {
   // Implements useMemo to memoize the filtered dataset.
   const filteredComplaints = useMemo(() => {
     return complaints.filter((comp) => {
-      // Evaluates status filter: Bypasses check if set to global "ALL", otherwise strictly compares.
       const matchesStatus = filterStatus === "ALL" || comp.status === filterStatus;
-      // Evaluates type filter logic.
       const matchesType = filterType === "ALL" || comp.type === filterType;
-      
-      // Returns boolean AND to ensure intersection of both filter criteria.
       return matchesStatus && matchesType;
     });
   }, [complaints, filterStatus, filterType]);
@@ -103,44 +73,36 @@ export default function UserComplaintsPage() {
   // ================= HTTP POST CONTROLLER (FORM SUBMIT) =================
   // Asynchronous event handler for the complaint submission payload.
   const handleSubmit = async (e) => {
-    // Intercepts and prevents the default DOM submission event to handle data transmission manually.
     e.preventDefault(); 
     setIsSubmitting(true); 
     
-    // Initializes an asynchronous UI notification reference.
     const toastId = toast.loading("Submitting complaint...");
 
     try {
       // Constructs and executes a RESTful POST request.
       const res = await fetch("/api/complaints/user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" }, // Declares MIME backend parsing.
+        headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify(formData) 
       });
       
       const data = await res.json();
-      // Error handling routine: throws exception if the backend rejects the payload.
       if (!res.ok) throw new Error(data.error);
 
-      // Updates the existing notification reference with a success state.
       toast.success("Complaint filed successfully.", { id: toastId });
       
-      // UI Cleanup: Dismisses the modal and resets the form payload state object to default configurations.
       setIsModalOpen(false);
       setFormData({ title: "", type: "PRODUCT_ISSUE", goalId: "", description: "" });
       
-      // Executes a re-fetch to synchronize the client-side state with the updated backend database state.
       fetchData(); 
     } catch (error) {
       // Updates the notification reference with the specific error trace caught during execution.
       toast.error(error.message, { id: toastId });
     } finally {
-      // Restores the submit button state to prevent UI locking.
       setIsSubmitting(false);
     }
   };
 
-  // ================= UTILITY FUNCTIONS =================
   // Maps a localized status string to a structural array to dynamically render progress tracking UI nodes.
   const getProgressSteps = (status) => {
     return [
@@ -149,15 +111,13 @@ export default function UserComplaintsPage() {
       { label: status === "REJECTED" ? "Rejected" : "Resolved", active: ["RESOLVED", "REJECTED"].includes(status), isError: status === "REJECTED" }
     ];
   };
-
-  // ================= COMPONENT RENDER TREE =================
   
-  // Render Guard 1: Awaits the resolution of the Clerk authentication provider context.
+  // Awaits the resolution of the Clerk authentication provider context.
   if (!isLoaded) {
     return <div className="min-h-[80vh] flex items-center justify-center"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   }
 
-  // Render Guard 2: Unauthenticated state fallback. Forces authorization flow before rendering protected UI.
+  // Unauthenticated state fallback. Forces authorization flow before rendering protected UI.
   if (isLoaded && !userId) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-[#f4f4f9]">
@@ -174,7 +134,7 @@ export default function UserComplaintsPage() {
     );
   }
 
-  // Render Guard 3: Awaits the resolution of the internal data fetching promise.
+  // Awaits the resolution of the internal data fetching promise.
   if (loading) {
     return <div className="min-h-[80vh] flex items-center justify-center bg-gray-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   }
@@ -184,7 +144,7 @@ export default function UserComplaintsPage() {
     <div className="min-h-screen bg-gray-50 p-6 md:p-12 text-gray-800">
       <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* --- PAGE HEADER --- */}
+       
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
@@ -193,7 +153,6 @@ export default function UserComplaintsPage() {
             </h1>
             <p className="text-gray-500 mt-1">Track issues or open a new dispute with a store.</p>
           </div>
-          {/* Invokes state mutation to render the modal portal */}
           <button 
             onClick={() => setIsModalOpen(true)}
             className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-md flex items-center gap-2 shrink-0"
@@ -203,7 +162,6 @@ export default function UserComplaintsPage() {
           </button>
         </div>
 
-        {/* --- FILTER CONTROL PANEL --- */}
         {/* Conditionally renders only if the base dataset size is greater than zero. */}
         {complaints.length > 0 && (
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
@@ -215,7 +173,6 @@ export default function UserComplaintsPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               
-              {/* Controlled Select Component: Two-way binding with filterStatus state. */}
               <div className="relative w-full sm:w-48">
                 <select 
                   value={filterStatus}
@@ -231,7 +188,6 @@ export default function UserComplaintsPage() {
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
               </div>
 
-              {/* Controlled Select Component: Two-way binding with filterType state. */}
               <div className="relative w-full sm:w-48">
                 <select 
                   value={filterType}
@@ -252,10 +208,9 @@ export default function UserComplaintsPage() {
           </div>
         )}
 
-        {/* --- DATA PROJECTION VIEW --- */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           
-          {/* Render Logic Fork: Empty state for unpopulated database. */}
+          {/* Empty state for unpopulated database. */}
           {complaints.length === 0 ? (
             <div className="text-center py-16 px-4">
               <CheckCircle className="w-16 h-16 text-green-200 mx-auto mb-4" />
@@ -264,26 +219,24 @@ export default function UserComplaintsPage() {
             </div>
           ) 
           
-          // Render Logic Fork: Empty state due to highly restrictive filter parameters.
+          // Empty state due to highly restrictive filter parameters.
           : filteredComplaints.length === 0 ? (
             <div className="text-center py-16 px-4 bg-gray-50/50">
               <Filter className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-gray-800">No Matches Found</h3>
               <p className="text-sm text-gray-500 mt-1 mb-4">We couldn't find any complaints matching your current filters.</p>
-              {/* Executes utility function to reset filter states and re-render the view. */}
               <button onClick={clearFilters} className="text-sm font-bold text-green-600 hover:text-green-700 hover:underline">
                 Clear Filters
               </button>
             </div>
           ) 
           
-          // Render Logic Fork: Populated state. Maps the memoized array to React nodes.
+          // Populated state. Maps the memoized array to React nodes.
           : (
             <div className="divide-y divide-gray-100">
               {filteredComplaints.map((comp) => (
                 <div key={comp.id} className="p-6 hover:bg-slate-50 transition flex flex-col md:flex-row gap-6 justify-between">
                   
-                  {/* Complaint Metadata Node */}
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold uppercase text-gray-500 tracking-widest bg-gray-100 px-3 py-1 rounded-full">
@@ -298,7 +251,6 @@ export default function UserComplaintsPage() {
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{comp.description}</p>
                     </div>
                     
-                    {/* Conditionally renders associative foreign key data (Goal/Order relation) */}
                     {comp.goal && (
                       <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-medium text-gray-600 border border-gray-200">
                         <Package size={14} className="text-blue-500" />
@@ -347,7 +299,6 @@ export default function UserComplaintsPage() {
         </div>
       </div>
 
-      {/* ================= MODAL PORTAL (DATA INGESTION UI) ================= */}
       {/* Conditionally rendered based on isModalOpen boolean state. */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
@@ -378,7 +329,6 @@ export default function UserComplaintsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 
-                {/* --- CONTROLLED SELECT: TYPE ENUM --- */}
                 <div>
                   <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 tracking-wider">Category</label>
                   <select 
@@ -395,8 +345,6 @@ export default function UserComplaintsPage() {
                   </select>
                 </div>
 
-                {/* --- CUSTOM RELATIONAL DROPDOWN UI --- */}
-                {/* Utilized to bypass native HTML <select> restrictions, allowing dynamic asset rendering (images). */}
                 <div className="relative">
                   <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5 tracking-wider">Related Product</label>
                   <button
@@ -448,7 +396,6 @@ export default function UserComplaintsPage() {
                 </div>
               </div>
 
-              {/* --- CONDITIONAL UI METADATA --- */}
               {/* Injects policy warnings based on dynamically selected complaint typings. */}
               {["PRODUCT_ISSUE", "DELIVERY"].includes(formData.type) && (
                 <div className="bg-orange-50 p-3 rounded-xl text-xs font-medium text-orange-700 border border-orange-100 flex gap-2">

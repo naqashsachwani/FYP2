@@ -59,7 +59,7 @@ export async function GET(req) {
             storeNet = Number(p.netAmount);   
             statusLabel = "PAID";
 
-            // ✅ Add to Fees Card (Store actually paid this)
+            //  Add to Fees Card (Store actually paid this)
             totalPlatformFees += adminFee; 
         } 
         else if (p.status === "REFUNDED") {
@@ -68,7 +68,7 @@ export async function GET(req) {
             adminFee = 0; // Visual fix: Store didn't "pay" a fee here, they just got a cut
             statusLabel = "COMPENSATED";
 
-            // ❌ DO NOT add to Fees Card (Store didn't pay anything)
+            //  DO NOT add to Fees Card (Store didn't pay anything)
         }
 
         // Add to Total Earnings Card

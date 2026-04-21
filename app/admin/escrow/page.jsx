@@ -1,24 +1,16 @@
-// Enables React hooks (useState, useEffect) and DOM manipulation in Next.js
 "use client";
 
-// --- Imports ---
 import { useEffect, useState } from "react";
-// UI Icons
 import { 
   Loader2, DollarSign, ArrowDownLeft, AlertCircle, RefreshCw, 
   Search, Copy, CheckCircle, ChevronLeft, ChevronRight, X, 
   User, Store, CreditCard, Calendar, ShieldAlert, Download 
 } from "lucide-react";
-// Toast notifications
 import toast from "react-hot-toast";
-
-// PDF Generation Libraries (Client-side generation)
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// ==========================================
 // GOAL DETAILS MODAL COMPONENT (Helper)
-// ==========================================
 // A popup overlay that fetches and displays the deep transaction ledger for a specific goal
 const GoalDetailsModal = ({ goalId, onClose }) => {
   const [goal, setGoal] = useState(null);
@@ -30,7 +22,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        // ✅ Added cache-busting timestamp (_t=Date.now()) to force fresh data retrieval
         const res = await fetch(`/api/goals/${goalId}?_t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.goal) setGoal(data.goal);
@@ -43,13 +34,11 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     fetchDetails();
   }, [goalId]);
 
-  if (!goalId) return null; // Guard clause
+  if (!goalId) return null; 
 
-  // Loading state overlay
   if (loading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"><Loader2 className="animate-spin text-white w-10 h-10" /></div>;
-  if (!goal) return null; // Fallback if goal data is missing
+  if (!goal) return null; 
 
-  // Modal Rendering
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -111,30 +100,27 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
   );
 };
 
-// ==========================================
 // MAIN ESCROW MANAGEMENT PAGE
-// ==========================================
 export default function AdminEscrowPage() {
   // --- Core State ---
-  const [data, setData] = useState(null); // Holds the main dashboard payload from the API
-  const [loading, setLoading] = useState(true); // Full-page spinner state
-  const [processingId, setProcessingId] = useState(null); // Locks specific row buttons during API POST
+  const [data, setData] = useState(null); 
+  const [loading, setLoading] = useState(true); 
+  const [processingId, setProcessingId] = useState(null); 
 
   // --- Filtering & Pagination State ---
-  const [searchTerm, setSearchTerm] = useState(""); // Local search input
-  const [page, setPage] = useState(1); // Server-side pagination tracker
-  const [filter, setFilter] = useState("ALL"); // Tab filter (ALL, ACTIVE, HISTORY)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1); 
+  const [filter, setFilter] = useState("ALL"); 
   
   // --- UI Control State ---
-  const [selectedGoalId, setSelectedGoalId] = useState(null); // ID for the GoalDetailsModal
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // Spinner for PDF generation button
+  const [selectedGoalId, setSelectedGoalId] = useState(null); 
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); 
 
   // --- Data Fetching ---
   const fetchData = async () => {
     setLoading(true);
     try {
-      // ✅ Added cache-busting timestamp so it NEVER uses stale browser data
-      // Passes page and filter query params to the backend for server-side pagination
+   
       const res = await fetch(`/api/admin/escrow?page=${page}&limit=10&filter=${filter}&_t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error("Failed");
       const jsonData = await res.json();
@@ -152,18 +138,15 @@ export default function AdminEscrowPage() {
   // --- Financial Processing Handler ---
   // Triggered when admin clicks "Release" or "Process Refund"
   const handleProcess = async (itemId, actionType, sourceTable) => {
-    // Safety prompt before moving real money
     const confirmMsg = actionType === 'RELEASE' ? "Release funds (5% fee)?" : "Refund funds (20% penalty)?";
     if (!confirm(confirmMsg)) return;
     
-    setProcessingId(itemId); // Lock the button
+    setProcessingId(itemId); 
 
-    // ✅ OPTIMISTIC UI UPDATE: Instantly remove the row from the screen for a snappy feel
     setData(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        // Filter out the item we are processing from the 'actionable' array immediately
         actionable: prev.actionable.filter(item => item.id !== itemId)
       };
     });
@@ -190,7 +173,6 @@ export default function AdminEscrowPage() {
   // Utility to copy Goal IDs to the clipboard
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
 
-  // --- Client-Side Search Logic ---
   // Filters local arrays based on the search input box
   const matchesSearch = (item) => {
     if (!searchTerm) return true;
@@ -203,7 +185,6 @@ export default function AdminEscrowPage() {
     );
   };
 
-  // --- Derived State Arrays ---
   // Apply the client-side search filter to the server-provided arrays
   const pendingReleases = data?.actionable?.filter(i => i.type === "RELEASE" && matchesSearch(i)) || [];
   const pendingRefunds = data?.actionable?.filter(i => i.type === "REFUND" && matchesSearch(i)) || [];
@@ -211,13 +192,11 @@ export default function AdminEscrowPage() {
   const totalPages = data?.history?.totalPages || 1;
 
   // ================= PDF GENERATION LOGIC (UPDATED) =================
-  // Generates a comprehensive PDF ledger of the Escrow account
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
     const toastId = toast.loading("Compiling full report...");
 
     try {
-      // ✅ Fetch ALL data for the PDF (limit=10000) ignoring pagination
       const res = await fetch(`/api/admin/escrow?page=1&limit=10000&filter=${filter}&_t=${Date.now()}`, { cache: 'no-store' });
       const fullData = await res.json();
       
@@ -230,7 +209,7 @@ export default function AdminEscrowPage() {
       const doc = new jsPDF();
       let currentY = 20; // Vertical cursor tracker
 
-      // 1. Report Header
+      // Report Header
       doc.setFontSize(22);
       doc.setTextColor(31, 41, 55); 
       doc.text("DreamSaver - Escrow Management Report", 14, currentY);
@@ -241,7 +220,7 @@ export default function AdminEscrowPage() {
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, currentY);
       currentY += 15;
 
-      // 2. Statistics Section
+      // Statistics Section
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
       doc.text("1. Overall Statistics", 14, currentY);
@@ -256,7 +235,7 @@ export default function AdminEscrowPage() {
       doc.text(`Pending Actions: ${fullData?.stats?.pendingActions || 0}`, 14, currentY);
       currentY += 15;
 
-      // 3. Pending Payouts Table
+      // Pending Payouts Table
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
       doc.text(`2. Pending Payouts (Total: ${allPendingReleases.length})`, 14, currentY);
@@ -278,7 +257,7 @@ export default function AdminEscrowPage() {
       });
       currentY = doc.lastAutoTable.finalY + 15; // Move cursor down below the table
 
-      // 4. Pending Refunds Table
+      // Pending Refunds Table
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
       doc.text(`3. Pending Refunds (Total: ${allPendingRefunds.length})`, 14, currentY);
@@ -300,7 +279,7 @@ export default function AdminEscrowPage() {
       });
       currentY = doc.lastAutoTable.finalY + 15;
 
-      // 5. Transaction History Table
+      // Transaction History Table
       doc.setFontSize(14);
       doc.setTextColor(31, 41, 55);
       doc.text(`4. Transaction History (Filter: ${filter} | Total: ${allHistoryData.length})`, 14, currentY);
@@ -335,7 +314,7 @@ export default function AdminEscrowPage() {
     }
   };
 
-  // Render Guard: Wait for initial API payload
+  // Wait for initial API payload
   if (loading && !data) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
 
   return (

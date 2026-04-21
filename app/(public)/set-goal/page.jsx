@@ -9,10 +9,9 @@ export default function SetGoalPage() {
 
       <h1 className="sr-only">Set Goal</h1>
       {/* Provides context for screen readers without showing visually */}
-      {/* sr-only -> For accessibility compliance */}
       <Suspense fallback={<div>Loading goal UI…</div>}>
         <SetGoalClient />
-        {/* separate client component? -> hooks or browser-specific logic cannot run in server components */}
+      
       </Suspense>
     </main>
   );

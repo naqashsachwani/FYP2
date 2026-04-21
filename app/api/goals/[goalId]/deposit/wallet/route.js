@@ -2,8 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
-import { depositConfirmationTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
+import { sendNotification } from "@/lib/sendNotification"; 
+import { depositConfirmationTemplate } from "@/lib/emailTemplates"; 
 
 // Helper: Normalize Prisma Decimals
 const normalize = (obj) => JSON.parse(
@@ -89,12 +89,12 @@ export async function POST(req, { params }) {
           saved: totalSavedAmount,
           status: newStatus,
         },
-        // ✅ ADDED USER TO INCLUDE
+        //  ADDED USER TO INCLUDE
         include: { deposits: true, product: true, user: true },
       });
 
       // E. Sync Escrow
-      // ✅ FIX 1: Changed findUnique to findFirst to avoid strict unique constraint panics
+      //  FIX 1: Changed findUnique to findFirst to avoid strict unique constraint panics
       const existingEscrow = await tx.escrow.findFirst({ where: { goalId } });
       if (existingEscrow) {
         await tx.escrow.update({
@@ -114,14 +114,14 @@ export async function POST(req, { params }) {
 
       return { updatedGoal, deposit };
 
-    // ✅ FIX 2: Added explicit timeout options to prevent P2028 crashes
+    //  FIX 2: Added explicit timeout options to prevent P2028 crashes
     }, {
         maxWait: 5000,   // Wait up to 5 seconds for connection
         timeout: 15000   // Give transaction up to 15 seconds to complete
     });
 
     // ==========================================
-    // ✅ FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    //  FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
     // ==========================================
     const savedGoal = result.updatedGoal;
     
@@ -129,7 +129,7 @@ export async function POST(req, { params }) {
         await sendNotification({
             userId: savedGoal.user.id,
             email: savedGoal.user.email,
-            title: "Wallet Payment Received! 💰",
+            title: "Wallet Payment Received! ",
             message: `Your deposit of Rs ${depositAmount} from your wallet was successful.`,
             html: depositConfirmationTemplate(
                 savedGoal.user.name, 
@@ -148,7 +148,7 @@ export async function POST(req, { params }) {
             await sendNotification({
                 userId: savedGoal.user.id,
                 email: savedGoal.user.email,
-                title: "Goal Completed! 🎉",
+                title: "Goal Completed! ",
                 message: "Congratulations! Your savings goal is now complete. You can now redeem your product.",
                 html: `
                   <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">

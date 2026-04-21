@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; 
 
 export async function POST(req) {
   try {
@@ -22,7 +22,7 @@ export async function POST(req) {
     // 1. Check wallet balance
     const wallet = await prisma.wallet.findUnique({ 
         where: { userId },
-        include: { user: true } // ✅ INCLUDE USER FOR EMAIL
+        include: { user: true } //  INCLUDE USER FOR EMAIL
     });
     
     if (!wallet || Number(wallet.balance) < withdrawAmount) {
@@ -48,12 +48,12 @@ export async function POST(req) {
       });
     });
 
-    // ✅ FIRE ENGINE: Notify user that the withdrawal was successfully processed
+    // FIRE ENGINE: Notify user that the withdrawal was successfully processed
     if (wallet.user) {
         await sendNotification({
             userId: wallet.user.id,
             email: wallet.user.email,
-            title: "Withdrawal Successful 🏦",
+            title: "Withdrawal Successful ",
             message: `Your withdrawal of Rs ${withdrawAmount.toLocaleString()} has been successfully transferred to your ${payoutMethod} account ending in ${accountNumber.slice(-4)}.`,
             type: "SYSTEM_ALERT",
             notifyInApp: true,

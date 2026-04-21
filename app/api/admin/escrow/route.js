@@ -81,7 +81,7 @@ export async function GET(req) {
           include: {
             user: { select: { name: true } },
             product: { 
-              // ✅ FIX: Removed 'name: true' from here. 
+              //  FIX: Removed 'name: true' from here. 
               // 'include' fetches all scalar fields (like name) automatically.
               include: { 
                 store: { select: { name: true } } 

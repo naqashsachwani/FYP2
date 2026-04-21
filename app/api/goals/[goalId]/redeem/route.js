@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; 
 
 export async function POST(request, { params }) {
   try {
@@ -15,7 +15,7 @@ export async function POST(request, { params }) {
 
     const goal = await prisma.goal.findUnique({
       where: { id: goalId },
-      include: { delivery: true, user: true, product: true } // ✅ INCLUDE USER/PRODUCT FOR NOTIFICATION
+      include: { delivery: true, user: true, product: true } 
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
@@ -32,7 +32,7 @@ export async function POST(request, { params }) {
         status: 'PENDING',
         shippingAddress: `${address.street}, ${address.city}, ${address.state}, ${address.zip}`,
         
-        // ✅ CRITICAL FIX: Save the Destination Coordinates!
+        // CRITICAL FIX: Save the Destination Coordinates!
         destinationLat: address.latitude,
         destinationLng: address.longitude,
 
@@ -42,7 +42,7 @@ export async function POST(request, { params }) {
       }
     });
 
-    // ✅ FIRE ENGINE: Notify user that redemption was successful
+    // FIRE ENGINE: Notify user that redemption was successful
     if (goal.user) {
         await sendNotification({
             userId: goal.user.id,

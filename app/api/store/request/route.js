@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; 
 
 export async function GET(req) {
   try {
@@ -76,7 +76,7 @@ export async function POST(req) {
       }
     });
 
-    // ✅ FIRE ENGINE: Acknowledge the store owner's request
+    // FIRE ENGINE: Acknowledge the store owner's request
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({

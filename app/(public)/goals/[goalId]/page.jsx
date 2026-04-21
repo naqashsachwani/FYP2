@@ -1,30 +1,19 @@
-"use client"; // Enforces client-side rendering for this Next.js component to allow hooks and DOM manipulation.
+"use client"; 
 
-// --- React & Next.js Imports ---
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-
-// --- Third-Party UI & Charting Imports ---
 import { Line } from "react-chartjs-2";
-import "chart.js/auto"; // Automatically registers Chart.js controllers, elements, and scales
+import "chart.js/auto"; 
 import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift, Wallet } from "lucide-react";
 import toast from "react-hot-toast";
-
-// --- Custom Components ---
 import GoalCard from "@/components/GoalCard";
 import RedeemAction from "@/components/RedeemAction";
-
-// --- Authentication ---
 import { useUser } from "@clerk/nextjs";
-
-// --- PDF Generation Libraries ---
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-/* ================= JSPDF GENERATORS ================= */
 // Utility function to generate a single transaction invoice PDF
 const generateInvoicePDF = (transaction, product, userName) => {
-  // Initialize jsPDF with A5 format for a receipt-like size
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a5" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -65,7 +54,6 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setTextColor(100, 116, 139);
   doc.text(`User ID: ${transaction.userId.slice(0, 12)}...`, margin, startY + (lineHeight * 2));
 
-  // Receipt Meta Info Section
   doc.setFontSize(9);
   doc.setTextColor(148, 163, 184);
   doc.setFont("helvetica", "bold");
@@ -78,7 +66,6 @@ const generateInvoicePDF = (transaction, product, userName) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  // ✅ ENFORCE DD/MM/YYYY formatting for standard parsing
   doc.text(`Date: ${new Date(transaction.createdAt).toLocaleDateString('en-GB')}`, rightEdge, startY + (lineHeight * 2), { align: "right" });
   doc.text(`Time: ${new Date(transaction.createdAt).toLocaleTimeString()}`, rightEdge, startY + (lineHeight * 3) - 1, { align: "right" });
 
@@ -135,12 +122,10 @@ const generateReportPDF = (deposits, goalName) => {
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.text(`Goal: ${goalName}`, 14, 27);
-  // ✅ ENFORCE DD/MM/YYYY
   doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')}`, 14, 32);
 
   // Map over deposits to construct table rows
   const tableData = deposits.map(d => [
-    // ✅ ENFORCE DD/MM/YYYY
     new Date(d.createdAt).toLocaleDateString('en-GB'),
     new Date(d.createdAt).toLocaleTimeString(),
     d.receiptNumber?.slice(0, 8) || "N/A",
@@ -161,7 +146,6 @@ const generateReportPDF = (deposits, goalName) => {
   doc.save("DreamSaver_Detailed_Report.pdf");
 };
 
-/* ================= INVOICE MODAL COMPONENT ================= */
 // A UI Modal displaying specific transaction details before downloading
 const InvoiceModal = ({ transaction, product, onClose, userName }) => {
   if (!transaction) return null; // Safety check
@@ -187,7 +171,6 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
               <p className="text-slate-500 font-medium mb-1">Receipt #</p>
               <p className="font-mono font-bold text-slate-800">{transaction.receiptNumber?.slice(0, 8) || "N/A"}</p>
               <div className="mt-4 text-slate-500">
-                {/* ✅ ENFORCE DD/MM/YYYY */}
                 <p>{new Date(transaction.createdAt).toLocaleDateString('en-GB')}</p>
                 <p>{new Date(transaction.createdAt).toLocaleTimeString()}</p>
               </div>
@@ -224,8 +207,6 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
     </div>
   );
 };
-
-/* ================= MAIN COMPONENT ================= */
 
 export default function GoalDetails() {
   // Hooks to grab URL params, routing, query strings, and auth user context
@@ -287,8 +268,6 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
-  // FIXED: Using setGoal callback to prevent the date from disappearing on re-renders
-  // This normalizes the API payload (string to numbers/dates) and safely merges it with existing state
   const normalizeAndSetGoal = (goalData) => {
     setGoal((prevGoal) => {
       const deposits = (goalData.deposits || []).map((d) => ({
@@ -339,11 +318,9 @@ export default function GoalDetails() {
   }, [goalId, user]);
 
   // Handle Stripe Success Return
-  // Checks URL parameters to see if the user was just redirected back from Stripe
   useEffect(() => {
     const payment = searchParams.get("payment");
     const amount = searchParams.get("amount");
-    // Ensure payment succeeded and we haven't already processed this (using handledRef)
     if (payment === "success" && amount && !handledRef.current) {
       handledRef.current = true; 
       setSavingDeposit(true);
@@ -387,11 +364,11 @@ export default function GoalDetails() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success(data.goalCompleted ? "🎉 Goal Completed!" : "✅ Deposit Added via Wallet!", { id: toastId });
+      toast.success(data.goalCompleted ? " Goal Completed!" : " Deposit Added via Wallet!", { id: toastId });
       normalizeAndSetGoal(data.goal); // Update local state
       setIsWalletModalOpen(false);    // Close the modal
-      setWalletAmount("");            // Reset input
-      fetchWalletBalance();           // Update balance state to reflect deduction
+      setWalletAmount("");            
+      fetchWalletBalance();           
     } catch (error) {
       toast.error(error.message || "Failed to process deposit", { id: toastId });
     } finally {
@@ -399,14 +376,12 @@ export default function GoalDetails() {
     }
   };
 
-  // Render Guards
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" /></div>;
   if (!goal) return <p className="p-4 text-red-500">Goal not found</p>;
 
   // Data processing for Chart.js
   const sortedDeposits = [...goal.deposits].sort((a, b) => b.createdAt - a.createdAt);
   
-  // ✅ ENFORCE DD/MM/YYYY for the Chart
   const chartPoints = [
       { date: new Date(goal.createdAt).toLocaleDateString('en-GB'), amount: 0 }, 
       ...sortedDeposits.map((d) => ({ date: d.createdAt.toLocaleDateString('en-GB'), amount: d.amount })).reverse()
@@ -540,7 +515,7 @@ export default function GoalDetails() {
               <li key={d.id} className="p-5 border border-slate-200 rounded-xl flex items-center justify-between bg-white shadow-sm">
                 <div>
                   <span className="text-slate-900 font-bold block">{d.paymentMethod === "WALLET" ? "Wallet Deposit" : "Deposit"}</span>
-                  {/* ✅ ENFORCE DD/MM/YYYY */}
+                  {/*  ENFORCE DD/MM/YYYY */}
                   <span className="text-slate-500 text-sm">{new Date(d.createdAt).toLocaleDateString('en-GB')} {new Date(d.createdAt).toLocaleTimeString()}</span>
                 </div>
                 <div className="flex items-center gap-4">

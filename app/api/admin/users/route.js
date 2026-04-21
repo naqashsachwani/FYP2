@@ -38,7 +38,7 @@ export async function PATCH(request) {
 
     if (!id) return NextResponse.json({ error: "User ID is required" }, { status: 400 });
 
-    // ✅ BACKEND SAFETY CHECK: Admin cannot suspend themselves
+    // BACKEND SAFETY CHECK: Admin cannot suspend themselves
     if (id === userId) {
       return NextResponse.json({ error: "You cannot suspend your own account." }, { status: 403 });
     }
@@ -60,7 +60,7 @@ export async function PATCH(request) {
       data: { isActive: newStatus }
     });
 
-    // ✅ FIRE ENGINE: Notify User of Account Status Change
+    //  FIRE ENGINE: Notify User of Account Status Change
     const title = newStatus ? "Account Restored ✅" : "Account Suspended ⚠️";
     const message = newStatus 
         ? "Your account access has been fully restored by an administrator."
@@ -99,7 +99,7 @@ export async function DELETE(request) {
 
     if (!id) return NextResponse.json({ error: "User ID is required" }, { status: 400 });
 
-    // ✅ BACKEND SAFETY CHECK: Admin cannot delete themselves
+    //  BACKEND SAFETY CHECK: Admin cannot delete themselves
     if (id === userId) {
       return NextResponse.json({ error: "You cannot delete your own account." }, { status: 403 });
     }
@@ -129,7 +129,7 @@ export async function DELETE(request) {
       });
       
       actionMessage = "User deleted. They are permitted to recreate their account one more time.";
-      emailTitle = "Account Deleted - Second Chance Available ⚠️";
+      emailTitle = "Account Deleted - Second Chance Available ";
       emailBody = "Your DreamSaver account has been deleted due to a severe policy violation. Because this is your first offense, you are permitted to recreate your account using this email address ONE time. Any further violations will result in a permanent ban.";
 
     } else {
@@ -143,11 +143,11 @@ export async function DELETE(request) {
       });
 
       actionMessage = "User permanently BANNED. They have exhausted their recreations.";
-      emailTitle = "Account Permanently Banned 🚫";
+      emailTitle = "Account Permanently Banned ";
       emailBody = "Your DreamSaver account has been permanently banned. You have exhausted your second chance and are no longer permitted to use our services.";
     }
 
-    // ✅ FIRE ENGINE: Send the final email before deleting their local DB record
+    //  FIRE ENGINE: Send the final email before deleting their local DB record
     await sendNotification({
         userId: userToDelete.id, // Will be deleted from DB soon, but needed for the function signature
         email: email,

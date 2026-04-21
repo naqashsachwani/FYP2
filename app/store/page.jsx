@@ -1,10 +1,8 @@
-// Designates this as a Next.js Client Component, allowing the use of React hooks and interactive state.
 'use client'
 
-// --- Imports ---
-import Loading from "@/components/Loading" // Custom loading spinner component
-import { useAuth } from "@clerk/nextjs" // Clerk authentication hook for secure API requests
-import axios from "axios" // Library for making HTTP requests
+import Loading from "@/components/Loading" 
+import { useAuth } from "@clerk/nextjs" 
+import axios from "axios"
 import { 
     CircleDollarSignIcon, 
     ShoppingBasketIcon, 
@@ -12,15 +10,13 @@ import {
     ClockIcon,
     DownloadIcon,
     TrendingUp,
-    Package // Icon used to visually represent "Total Orders"
-} from "lucide-react" // Scalable SVG icons for the UI
-import { useRouter } from "next/navigation" // Next.js router for programmatic navigation
-import { useEffect, useState } from "react" // Standard React hooks
-import toast from "react-hot-toast" // Notification library for popup alerts
-// Libraries for generating PDF reports on the client side
+    Package 
+} from "lucide-react" 
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import toast from "react-hot-toast" 
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-// Recharts library components for rendering the dynamic line chart
 import {
   LineChart, 
   Line,      
@@ -34,14 +30,10 @@ import {
 export default function Dashboard() {
 
     // --- AUTHENTICATION & CONFIG ---
-    // Extract the getToken function from Clerk to securely authorize API calls
     const { getToken } = useAuth()
-    // Pull currency symbol from environment variables, defaulting to 'Rs'
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || 'Rs'
     const router = useRouter() 
 
-    // --- STATE MANAGEMENT ---
-    // Controls the main page loading spinner during initial data fetch
     const [loading, setLoading] = useState(true)
     
     // Object storing all the key metrics fetched from the backend for the store
@@ -57,25 +49,17 @@ export default function Dashboard() {
     // Stores the processed array formatted specifically for the Recharts library
     const [chartData, setChartData] = useState([])
 
-    /**
-     * PROCESS CHART DATA
-     * Takes the raw 'allOrders' array and groups the revenue by day for the last 7 days.
-     */
     const processChartData = (orders = []) => {
         const data = [];
         const today = new Date();
         
-        // Loop backwards 7 days, starting from 6 days ago up to today (0)
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(today.getDate() - i);
             
-            // Format dates for strict comparison (e.g., "4/20/2026")
             const comparisonDate = d.toLocaleDateString();
-            // Create a short label for the X-axis (e.g., "Mon", "Tue")
             const label = d.toLocaleDateString('en-US', { weekday: 'short' }); 
             
-            // Filter the raw orders array to find transactions matching this specific loop day
             const daysOrders = orders.filter(o => {
                 if (!o.createdAt) return false;
                 const orderDate = new Date(o.createdAt).toLocaleDateString();
@@ -85,7 +69,6 @@ export default function Dashboard() {
             // Sum the 'total' field (representing store revenue) for all orders on this day
             const dailyRevenue = daysOrders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
             
-            // Push the formatted object into the chart data array
             data.push({
                 name: label,
                 revenue: dailyRevenue
@@ -95,7 +78,7 @@ export default function Dashboard() {
     }
 
     // --- API INTEGRATION ---
-    // Asynchronous function to retrieve dashboard statistics from the backend
+    // function to retrieve dashboard statistics from the backend
     const fetchDashboardData = async () => {
         try {
             const token = await getToken()
@@ -105,8 +88,6 @@ export default function Dashboard() {
                 headers: { Authorization: `Bearer ${token}` }
             })
             
-            // Map the backend response to a safe object, casting values to Numbers 
-            // and providing fallbacks (0 or []) if data is missing or undefined
             const safeData = {
                 totalProducts: Number(data.dashboardData.totalProducts) || 0,
                 totalEarnings: Number(data.dashboardData.totalEarnings) || 0,
@@ -130,20 +111,19 @@ export default function Dashboard() {
     }
 
     // --- REPORT GENERATION ---
-    // Function to generate and download a PDF executive report using jsPDF
     const GenerateReport = () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const today = new Date();
-        const brandColor = [30, 41, 59]; // Slate-800 color for headers
+        const brandColor = [30, 41, 59]; 
 
         // PDF Header Formatting
         doc.setFillColor(...brandColor);
         doc.rect(0, 0, pageWidth, 40, 'F'); // Draw a solid rectangle across the top
 
         doc.setFontSize(24);
-        doc.setTextColor(255, 255, 255); // White text
+        doc.setTextColor(255, 255, 255); 
         doc.setFont("helvetica", "bold");
         doc.text("DREAMSAVER", 14, 20);
         
@@ -151,13 +131,11 @@ export default function Dashboard() {
         doc.setFont("helvetica", "normal");
         doc.text("Store Performance Audit Report", 14, 28);
 
-        // Header Metadata
         doc.setFontSize(10);
         doc.text(`Report ID: ${Date.now()}`, pageWidth - 14, 18, { align: 'right' });
         doc.text(`Date: ${today.toLocaleDateString()}`, pageWidth - 14, 24, { align: 'right' });
         doc.text(`Generated By: Store Manager`, pageWidth - 14, 30, { align: 'right' });
 
-        // Section 1: Stats Overview
         let yPos = 55;
         
         doc.setFontSize(14);
@@ -180,22 +158,21 @@ export default function Dashboard() {
 
         // Loop through the stats array to draw "cards" in the PDF
         stats.forEach((stat, index) => {
-            const x = startX + (index * (cardWidth + gap)); // Calculate horizontal position
+            const x = startX + (index * (cardWidth + gap)); 
             doc.setFillColor(248, 250, 252); 
             doc.setDrawColor(226, 232, 240); 
-            doc.roundedRect(x, yPos, cardWidth, cardHeight, 3, 3, 'FD'); // Draw card background with border
+            doc.roundedRect(x, yPos, cardWidth, cardHeight, 3, 3, 'FD'); 
 
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139);
-            doc.text(stat.label, x + 5, yPos + 8); // Draw label
+            doc.text(stat.label, x + 5, yPos + 8); 
 
             doc.setFontSize(14);
             doc.setTextColor(...brandColor);
             doc.setFont("helvetica", "bold");
-            doc.text(stat.value, x + 5, yPos + 18); // Draw value
+            doc.text(stat.value, x + 5, yPos + 18); 
         });
 
-        // Section 2: Operational Metrics
         yPos += cardHeight + 15;
         doc.setFontSize(14);
         doc.setTextColor(...brandColor);
@@ -208,14 +185,12 @@ export default function Dashboard() {
         const healthText = `Pending Deliveries: ${dashboardData.pendingDeliveries} | Delivery Completion Rate: ${dashboardData.ordersDelivered > 0 ? ((dashboardData.ordersDelivered / (dashboardData.ordersDelivered + dashboardData.pendingDeliveries)) * 100).toFixed(1) + '%' : 'N/A'}`;
         doc.text(healthText, 14, yPos + 5);
 
-        // Section 3: Data Table using autoTable plugin
         yPos += 15;
         doc.setFontSize(14);
         doc.setTextColor(...brandColor);
         doc.setFont("helvetica", "bold");
         doc.text("3. Daily Revenue Breakdown (Last 7 Days)", 14, yPos);
 
-        // Map the generated chartData into a 2D array required by autoTable
         // If chartData is empty, provide a fallback row to prevent errors
         const auditRows = chartData.length > 0 ? chartData.map(day => [
             day.name,
@@ -266,7 +241,6 @@ export default function Dashboard() {
     }, [])
 
     // --- Configuration Array for UI Mapping ---
-    // Array of top-level metrics mapped to CSS classes for easy rendering of the grid cards
     const dashboardCardsData = [
         { 
             title: 'Total Earnings', 
@@ -356,23 +330,19 @@ export default function Dashboard() {
                             key={index} 
                             className="relative overflow-hidden bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 group"
                         >
-                            {/* Decorative background hover effect */}
                             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${card.gradient} opacity-5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500`}></div>
 
                             <div className="relative z-10 flex items-start justify-between">
                                 <div className="space-y-4">
-                                    {/* Dynamic Icon */}
                                     <div className={`w-12 h-12 rounded-2xl ${card.bgLight} ${card.textColor} flex items-center justify-center`}>
                                         <card.icon size={24} />
                                     </div>
                                     <div>
                                         <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">{card.title}</p>
-                                        {/* Dynamic Value */}
                                         <h3 className="text-3xl font-bold text-slate-900 mt-1">{card.value}</h3>
                                     </div>
                                 </div>
                             </div>
-                            {/* Decorative bottom border line */}
                             <div className={`absolute bottom-0 left-0 w-full h-1.5 bg-gradient-to-r ${card.gradient} opacity-80`}></div>
                         </div>
                     ))}
@@ -390,9 +360,7 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Height constraint required for ResponsiveContainer to work */}
                     <div className="h-[350px] w-full">
-                        {/* Recharts Wrapper: Adapts chart to screen width */}
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />

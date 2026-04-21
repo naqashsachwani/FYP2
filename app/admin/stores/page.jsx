@@ -1,14 +1,11 @@
-// Designates this file as a Client Component in Next.js, allowing the use of React hooks and interactive state.
 'use client'
 
-// --- Imports ---
-import StoreInfo from "@/components/admin/StoreInfo" // Custom component to display standardized store details
-import Loading from "@/components/Loading" // Custom loading spinner component
-import { useEffect, useState } from "react" // Standard React hooks
-import toast from "react-hot-toast" // Notification library for success/error popups
-import { useUser, useAuth } from "@clerk/nextjs" // Clerk hooks for authentication and user session management
-import axios from "axios" // Library for making HTTP requests to the backend
-// Lucide icons for UI enhancement
+import StoreInfo from "@/components/admin/StoreInfo" 
+import Loading from "@/components/Loading" 
+import { useEffect, useState } from "react"
+import toast from "react-hot-toast" 
+import { useUser, useAuth } from "@clerk/nextjs" 
+import axios from "axios" 
 import { 
   Store, 
   Activity, 
@@ -23,36 +20,27 @@ import {
   Trash2 
 } from "lucide-react"
 
-// ================= MAIN COMPONENT =================
 export default function AdminStores() {
     
     // Auth Hooks: 'useUser' gets client-side user data, 'getToken' fetches a JWT for secure API requests.
     const { user } = useUser()
     const { getToken } = useAuth()
-
     // --- Core State ---
     const [stores, setStores] = useState([]) // Holds the master list of stores fetched from the database
     const [loading, setLoading] = useState(true) // Controls the full-page loading spinner
     
     // --- Search & Filtering State ---
-    // 'searchTerm' updates immediately on every keystroke.
     const [searchTerm, setSearchTerm] = useState("")
-    // 'debouncedSearch' updates only after the user stops typing, preventing excessive re-filtering.
     const [debouncedSearch, setDebouncedSearch] = useState("") 
-    // Tracks the current status filter dropdown (all, active, inactive).
     const [statusFilter, setStatusFilter] = useState("all")
 
     // --- MODAL STATES ---
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false) // Controls Edit modal visibility
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false) // Controls View modal visibility
-    const [selectedStore, setSelectedStore] = useState(null) // Holds the specific store object currently being viewed/edited
-    const [editFormData, setEditFormData] = useState({ name: "", isActive: false }) // Holds the draft state of the edit form
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false) 
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false) 
+    const [selectedStore, setSelectedStore] = useState(null) 
+    const [editFormData, setEditFormData] = useState({ name: "", isActive: false }) 
 
-    /**
-     * Fetch Stores from Backend
-     * This logic is wrapped in a function so it can be reused (e.g., if we want a manual refresh button).
-     * It passes the Bearer token in the headers to authenticate against the protected API route.
-     */
+   
     const fetchStores = async () => {
         try {
             const token = await getToken()
@@ -84,7 +72,6 @@ export default function AdminStores() {
         // Safety Check: Native browser confirm dialog to prevent accidental deletions
         if(!confirm("Are you sure you want to delete this store? This action cannot be undone.")) return;
 
-        // Snapshot: Save the current state in memory before modifying it (Optimistic UI preparation)
         const previousStores = [...stores];
 
         // Optimistic UI Update: Remove the store from the screen immediately so the app feels instant
@@ -104,15 +91,10 @@ export default function AdminStores() {
         }
     }
 
-    /**
-     * UPDATE STORE (Optimistic UI Pattern)
-     * We construct the 'updatedStore' manually on the client to update the screen instantly,
-     * avoiding the delay of waiting for the backend response.
-     */
     const handleUpdateStore = async (e) => {
         e.preventDefault() // Stop the HTML form from refreshing the page
         
-        const previousStores = [...stores] // Snapshot for rollback
+        const previousStores = [...stores] 
     
         // Merge the existing store data with the new changes from the form
         const updatedStore = { ...selectedStore, ...editFormData }
@@ -142,18 +124,11 @@ export default function AdminStores() {
         }
     }
 
-    /**
-     * Debounce Effect
-     * This prevents the app from filtering the array on every single keystroke.
-     * It waits for 500ms of silence from the user before finalizing the 'debouncedSearch' value.
-     */
     useEffect(() => {
         const handler = setTimeout(() => {
             setDebouncedSearch(searchTerm);
         }, 500);
 
-        // Cleanup Function: If the user types a new letter before 500ms is up,
-        // this cancels the previous timeout, ensuring only the final complete word triggers the update.
         return () => clearTimeout(handler);
     }, [searchTerm]);
 
@@ -164,11 +139,6 @@ export default function AdminStores() {
         }
     }, [user])
 
-    /**
-     * Client-Side Filtering
-     * We filter based on 'debouncedSearch' (the delayed value),
-     * not 'searchTerm' (the immediate value), keeping CPU usage low.
-     */
     const filteredStores = stores.filter(store => {
         // Search Name OR Username (case-insensitive)
         const matchesSearch = store.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -188,14 +158,13 @@ export default function AdminStores() {
     const activeStores = stores.filter(store => store.isActive).length
     const inactiveStores = stores.filter(store => !store.isActive).length
 
-    // Render Guard: Full-page spinner while fetching initial data
+    // Full-page spinner while fetching initial data
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <Loading />
         </div>
     )
 
-    // --- MAIN RENDER ---
     return (
         <div className="space-y-8 mb-28 relative">
             
@@ -272,16 +241,13 @@ export default function AdminStores() {
                         <div key={store.id} className="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-blue-200 transition-all duration-300">
                             <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                                 
-                                {/* Store Info Container (Left side) */}
                                 <div className="flex-1 min-w-0">
                                     {/* Reusable component handling the heavy lifting of displaying owner/legal info */}
                                     <StoreInfo store={store} />
                                 </div>
 
-                                {/* Controls Container (Right side / Vertical stack) */}
                                 <div className="flex flex-col items-stretch sm:items-end gap-3 lg:border-l lg:border-slate-100 lg:pl-6 min-w-[140px] pt-4 lg:pt-0">
                                     
-                                    {/* Dynamic Status Badge */}
                                     <div className={`self-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider ${store.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         {store.isActive ? 'Active' : 'Inactive'}
                                     </div>
@@ -317,7 +283,7 @@ export default function AdminStores() {
                         </div>
                     ))
                 ) : (
-                    // Fallback UI if the array is empty (uses the EmptyState component defined below)
+                    // Fallback UI if the array is empty 
                     <EmptyState searchTerm={searchTerm} />
                 )}
             </div>
@@ -362,7 +328,6 @@ export default function AdminStores() {
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
                                     </select>
-                                    {/* Custom SVG Dropdown Arrow overlaying the default native arrow */}
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -440,8 +405,6 @@ export default function AdminStores() {
     )
 }
 
-// ================= HELPER COMPONENTS =================
-
 // Standardized component to render a statistic box (used at the top of the page)
 const StatCard = ({ label, value, icon: Icon, color, bg, text }) => (
     <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
@@ -466,7 +429,6 @@ const DetailItem = ({ label, value }) => (
     </div>
 )
 
-// Fallback UI rendered when the filtered array is empty.
 // Adjusts its text based on whether the user is actively searching or if the DB is truly empty.
 const EmptyState = ({ searchTerm }) => (
     <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center shadow-sm">

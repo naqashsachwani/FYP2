@@ -2,8 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
-import { depositConfirmationTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
+import { sendNotification } from "@/lib/sendNotification"; 
+import { depositConfirmationTemplate } from "@/lib/emailTemplates"; 
 
 // Helper: Normalize Prisma Decimals
 const normalize = (obj) => JSON.parse(
@@ -81,11 +81,11 @@ export async function POST(req, { params }) {
           status: newStatus,
           endDate: isCompleted ? new Date() : undefined,
         },
-        // ✅ ADDED USER TO INCLUDE FOR NOTIFICATION EMAILS
+        //  ADDED USER TO INCLUDE FOR NOTIFICATION EMAILS
         include: { deposits: true, product: true, user: true },
       });
 
-      // F. ✅ CRITICAL: Sync with Escrow Table (For Admin Dashboard)
+      // F.  CRITICAL: Sync with Escrow Table (For Admin Dashboard)
       const existingEscrow = await tx.escrow.findUnique({ where: { goalId } });
       if (existingEscrow) {
          await tx.escrow.update({
@@ -107,11 +107,11 @@ export async function POST(req, { params }) {
 
     }, {
       maxWait: 5000, 
-      timeout: 20000 // ✅ FIXED: Increased timeout to 20s to prevent crashes
+      timeout: 20000 //  FIXED: Increased timeout to 20s to prevent crashes
     });
 
     // ==========================================
-    // ✅ FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    //  FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
     // ==========================================
     
     // 1. Send Deposit Confirmation

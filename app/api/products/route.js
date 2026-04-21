@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";  // Next.js helper for responses
 
 export async function GET(request) {
     try {
-        // 1Fetch all products from the database
+        // Fetch all products from the database
         let products = await prisma.product.findMany({
             // Removed `where: { inStock: true }` so all products are fetched.
             // Stock availability will be handled in the UI instead.

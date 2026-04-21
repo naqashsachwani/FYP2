@@ -20,7 +20,7 @@ export async function GET(req) {
       orderBy: { createdAt: 'desc' }
     });
 
-    // ✅ UPDATED: Include product images for the frontend picker
+    //  UPDATED: Include product images for the frontend picker
     const goals = await prisma.goal.findMany({
       where: { userId },
       include: { 
@@ -58,7 +58,7 @@ export async function POST(req) {
 
     let targetStoreId = null;
 
-    // ✅ THE 7-DAY RULE LOGIC
+    //  THE 7-DAY RULE LOGIC
     if (goalId) {
       const goal = await prisma.goal.findUnique({
         where: { id: goalId },
@@ -101,7 +101,7 @@ export async function POST(req) {
       }
     });
 
-    // ✅ FIRE ENGINE: Acknowledge the user's complaint
+    //  FIRE ENGINE: Acknowledge the user's complaint
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({

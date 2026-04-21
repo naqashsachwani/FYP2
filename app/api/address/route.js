@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server"; 
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; 
 
-// ===========================
-// GET: Fetch all addresses
-// ===========================
+
 export async function GET() {
   try {
+    // Attempt to securely identify the user making the request via Clerk's session token
     const user = await currentUser();
     
+    // Auth Guard: If the user is not logged in, immediately reject the request with a 401 Unauthorized status
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -26,62 +26,56 @@ export async function GET() {
   }
 }
 
-// ===========================
-// POST: Add a new address
-// ===========================
 export async function POST(request) {
   try {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    
-    // 🔍 LOG THE RECEIVED DATA
-    console.log("📥 API Received Address Data:", body);
-
-    // Handle nested or flat structure
+    console.log(" API Received Address Data:", body);
     const data = body.address || body;
     const { name, street, city, state, zip, country, phone, latitude, longitude } = data;
-
-    // ✅ FIX: Removed '!zip' from validation so empty zip codes don't block saving
+  
     if (!name || !street || !city) {
-      console.log("❌ Missing Fields:", { name, street, city });
+      console.log(" Missing Fields:", { name, street, city });
+      // If missing, reject the request with a 400 Bad Request status
       return NextResponse.json({ error: "Missing required fields (Name, Street, City)" }, { status: 400 });
     }
 
+    // Create a new record in the database using Prisma
     const newAddress = await prisma.address.create({
       data: {
-        userId: user.id,
+        userId: user.id, 
         email: user.emailAddresses?.[0]?.emailAddress || "no-email@recorded.com", 
         name,
         street,
         city,
         state: state || "",
-        // ✅ FIX: Default to "00000" if zip is missing or empty
         zip: zip || "00000",
         country: country || "Pakistan",
         phone: phone || "",
+        // Convert string coordinates from the frontend into precise float numbers for the database.
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
       }
     });
 
-    // ✅ FIRE ENGINE: Quiet in-app notification (No email spam for minor updates)
     await sendNotification({
       userId: user.id,
-      title: "New Address Added 📍",
+      title: "New Address Added ",
       message: `Your address at ${street}, ${city} was saved successfully.`,
       type: "SYSTEM_ALERT",
-      notifyInApp: true,
-      notifyEmail: false // Keep their inbox clean
+      notifyInApp: true,   
+      notifyEmail: false  
     });
 
-    console.log("✅ Address Saved Successfully:", newAddress.id);
+    // Log success to the server console
+    console.log(" Address Saved Successfully:", newAddress.id);
     return NextResponse.json({ success: true, newAddress, message: 'Address added successfully' });
 
   } catch (error) {
-    // 🛑 THIS PRINTS THE REAL ERROR TO YOUR TERMINAL
-    console.error("❌ CRITICAL DB ERROR:", error);
+    //  THIS PRINTS THE REAL ERROR TO YOUR TERMINAL
+    console.error(" CRITICAL DB ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

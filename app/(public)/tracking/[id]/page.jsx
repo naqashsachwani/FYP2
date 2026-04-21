@@ -1,95 +1,83 @@
-// Marks this component as a Client Component, enabling React hooks and browser-only APIs.
 'use client';
 
-// --- Imports ---
+
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic'; // Allows lazy loading of components
+import dynamic from 'next/dynamic'; 
 import { Loader2, Truck, Calendar, Store, MapPin, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 
-// --- Dynamic Imports ---
 // Dynamically imports the DeliveryMap component and disables Server-Side Rendering (SSR).
-// This is critical because map libraries (like Leaflet) require the browser's 'window' object, which doesn't exist on the server.
 const DeliveryMap = dynamic(() => import('@/components/DeliveryMap'), { 
   ssr: false,
   loading: () => <div className="h-full flex items-center justify-center bg-gray-100 text-gray-400">Loading Map...</div>
 });
 
 export default function TrackingPage() {
-  // --- Hooks & Routing ---
-  // Extracts the dynamic 'id' parameter from the URL (e.g., /tracking/123 -> id = 123)
+  // Extracts the dynamic 'id' parameter from the URL 
   const params = useParams();
   const id = params?.id; 
   
   const router = useRouter();
 
-  // --- State Management ---
-  const [delivery, setDelivery] = useState(null); // Stores the fetched delivery data
-  const [loading, setLoading] = useState(true);   // Controls the initial full-page loading spinner
-  const [updating, setUpdating] = useState(false);// Controls the loading state of the confirm button
 
-  // 1. Fetch Delivery Data
-  // Asynchronous function to fetch the latest tracking information from the API.
+  const [delivery, setDelivery] = useState(null); 
+  const [loading, setLoading] = useState(true);   
+  const [updating, setUpdating] = useState(false);
+
+  // function to fetch the latest tracking information from the API.
   const fetchData = async () => {
-    if (!id) return; // Guard clause: do nothing if ID is missing
+    if (!id) return; 
     try {
       const res = await fetch(`/api/delivery/${id}`);
       const data = await res.json();
       if (!data.error) {
-        setDelivery(data); // Update state with the fetched data
+        setDelivery(data); 
       }
     } catch (e) { 
       console.error("Fetch Error:", e); 
     } finally { 
-      setLoading(false); // Stop the initial loading spinner
+      setLoading(false); 
     }
   };
 
-  // --- Lifecycle & Polling ---
+
   useEffect(() => {
     if (!id) return;
     
-    fetchData(); // Initial load when the component mounts
+    fetchData(); 
     
-    // 2. Poll for updates every 4 seconds (Live Tracking)
     // Sets up a recurring timer to hit the API, allowing the map and status to update in near real-time.
     const interval = setInterval(() => {
       fetchData();
     }, 4000); 
 
-    // Cleanup function: clears the interval when the user navigates away to prevent memory leaks.
     return () => clearInterval(interval);
   }, [id]); // Re-runs if the 'id' changes
 
-  // 3. User Action: Confirm Delivery
   // Allows the user to manually mark the package as received.
   const handleConfirmDelivery = async () => {
-    // Native browser confirmation dialog to prevent accidental clicks
     if (!confirm("Are you sure you received the package?")) return;
     
-    setUpdating(true); // Lock the button and show spinner
+    setUpdating(true); 
     try {
       const res = await fetch(`/api/delivery/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DELIVERED' }) // Send payload to update status
+        body: JSON.stringify({ status: 'DELIVERED' }) 
       });
       // If successful, immediately fetch fresh data to update the UI
       if (res.ok) await fetchData(); 
     } catch (error) { 
       alert("Failed to confirm delivery"); 
     } finally { 
-      setUpdating(false); // Unlock the button
+      setUpdating(false); 
     }
   };
 
-  // --- Render Guards ---
-  // If still doing the initial fetch, show a centered spinner.
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>;
-  // If data finished fetching but nothing was found, show an error.
   if (!delivery) return <div className="p-10 text-center">Tracking not found</div>;
 
-  // --- Derived State ---
+
   // Extract useful sub-properties to keep the JSX clean
   const product = delivery.goal?.product;
   const isDelivered = delivery.status === 'DELIVERED';
@@ -98,7 +86,7 @@ export default function TrackingPage() {
   // Determine color theming based on the delivery status
   const statusColor = isDelivered ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700';
 
-  // --- Main Render ---
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
@@ -110,15 +98,11 @@ export default function TrackingPage() {
           </button>
         </div>
 
-        {/* Main Layout Grid: 1 column on mobile, 3 columns on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[80vh]">
-          
-          {/* LEFT SIDEBAR: Details panel taking up 1/3 of the grid on desktop */}
           <div className="md:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full overflow-y-auto">
             <h1 className="text-2xl font-bold text-gray-900 mb-1">Track Delivery</h1>
             <p className="text-gray-400 text-xs font-mono mb-6">ID: {delivery.trackingNumber}</p>
             
-            {/* Status Badge */}
             <div className={`p-4 rounded-xl border mb-6 ${statusColor}`}>
               <div className="flex items-center gap-2 mb-1 font-bold uppercase tracking-wide">
                 {isDelivered ? <CheckCircle size={18} /> : <Truck size={18} />} 
@@ -127,7 +111,6 @@ export default function TrackingPage() {
               </div>
               <div className="flex items-center gap-2 text-xs opacity-80 mt-2">
                 <Calendar size={12} />
-                {/* Dynamically shows delivery date if delivered, otherwise shows ETA */}
                 {isDelivered 
                   ? `Delivered on ${new Date(delivery.updatedAt).toLocaleDateString('en-GB')}`
                   : `Estimated: ${new Date(delivery.estimatedDate).toDateString()}` 
@@ -135,7 +118,6 @@ export default function TrackingPage() {
               </div>
             </div>
 
-            {/* Product Card Snippet */}
             <div className="flex gap-4 items-start border-t border-gray-100 pt-6 mb-6">
                {product?.images?.[0] && <img src={product.images[0]} alt="Product" className="w-16 h-16 rounded-lg bg-gray-100 object-cover border" />}
                <div>
@@ -178,7 +160,6 @@ export default function TrackingPage() {
             )}
           </div>
 
-          {/* RIGHT SIDE: Interactive Map taking up 2/3 of the grid on desktop */}
           <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[400px]">
             <DeliveryMap delivery={delivery} />
           </div>

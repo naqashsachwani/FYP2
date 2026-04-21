@@ -1,29 +1,24 @@
-// Designates this as a Next.js Client Component, allowing the use of React state and lifecycle hooks.
 'use client'
 
-// --- Imports ---
-import { useEffect, useState } from "react" // Standard React hooks
-import { toast } from "react-hot-toast" // Notification library for popup alerts
-import Image from "next/image" // Next.js optimized image component
-import Loading from "@/components/Loading" // Custom full-page loading spinner
-import { useAuth, useUser } from "@clerk/nextjs" // Clerk authentication hooks
-import axios from "axios" // Library for making HTTP requests
-import { Pencil, Trash2, Upload, Search } from "lucide-react" // UI Icons
+import { useEffect, useState } from "react" 
+import { toast } from "react-hot-toast" 
+import Image from "next/image" 
+import Loading from "@/components/Loading" 
+import { useAuth, useUser } from "@clerk/nextjs"
+import axios from "axios" 
+import { Pencil, Trash2, Upload, Search } from "lucide-react" 
 
 export default function StoreManageProducts() {
 
-  // Extract authentication tools from Clerk
   const { getToken } = useAuth()
   const { user } = useUser()
-  // Pull currency symbol from environment variables, defaulting to 'Rs '
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || 'Rs '
 
   // --- State Management ---
-  const [loading, setLoading] = useState(true) // Controls initial full-page load spinner
-  const [products, setProducts] = useState([]) // Master array of all store products
-  const [editingProduct, setEditingProduct] = useState(null) // Tracks the ID of the row currently in "Edit Mode"
+  const [loading, setLoading] = useState(true) 
+  const [products, setProducts] = useState([]) 
+  const [editingProduct, setEditingProduct] = useState(null) 
   
-  // Tracks the user's input in the search bar
   const [searchTerm, setSearchTerm] = useState("")
 
   // Form state specifically for the "Edit" row
@@ -36,34 +31,29 @@ export default function StoreManageProducts() {
   })
 
   // --- API: Fetch Products ---
-  // Retrieves the store's inventory from the backend
   const fetchProducts = async () => {
     try {
       const token = await getToken()
       const { data } = await axios.get('/api/store/product', {
         headers: { Authorization: `Bearer ${token}` }
       })
-      // Sort the returned array so the newest products appear at the top of the list
       setProducts(data.products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     }
-    // Turn off the spinner whether the fetch succeeded or failed
     setLoading(false)
   }
 
   // --- API: Toggle Stock Status ---
-  // Reverses the 'inStock' boolean for a specific product
   const toggleStock = async (productId) => {
-    // 1. Snapshot: Save current state to restore if API fails
+    //Save current state to restore if API fails
     const originalProducts = [...products];
 
-    // 2. Optimistic Update: Switch the toggle in the UI immediately for a snappy feel
+    // Switch the toggle in the UI immediately for a snappy feel
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, inStock: !p.inStock } : p));
 
     try {
       const token = await getToken()
-      // Send the toggle command to the backend
       await axios.post(
         '/api/store/stock-toggle',
         { productId },
@@ -71,23 +61,21 @@ export default function StoreManageProducts() {
       )
       toast.success("Stock updated")
     } catch (error) {
-      // 3. Rollback: If API failed, put the old data back in the UI
+      // If API failed, put the old data back in the UI
       setProducts(originalProducts);
       toast.error(error?.response?.data?.error || "Failed to update stock")
     }
   }
 
-  // --- UI: Enter Edit Mode ---
-  // Fires when the user clicks the "Edit" button on a row
   const handleEditClick = (product) => {
-    setEditingProduct(product.id) // Locks the specific row into edit mode
+    setEditingProduct(product.id) 
     // Pre-fill the form state with existing database data so the user doesn't have to re-type everything
     setFormData({
       name: product.name,
       price: product.price,
       mrp: product.mrp,
       description: product.description,
-      imageFile: null, // Reset image on edit start (we keep the old one on the server unless this changes)
+      imageFile: null, 
     })
   }
 
@@ -106,8 +94,6 @@ export default function StoreManageProducts() {
     try {
       const token = await getToken()
       
-      // Standard JSON ({}) cannot handle binary file uploads. 
-      // FormData is required to send text fields AND an image file in a single 'multipart/form-data' request.
       const submissionData = new FormData();
       
       // Append all text fields to the payload
@@ -118,7 +104,6 @@ export default function StoreManageProducts() {
       submissionData.append('mrp', formData.mrp);
       
       // Only append the image file if the user actually picked a new one.
-      // If omitted, the backend is designed to keep the existing image intact.
       if (formData.imageFile) {
         submissionData.append('image', formData.imageFile);
       }
@@ -130,14 +115,13 @@ export default function StoreManageProducts() {
         { 
           headers: { 
             Authorization: `Bearer ${token}`,
-            // Axios automatically sets 'Content-Type: multipart/form-data' when it sees a FormData object.
           } 
         }
       )
       
       toast.success(data.message)
       fetchProducts(); // Refresh list from the server to show the new image/data
-      setEditingProduct(null) // Exit edit mode
+      setEditingProduct(null) 
     } catch (error) {
       console.error(error)
       toast.error(error?.response?.data?.error || error.message)
@@ -146,7 +130,6 @@ export default function StoreManageProducts() {
 
   // --- API: Delete Product ---
   const handleDelete = async (id) => {
-    // Native browser confirm dialog prevents accidental clicks
     if(!confirm("Are you sure you want to delete this product?")) return;
     
     try {
@@ -155,22 +138,18 @@ export default function StoreManageProducts() {
         headers: { Authorization: `Bearer ${token}` },
       })
       toast.success("Product deleted successfully")
-      // Remove the product from the local array instantly so it disappears from the screen
       setProducts(prev => prev.filter(p => p.id !== id))
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     }
   }
 
-  // Fetch products automatically once Clerk confirms the user session is active
   useEffect(() => {
     if (user) fetchProducts()
   }, [user])
 
   // --- Client-Side Filtering ---
   // Create a computed variable 'filteredProducts' instead of modifying the main 'products' state.
-  // This preserves the original data so we can un-filter easily when the user deletes their search query.
-  // Expanded to search name, description, price, and mrp.
   const filteredProducts = products.filter(product => {
     const term = searchTerm.toLowerCase();
     return (
@@ -181,15 +160,12 @@ export default function StoreManageProducts() {
     );
   });
 
-  // Render Guard: Show full-page spinner during initial data fetch
   if (loading) return <Loading />
 
-  // --- Main Render ---
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4 md:px-12">
       <div className="max-w-6xl mx-auto">
         
-        {/* Header Section */}
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           Manage <span className="text-blue-600">Products</span>
         </h1>
@@ -225,7 +201,6 @@ export default function StoreManageProducts() {
             {/* Table Body */}
             <tbody className="text-gray-700">
               {filteredProducts.length > 0 ? (
-                  // Map over the filtered array
                   filteredProducts.map((product) => (
                     <tr key={product.id} className="border-t hover:bg-blue-50 transition-all">
                       
@@ -235,7 +210,6 @@ export default function StoreManageProducts() {
                         {editingProduct === product.id ? (
                           // Edit Mode: Shows Image Upload + Text Input
                           <div className="flex flex-col gap-2">
-                            {/* Clickable Image Label triggering the hidden file input */}
                             <label htmlFor={`image-upload-${product.id}`} className="cursor-pointer relative group">
                               <Image
                                 width={50}
@@ -245,7 +219,6 @@ export default function StoreManageProducts() {
                                 src={formData.imageFile ? URL.createObjectURL(formData.imageFile) : product.images[0]}
                                 alt={product.name}
                               />
-                              {/* Dark overlay with Upload icon appears on hover */}
                               <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Upload className="text-white w-4 h-4" />
                               </div>
@@ -309,7 +282,6 @@ export default function StoreManageProducts() {
                             placeholder="MRP"
                           />
                         ) : (
-                          // line-through class adds a strike-through to the original price
                           <span className="line-through">{currency}{product.mrp?.toLocaleString()}</span>
                         )}
                       </td>
@@ -336,17 +308,14 @@ export default function StoreManageProducts() {
                             {product.inStock ? "In Stock" : "Out of Stock"}
                           </span>
                           
-                          {/* CSS-Only Toggle Switch */}
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
-                              className="sr-only peer" // Hides the native checkbox
-                              onChange={() => toggleStock(product.id)} // Triggers the Optimistic UI update
+                              className="sr-only peer" 
+                              onChange={() => toggleStock(product.id)} 
                               checked={product.inStock}
                             />
-                            {/* Gray background track that turns green when the hidden checkbox is checked (peer-checked) */}
                             <div className="w-10 h-5 bg-gray-300 rounded-full peer peer-checked:bg-green-500 transition-all"></div>
-                            {/* White circle that slides to the right when checked */}
                             <span className="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></span>
                           </label>
                         </div>

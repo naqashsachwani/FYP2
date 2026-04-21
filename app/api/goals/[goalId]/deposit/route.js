@@ -48,7 +48,7 @@ export async function POST(req, context) {
   if (!goal)
     return NextResponse.json({ error: "Goal not found" }, { status: 404 });
 
-  // ================== ✅ VALIDATE MAX DEPOSIT ==================
+  // ==================  VALIDATE MAX DEPOSIT ==================
   // Calculate how much is left to reach the target
   const savedAmount = Number(goal.saved);
   const targetAmount = Number(goal.targetAmount);

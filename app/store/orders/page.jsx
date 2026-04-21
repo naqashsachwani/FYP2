@@ -1,47 +1,36 @@
-// Designates this as a Next.js Client Component, allowing the use of React hooks and interactive state.
 'use client'
 
-// --- Imports ---
-import { useEffect, useState, useMemo } from "react" // React hooks for state, lifecycle, and performance optimization
-import Loading from "@/components/Loading" // Custom full-page loading spinner component
-import { useAuth } from "@clerk/nextjs" // Clerk authentication hook to secure API requests
-import axios from "axios" // Library for making HTTP requests to the backend
-import toast from "react-hot-toast" // Notification library for popup alerts
-// UI Icons from lucide-react
+import { useEffect, useState, useMemo } from "react" 
+import Loading from "@/components/Loading" 
+import { useAuth } from "@clerk/nextjs" 
+import axios from "axios" 
+import toast from "react-hot-toast" 
 import { Search, MapPin, Truck, CheckCircle, Calendar, Clock, Store, Play, EyeOff, RefreshCw, ChevronLeft, ChevronRight, Filter } from "lucide-react" 
-import dynamic from 'next/dynamic' // Next.js utility for lazy-loading components
+import dynamic from 'next/dynamic' 
 
-// --- Dynamic Import for Map Component ---
-// ssr: false is CRITICAL here. Map libraries (like Leaflet) interact directly with the browser's 'window' object.
-// If Next.js tries to render this on the server during the build, it will crash.
 const DeliveryMap = dynamic(() => import('@/components/DeliveryMap'), { 
     ssr: false,
-    // Placeholder UI shown while the heavy map javascript downloads in the browser
     loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-100 text-gray-400">Loading Map...</div>
 });
 
 export default function StoreOrders() {
-    // --- State Management ---
-    const [orders, setOrders] = useState([]) // Master array of all store orders
-    const [loading, setLoading] = useState(true) // Controls initial full-page load spinner
-    const [isRefreshing, setIsRefreshing] = useState(false) // Controls the spinner on the manual refresh button
-    const [selectedOrder, setSelectedOrder] = useState(null) // Tracks which order is actively viewed in the modal
-    const [isModalOpen, setIsModalOpen] = useState(false) // Controls visibility of the map/details modal
-    
-    // --- Filtering & Pagination State ---
-    const [searchTerm, setSearchTerm] = useState("") // Tracks user input in the search bar
-    const [statusFilter, setStatusFilter] = useState("ALL") // Tracks dropdown selection (e.g., "PENDING")
-    const [currentPage, setCurrentPage] = useState(1) // Tracks active pagination page
-    const ITEMS_PER_PAGE = 10; // Constant defining rows per table page
+    const [orders, setOrders] = useState([]) 
+    const [loading, setLoading] = useState(true) 
+    const [isRefreshing, setIsRefreshing] = useState(false) 
+    const [selectedOrder, setSelectedOrder] = useState(null) 
+    const [isModalOpen, setIsModalOpen] = useState(false) 
+    const [searchTerm, setSearchTerm] = useState("") 
+    const [statusFilter, setStatusFilter] = useState("ALL") 
+    const [currentPage, setCurrentPage] = useState(1) 
+    const ITEMS_PER_PAGE = 10; 
 
-    // Extract the getToken function from Clerk
     const { getToken } = useAuth()
 
     // --- API: Fetch Orders ---
     // Retrieves the list of delivery orders assigned to this store
     const fetchOrders = async (isManualRefresh = false) => {
        try {
-         if (isManualRefresh) setIsRefreshing(true); // Trigger the tiny spinner on the button
+         if (isManualRefresh) setIsRefreshing(true); 
          const token = await getToken()
          const { data } = await axios.get('/api/store/deliveries', {
             headers: { Authorization: `Bearer ${token}` }
@@ -50,13 +39,12 @@ export default function StoreOrders() {
        } catch (error) {
          toast.error("Failed to fetch orders")
        } finally {
-         setLoading(false) // Turn off full page spinner
-         setIsRefreshing(false) // Turn off button spinner
+         setLoading(false) 
+         setIsRefreshing(false) 
        }
     }    
 
     // --- API: Update Order Status ---
-    // Fires when the store owner changes the <select> dropdown in the table row
     const updateOrderStatus = async (deliveryId, status) => {
        try {
          const token = await getToken()
@@ -69,7 +57,6 @@ export default function StoreOrders() {
          const updatedOrders = orders.map(o => o.id === deliveryId ? { ...o, status } : o);
          setOrders(updatedOrders);
          
-         // If the modal happens to be open for this specific order, update its state too
          if (selectedOrder && selectedOrder.id === deliveryId) {
              setSelectedOrder({ ...selectedOrder, status });
          }
@@ -79,21 +66,18 @@ export default function StoreOrders() {
        }
     }
 
-    // --- SIMULATION LOGIC (For Demonstration Purposes) ---
-    // Simulates a delivery driver moving by updating the coordinates slightly
+    
     const handleManualUpdate = async (deliveryId) => {
-        // Generate a random coordinate near Karachi (for demonstration)
         const lat = 24.8607 + (Math.random() * 0.04 - 0.02); 
         const lng = 67.0011 + (Math.random() * 0.04 - 0.02);
         
         await updateLocation(deliveryId, lat, lng, "Simulated Driver");
-        toast.success("Driver Location Updated 📍");
+        toast.success("Driver Location Updated ");
     };
 
-    // Removes the driver's location from the map by sending null coordinates
     const handleHideStatus = async (deliveryId) => {
         await updateLocation(deliveryId, null, null, null);
-        toast.success("Driver Hidden 🙈");
+        toast.success("Driver Hidden");
     };
 
     // Helper to close the modal and clear the selected order
@@ -124,7 +108,6 @@ export default function StoreOrders() {
     }
  
     // --- Derived State: Statistics ---
-    // useMemo calculates the top KPI cards. It only recalculates when the 'orders' array changes.
     const stats = useMemo(() => {
         return {
             total: orders.length,
@@ -136,13 +119,11 @@ export default function StoreOrders() {
     }, [orders])
 
     // --- Derived State: Filtering ---
-    // useMemo handles the Search bar and Dropdown logic on the client side for instant UI response.
     const filteredOrders = useMemo(() => {
         return orders.filter(order => {
             // Check if the search term exists in the customer name OR tracking number
             const matchesSearch = order.goal?.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                   order.trackingNumber.toLowerCase().includes(searchTerm.toLowerCase());
-            // Check if the status matches the dropdown (or if "ALL" is selected)
             const matchesStatus = statusFilter === "ALL" || order.status === statusFilter;
             
             return matchesSearch && matchesStatus;
@@ -154,17 +135,12 @@ export default function StoreOrders() {
         setCurrentPage(1);
     }, [searchTerm, statusFilter]);
 
-    // --- Derived State: Pagination ---
     // Calculate total pages required based on the filtered array length. Fallback to 1 if empty.
     const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
     // Slice the filtered array to extract only the 10 items needed for the current view
     const currentOrders = filteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
-
-    // Opens the details/map modal for a specific order
     const openModal = (order) => { setSelectedOrder(order); setIsModalOpen(true); }
 
-    // --- UI Helpers ---
-    // Returns specific Tailwind CSS color classes based on the database status string
     const getStatusStyles = (status) => {
         switch (status) {
             case 'DELIVERED': return 'bg-green-50 text-green-700 border-green-200'
@@ -175,23 +151,19 @@ export default function StoreOrders() {
         }
     }
 
-    // Returns a specific Lucide icon based on the status string
     const getStatusIcon = (status) => {
         if (status === 'DELIVERED') return <CheckCircle size={20} />
         if (status === 'PENDING') return <Clock size={20} />
         return <Truck size={20} />
     }
 
-    // Trigger initial data fetch on component mount
     useEffect(() => { fetchOrders() }, [])
 
-    // Render Guard: Show full-page spinner if waiting for initial API response
     if (loading && orders.length === 0) return <Loading />
 
     // Determine if the currently viewed modal order is finished
     const isDelivered = selectedOrder?.status === 'DELIVERED';
 
-    // --- Main Render ---
     return (
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
             <div className="max-w-7xl mx-auto">
@@ -272,9 +244,7 @@ export default function StoreOrders() {
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>{["Tracking #", "Customer", "Product", "Scheduled", "Status", "Actions"].map((h, i) => <th key={i} className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">{h}</th>)}</tr>
                             </thead>
-                            {/* Table Body */}
                             <tbody className="divide-y divide-gray-100">
-                                {/* Empty State UI */}
                                 {currentOrders.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-12 text-center text-gray-400">
@@ -282,7 +252,6 @@ export default function StoreOrders() {
                                         </td>
                                     </tr>
                                 ) : currentOrders.map((order) => (
-                                    // Row data rendering. Clicking the row triggers the modal.
                                     <tr key={order.id} onClick={() => openModal(order)} className="hover:bg-blue-50/50 cursor-pointer transition-colors">
                                         <td className="px-6 py-4 font-mono text-sm text-blue-600 font-medium">{order.trackingNumber}</td>
                                         <td className="px-6 py-4"><div className="text-sm font-semibold text-gray-900">{order.goal?.user?.name}</div></td>
@@ -292,7 +261,7 @@ export default function StoreOrders() {
                                             {/* Inline Status Dropdown - Allows store owner to update status without opening the modal */}
                                             <select 
                                                 value={order.status} 
-                                                onClick={(e) => e.stopPropagation()} // Prevents dropdown click from triggering row click (modal open)
+                                                onClick={(e) => e.stopPropagation()} 
                                                 onChange={(e) => updateOrderStatus(order.id, e.target.value)} 
                                                 className={`text-xs font-bold px-3 py-1.5 rounded-full border-0 outline-none cursor-pointer hover:opacity-90 transition-opacity ${getStatusStyles(order.status)}`}
                                             >
@@ -313,7 +282,6 @@ export default function StoreOrders() {
                     {/* Only render if there is more than 1 page of filtered data */}
                     {totalPages > 1 && (
                         <div className="p-4 border-t border-gray-100 bg-gray-50 flex items-center justify-between shrink-0">
-                            {/* Descriptive helper text */}
                             <span className="text-sm text-gray-500 font-medium">
                                 Showing <span className="font-bold text-gray-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-gray-900">{Math.min(currentPage * ITEMS_PER_PAGE, filteredOrders.length)}</span> of <span className="font-bold text-gray-900">{filteredOrders.length}</span> orders
                             </span>
@@ -342,14 +310,13 @@ export default function StoreOrders() {
                     )}
                 </div>
 
-                {/* ================= MODAL OVERLAY ================= */}
                 {/* Renders the map and delivery details if a row was clicked */}
                 {isModalOpen && selectedOrder && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={closeModal}>
                         {/* Stops clicks inside the modal from bubbling up and triggering closeModal */}
                         <div className="bg-white rounded-2xl w-full max-w-5xl h-[85vh] overflow-hidden flex flex-col md:flex-row shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                             
-                            {/* LEFT SIDE: Order Details Panel */}
+                            {/* Order Details Panel */}
                             <div className="w-full md:w-[400px] bg-white p-6 overflow-y-auto border-r border-gray-100 flex flex-col">
                                 <h2 className="text-xl font-bold mb-1 text-gray-900">Order Details</h2>
                                 <p className="text-xs text-gray-400 font-mono mb-6">ID: {selectedOrder.trackingNumber}</p>
@@ -369,7 +336,6 @@ export default function StoreOrders() {
                                         </div>
                                     </div>
 
-                                    {/* SIMULATION BUTTONS: Specific dev tools to demonstrate real-time tracking */}
                                     {/* Only show if the status is EXACTLY 'DISPATCHED' */}
                                     {selectedOrder.status === 'DISPATCHED' && (
                                         <div className="border-t border-gray-100 pt-5">
@@ -402,11 +368,9 @@ export default function StoreOrders() {
                                 </div>
                             </div>
 
-                            {/* RIGHT SIDE: Interactive Map Panel */}
+                            {/* Interactive Map Panel */}
                             <div className="flex-1 bg-gray-100 relative min-h-[300px]">
-                                {/* Pass the selected order data down to the map to plot the store, buyer, and driver */}
                                 <DeliveryMap delivery={selectedOrder} />
-                                {/* Close button overlapping the map */}
                                 <button onClick={closeModal} className="absolute top-4 right-4 bg-white hover:bg-gray-100 text-gray-500 p-2 rounded-full shadow-md z-[1000] transition-colors border border-gray-200">
                                     <EyeOff className="hidden"/> ✕
                                 </button>

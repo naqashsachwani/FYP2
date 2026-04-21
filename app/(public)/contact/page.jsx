@@ -13,9 +13,7 @@ const Contact = () => {
           Contact Us
         </h1>
 
-        {/* RESPONSIVE GRID LAYOUT */}
-        {/* - grid-cols-1: Mobile phones get a single vertical stack. */}
-        {/* - md:grid-cols-3: Tablets and desktops see 3 side-by-side columns. */}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* ================= CARD 1: EMAIL ================= */}

@@ -1,23 +1,16 @@
-// Designates this file as a Client Component in Next.js, allowing the use of React hooks and interactive UI elements.
 "use client";
 
-// --- Imports ---
 import { useEffect, useState } from "react";
-// Lucide icons for UI enhancement
 import { 
   Loader2, TrendingUp, DollarSign, Clock, AlertCircle, PackageCheck, 
   Search, Copy, X, CreditCard, Calendar, CheckCircle, ShieldAlert,
   ChevronLeft, ChevronRight, RefreshCw 
 } from "lucide-react";
-// Toast notifications for user feedback
 import toast from "react-hot-toast";
 
-// ==========================================
-// COMPONENT: TRANSACTION DETAILS MODAL
-// ==========================================
+
 // A popup modal that fetches and displays deep details for a specific transaction/goal.
 const GoalDetailsModal = ({ goalId, onClose }) => {
-  // Local state for the modal's data and loading status
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,10 +20,8 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     const fetchDetails = async () => {
       try {
         setLoading(true);
-        // Fetch goal details from the backend API
         const res = await fetch(`/api/goals/${goalId}`);
         const data = await res.json();
-        // Update state if goal data exists
         if (data.goal) setGoal(data.goal);
       } catch (e) { 
         toast.error("Failed to load details"); 
@@ -57,10 +48,7 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
   if (!goal) return null; // Fallback if no goal data was returned
 
   // --- Financial Calculations ---
-  // Determine if the transaction was cancelled/refunded
   const isRefunded = goal.status === 'REFUNDED' || goal.status === 'CANCELLED';
-  // Calculate the net share for the store. 
-  // If refunded, the store gets a 10% penalty cut. If completed normally, they get 95% (5% platform fee).
   const netShare = isRefunded ? goal.saved * 0.10 : goal.saved * 0.95;
   // Contextual label explaining the math to the user
   const shareLabel = isRefunded ? "*10% Cancellation Share" : "*After 5% Platform Fee";
@@ -92,7 +80,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                 </div>
                 </div>
                 <div className="text-right">
-                {/* Dynamic Status Badge (Green for completed, Red for everything else) */}
                 <span className={`px-3 py-1 rounded-full text-xs font-bold border ${goal.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                     {goal.status}
                 </span>
@@ -147,9 +134,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
   );
 };
 
-// ==========================================
-// MAIN PAGE: STORE REVENUE DASHBOARD
-// ==========================================
 export default function StoreRevenuePage() {
   // --- Core State ---
   const [data, setData] = useState(null); // Stores the full payload from the API
@@ -190,9 +174,6 @@ export default function StoreRevenuePage() {
     toast.success("ID Copied");
   };
 
-  // ==========================================
-  // UPDATED SEARCH LOGIC
-  // ==========================================
   // Filters the transactions array strictly on the client side
   const filteredTransactions = data?.transactions?.filter((item) => {
     if (!searchTerm) return true; // If no search term, return all items
@@ -214,8 +195,7 @@ export default function StoreRevenuePage() {
         ${netStr}
     `.toLowerCase();
 
-    // ✅ FIX: Manually inject "refund split" into the search string if the status is COMPENSATED.
-    // This allows the user to search for "refund" and find these specific compensated rows.
+    // FIX: Manually inject "refund split" into the search string if the status is COMPENSATED.
     if (item.status === 'COMPENSATED') {
         searchableText += " refund split"; 
     }
@@ -332,7 +312,6 @@ export default function StoreRevenuePage() {
                 {currentItems.length === 0 ? (
                     <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-400 flex flex-col items-center gap-2"><AlertCircle size={24} /><span>No payouts found.</span></td></tr>
                 ) : (
-                    // Map over the current page's sliced items
                     currentItems.map((item) => {
                       // Check if the transaction represents a cancelled order where the store gets a 10% penalty fee
                       const isCompensated = item.status === "COMPENSATED";
@@ -373,7 +352,6 @@ export default function StoreRevenuePage() {
                           </td>
                           {/* Column: Net Earnings for Store */}
                           <td className="px-6 py-4 font-mono font-bold text-green-600 text-base">Rs {displayNet.toLocaleString()}</td>
-                          {/* Column: Visual Status Badge */}
                           <td className="px-6 py-4">
                               {isCompensated ? (
                                   <span className="px-2 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700 inline-flex items-center gap-1">

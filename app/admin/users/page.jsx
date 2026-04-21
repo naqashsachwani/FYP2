@@ -1,55 +1,44 @@
-// Designates this as a Next.js Client Component, allowing the use of React hooks and interactive state.
 'use client'
 
-// --- Imports ---
-import { useEffect, useState } from "react" // Standard React hooks for state and lifecycle management
-import toast from "react-hot-toast" // Library for non-blocking pop-up notifications
-import { Loader2, UserX, Users, ShieldAlert, ShieldCheck } from "lucide-react" // Scalable SVG icons for the UI
-import { useAuth } from "@clerk/nextjs" // Clerk hook to get authentication tokens
-import axios from "axios" // HTTP client for making API requests
+import { useEffect, useState } from "react" 
+import toast from "react-hot-toast" 
+import { Loader2, UserX, Users, ShieldAlert, ShieldCheck } from "lucide-react" 
+import { useAuth } from "@clerk/nextjs" 
+import axios from "axios" 
 
 export default function AdminUsers() {
-  // Extracts getToken and userId from Clerk to securely authorize requests and identify the current admin
   const { getToken, userId } = useAuth()
   
   // --- State Management ---
-  const [users, setUsers] = useState([]) // Stores the array of user objects fetched from the database
-  const [loading, setLoading] = useState(true) // Controls the full-page loading spinner
+  const [users, setUsers] = useState([]) 
+  const [loading, setLoading] = useState(true)
 
-  // --- Data Fetching ---
-  // Asynchronous function to retrieve all users from the admin API
+  // function to retrieve all users from the admin API
   const fetchUsers = async () => {
     try {
-      const token = await getToken() // Retrieve the active session JWT
+      const token = await getToken() 
       const { data } = await axios.get('/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` } // Pass token for secure backend access
+        headers: { Authorization: `Bearer ${token}` } 
       })
       setUsers(data.users) // Populate the state with the fetched users
     } catch (error) {
-      // Display error message from the server, or a fallback message
       toast.error(error?.response?.data?.error || "Failed to load users")
     } finally {
-      // Always stop the loading spinner, regardless of success or failure
       setLoading(false)
     }
   }
 
-  // Trigger the fetch function exactly once when the component mounts
   useEffect(() => {
     fetchUsers()
   }, [])
 
   // --- TOGGLE ENABLE/DISABLE ---
-  // Reverses a user's active status (e.g., suspends an active user, or restores a suspended one)
+  // Reverses a user's active status 
   const handleToggleStatus = async (id, name, currentStatus) => {
     // Determine the confirmation text based on what the *new* state will be
     const actionText = currentStatus ? "DISABLE" : "ENABLE";
     
-    // Safety check using the native browser confirm dialog
     if (!window.confirm(`Are you sure you want to ${actionText} ${name}'s account?`)) return;
-
-    // Optimistic UI Update: Immediately update the user's status in the local state array
-    // so the UI feels instantaneous without waiting for the server response.
     setUsers(users.map(u => u.id === id ? { ...u, isActive: !currentStatus } : u))
 
     try {
@@ -70,7 +59,6 @@ export default function AdminUsers() {
   // --- DELETE & BAN USER ---
   // Permanently removes a user from the platform
   const handleDeleteUser = async (id, name) => {
-    // Safety check detailing the severe consequences of this action
     if (!window.confirm(`Are you sure you want to remove ${name}?\n\nNOTE: If this is their first deletion, they will be allowed to recreate their account ONE time. If they have been deleted before, they will be permanently banned.`)) return
 
     try {
@@ -90,7 +78,6 @@ export default function AdminUsers() {
     }
   }
 
-  // --- Render Guard ---
   // Shows a centered spinner while the initial fetchUsers request is running
   if (loading) return <div className="min-h-[60vh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
 
@@ -123,10 +110,9 @@ export default function AdminUsers() {
             <tbody>
               {/* Map over the users array to create a table row for each user */}
               {users.map((user) => {
-                const isSelf = user.id === userId; // ✅ Check if this row is the logged-in admin
+                const isSelf = user.id === userId; 
 
                 return (
-                  // Dynamic styling: If the user is inactive, apply a red tint and dim the row (grayscale). Otherwise, apply standard hover effects.
                   <tr key={user.id} className={`border-b border-slate-50 transition group ${!user.isActive ? 'bg-red-50/50 grayscale-[0.3]' : 'hover:bg-slate-50'}`}>
                     
                     {/* Column 1: Avatar and Name */}
@@ -135,17 +121,14 @@ export default function AdminUsers() {
                           // Try to load the user's actual image. If missing, fall back to an external service that generates an avatar based on their initials.
                           src={user.image || `https://ui-avatars.com/api/?name=${user.name}&background=random`} 
                           alt="avatar" 
-                          // If inactive, lower the opacity of the avatar
                           className={`w-10 h-10 rounded-full border border-slate-200 object-cover ${!user.isActive ? 'opacity-50' : ''}`}
                       />
                       <span className="font-semibold text-slate-800">
                         {user.name}
-                        {/* Display a small 'YOU' badge if the row matches the currently logged-in admin */}
                         {isSelf && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">YOU</span>}
                       </span>
                     </td>
                     
-                    {/* Column 2: Email */}
                     <td className="py-3 px-4 text-slate-600">{user.email}</td>
                     
                     {/* Column 3: STATUS BADGE */}
@@ -164,7 +147,7 @@ export default function AdminUsers() {
                       {/* TOGGLE STATUS BUTTON */}
                       <button 
                           onClick={() => handleToggleStatus(user.id, user.name, user.isActive)} 
-                          disabled={isSelf} // ✅ Prevent admin from disabling themselves
+                          disabled={isSelf} // Prevent admin from disabling themselves
                           // Dynamic button styling: Handle self, active, and inactive states.
                           className={`p-2 rounded-lg transition-colors ${
                             isSelf 
@@ -181,7 +164,7 @@ export default function AdminUsers() {
                       {/* DELETE BUTTON */}
                       <button 
                           onClick={() => handleDeleteUser(user.id, user.name)} 
-                          disabled={isSelf} // ✅ Prevent admin from deleting themselves
+                          disabled={isSelf} // Prevent admin from deleting themselves
                           className={`p-2 rounded-lg transition-colors text-slate-400 ${
                             isSelf 
                               ? 'opacity-30 cursor-not-allowed' 

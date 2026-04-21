@@ -1,13 +1,11 @@
-// Marks this as a Next.js Client Component to enable interactivity and state hooks.
 'use client'
 
-// --- Dependencies ---
 import { useEffect, useState } from "react"
-import { format } from "date-fns" // Utility for human-readable date formatting
-import toast from "react-hot-toast" // Notification library
-import { Loader2, Trash2 } from "lucide-react" // UI Icons
-import { useAuth } from "@clerk/nextjs" // Clerk authentication hook
-import axios from "axios" // HTTP client for API requests
+import { format } from "date-fns" 
+import toast from "react-hot-toast" 
+import { Loader2, Trash2 } from "lucide-react" 
+import { useAuth } from "@clerk/nextjs" 
+import axios from "axios" 
 
 export default function AdminCoupons() {
   // --- Authentication context ---
@@ -77,7 +75,6 @@ export default function AdminCoupons() {
     }
   }
 
-  // --- UI Logic: Form Handling ---
   // Synchronizes input field changes with the local 'newCoupon' state
   const handleChange = (e) => {
     const { name, value } = e.target

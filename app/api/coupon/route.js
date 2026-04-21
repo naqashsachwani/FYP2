@@ -14,7 +14,7 @@ export async function GET(req) {
 
         const now = new Date();
 
-        // 1. ✅ Fetch public coupons OR private coupons assigned to this user
+        // 1.  Fetch public coupons OR private coupons assigned to this user
         const allCoupons = await prisma.coupon.findMany({
             where: { 
                 OR: [
@@ -89,7 +89,7 @@ export async function POST(req) {
 
         if (!coupon) return NextResponse.json({ error: "Invalid coupon code" }, { status: 404 });
 
-        // ✅ SECURITY: Check if it's a private apology coupon assigned to someone else
+        //  SECURITY: Check if it's a private apology coupon assigned to someone else
         if (!coupon.isPublic && coupon.userId && coupon.userId !== userId) {
             return NextResponse.json({ error: "This coupon is not assigned to your account." }, { status: 403 });
         }

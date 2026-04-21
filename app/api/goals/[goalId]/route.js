@@ -69,7 +69,7 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Goal already completed." }, { status: 400 });
     }
 
-    // ✅ WRAPPED IN TRANSACTION & ADDED ESCROW SYNC
+    //  WRAPPED IN TRANSACTION & ADDED ESCROW SYNC
     const result = await prisma.$transaction(async (tx) => {
         // 1. Create deposit
         const deposit = await tx.deposit.create({
@@ -103,7 +103,7 @@ export async function POST(req, { params }) {
           include: { deposits: true, product: true, user: true }, // ✅ INCLUDED USER
         });
 
-        // 4. ✅ CRITICAL: Sync Escrow Table (So Admin sees funds immediately)
+        // 4.  CRITICAL: Sync Escrow Table (So Admin sees funds immediately)
         const existingEscrow = await tx.escrow.findUnique({ where: { goalId } });
         if (existingEscrow) {
             await tx.escrow.update({
@@ -125,7 +125,7 @@ export async function POST(req, { params }) {
     });
 
     // ==========================================
-    // ✅ FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    // FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
     // ==========================================
     const savedGoal = result.updatedGoal;
     
@@ -133,7 +133,7 @@ export async function POST(req, { params }) {
         await sendNotification({
             userId: savedGoal.user.id,
             email: savedGoal.user.email,
-            title: "Payment Received! 💰",
+            title: "Payment Received! ",
             message: `Your deposit of Rs ${amount} was successful.`,
             html: depositConfirmationTemplate(
                 savedGoal.user.name, 
@@ -152,7 +152,7 @@ export async function POST(req, { params }) {
             await sendNotification({
                 userId: savedGoal.user.id,
                 email: savedGoal.user.email,
-                title: "Goal Completed! 🎉",
+                title: "Goal Completed! ",
                 message: "Congratulations! Your savings goal is now complete. You can now redeem your product.",
                 type: "GOAL_COMPLETE",
                 goalId: savedGoal.id,
@@ -185,7 +185,7 @@ export async function DELETE(req, { params }) {
   try {
     const goal = await prisma.goal.findUnique({ 
         where: { id: goalId },
-        include: { escrow: true, refundRequest: true, user: true, product: true } // ✅ INCUDED USER/PRODUCT
+        include: { escrow: true, refundRequest: true, user: true, product: true } // INCUDED USER/PRODUCT
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
@@ -237,12 +237,12 @@ export async function DELETE(req, { params }) {
         }
       });
 
-      // ✅ FIRE ENGINE: Notify user that their cancellation/refund is processing
+      // FIRE ENGINE: Notify user that their cancellation/refund is processing
       if (goal.user) {
           await sendNotification({
               userId: goal.user.id,
               email: goal.user.email,
-              title: "Cancellation & Refund Initiated 🔄",
+              title: "Cancellation & Refund Initiated",
               message: `You have successfully cancelled your goal for ${goal.product?.name}. Your refund request for Rs ${savedAmount.toLocaleString()} is now processing.`,
               type: "SYSTEM_ALERT",
               goalId: goal.id,

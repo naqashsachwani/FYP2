@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification"; //  IMPORT ENGINE
 
 // GET: Fetch Delivery Details
 export async function GET(request, { params }) {
@@ -79,13 +79,13 @@ export async function POST(request, { params }) {
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
           location: location || 'En Route',
-          // ✅ CRITICAL FIX: Use the EXISTING status. Do NOT default to 'IN_TRANSIT'.
+          //  CRITICAL FIX: Use the EXISTING status. Do NOT default to 'IN_TRANSIT'.
           status: status || updatedDelivery.status, 
         }
       });
     }
 
-    // ✅ FIRE ENGINE: Notify User on Major Status Changes (Dispatched or Delivered)
+    //  FIRE ENGINE: Notify User on Major Status Changes (Dispatched or Delivered)
     if (status && ['DISPATCHED', 'DELIVERED'].includes(status)) {
         const deliveryInfo = await prisma.delivery.findUnique({
             where: { id: id },

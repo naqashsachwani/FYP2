@@ -1,8 +1,8 @@
 import prisma from "@/lib/prisma"; // Prisma client for DB
 import { getAuth } from "@clerk/nextjs/server"; // Clerk auth for server
 import { NextResponse } from "next/server"; // Next.js response helper
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
-import { goalStartedTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
+import { sendNotification } from "@/lib/sendNotification"; 
+import { goalStartedTemplate } from "@/lib/emailTemplates"; 
 
 // ---------------- Normalize Decimal to Number ----------------
 // Prisma stores decimals as objects; this converts them to normal numbers for JSON
@@ -29,7 +29,7 @@ export async function GET(request) {
         deposits: { orderBy: { createdAt: "desc" } }, // Deposits history
         priceLock: true, // Linked PriceLock data
         
-        // ✅ CRITICAL FIX: Include Delivery Data
+        // CRITICAL FIX: Include Delivery Data
         // This is required for the "Delivered" section in the dashboard to work
         delivery: true 
       },
@@ -127,7 +127,7 @@ export async function POST(request) {
           lockedPrice: product.price,
           priceLocked: true,
         },
-        include: { user: true } // ✅ INCLUDE USER FOR NOTIFICATION
+        include: { user: true } //  INCLUDE USER FOR NOTIFICATION
       });
 
       // Create linked PriceLock
@@ -147,7 +147,7 @@ export async function POST(request) {
       return newGoal;
     });
 
-    // ✅ FIRE ENGINE: Send Welcome Email
+    //  FIRE ENGINE: Send Welcome Email
     if (result.user && status === "ACTIVE") {
         await sendNotification({
             userId: result.user.id,

@@ -1,18 +1,11 @@
-// Designates this as a Next.js Client Component, allowing the use of React hooks and browser-only APIs.
 'use client'
 
-// --- Imports ---
 import { useEffect, useState, useMemo } from "react"
-// Clerk authentication hooks to identify the admin and authorize API requests
 import { useAuth, useUser } from "@clerk/nextjs"
-// Axios for making HTTP requests
 import axios from "axios"
-// Toast notifications for user feedback
 import toast from "react-hot-toast"
-// Custom UI components
 import Loading from "@/components/Loading"
 import StoreInfo from "@/components/admin/StoreInfo"
-// Scalable SVG icons for the UI
 import {
   Shield,
   CheckCircle,
@@ -26,29 +19,21 @@ import {
 
 export default function AdminApprove() {
   // --- Authentication ---
-  // Clerk hooks to get the current user object and their session token.
   const { user } = useUser()
   const { getToken } = useAuth()
   
   // --- Main State ---
   // Stores the raw array of all store applications fetched from the backend.
   const [stores, setStores] = useState([])
-  // Controls the full-page loading spinner during the initial data fetch.
   const [loading, setLoading] = useState(true)
   
   // --- Filtering State ---
-  // Tracks the user's input in the search bar.
   const [searchTerm, setSearchTerm] = useState("")
-  // Tracks the dropdown selection (all, pending, approved, rejected).
   const [statusFilter, setStatusFilter] = useState("pending")
-  
-  // --- UI Locking State ---
-  // Instead of a global 'isSubmitting' boolean, we store the specific ID of the store being modified.
-  // This allows us to disable only the buttons for *that specific card* while leaving others active.
   const [processingId, setProcessingId] = useState(null)
 
   // --- Data Fetching ---
-  // Asynchronous function to retrieve the list of store applications from the admin API.
+  // function to retrieve the list of store applications from the admin API.
   const fetchStores = async () => {
     try {
       const token = await getToken()
@@ -60,7 +45,6 @@ export default function AdminApprove() {
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     } finally {
-      // Turn off the loading spinner regardless of success or failure
       setLoading(false)
     }
   }
@@ -80,32 +64,22 @@ export default function AdminApprove() {
       })
       
       toast.success(data.message)
-      // Re-fetch the stores to sync the UI with the updated database status
       await fetchStores()
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     } finally {
-      // 4. Unlock UI: Always clean up state, resetting the processing ID so buttons become clickable again
       setProcessingId(null)
     }
   }
 
-  // --- Lifecycle Hook ---
-  // Initial Data Fetch: Runs once when the component mounts and the user is verified
   useEffect(() => {
     if (user) fetchStores()
   }, [user])
 
   // ================= PERFORMANCE OPTIMIZATION =================
-  
-  // Filtering is an expensive operation. useMemo ensures we only re-run this logic 
-  // when 'stores', 'searchTerm', or 'statusFilter' actually changes, preventing lag 
-  // on every single React render.
   const filteredStores = useMemo(() => {
     return stores.filter(store => {
-      // Convert search term to lowercase once for efficiency
       const term = searchTerm.toLowerCase()
-      // Check if the search term exists in the store name, store username, or the owner's name
       const matchesSearch =
         store.name.toLowerCase().includes(term) ||
         store.username.toLowerCase().includes(term) ||
@@ -114,18 +88,16 @@ export default function AdminApprove() {
       // Check if the store's status matches the dropdown filter (or if "all" is selected)
       const matchesStatus = statusFilter === "all" || store.status === statusFilter
       
-      // A store must pass BOTH the search check and the status check to be included in the final array
       return matchesSearch && matchesStatus
     })
   }, [stores, searchTerm, statusFilter])
 
-  // --- Derived Statistics ---
+
   // useMemo caches these counts so we aren't iterating over the array unnecessarily
   const pendingCount = useMemo(() => stores.filter(s => s.status === 'pending').length, [stores])
   const approvedCount = useMemo(() => stores.filter(s => s.status === 'approved').length, [stores])
   const rejectedCount = useMemo(() => stores.filter(s => s.status === 'rejected').length, [stores])
 
-  // --- Render Guard ---
   // If still waiting for the initial API fetch, display a centered loading component
   if (loading)
     return (
@@ -134,12 +106,9 @@ export default function AdminApprove() {
       </div>
     )
 
-  // --- Main Render Block ---
   return (
-    // Outer layout wrapper keeping content centered with a max-width
     <div className="space-y-6 mb-28 px-3 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto">
       
-      {/* ================= Header Section ================= */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
@@ -150,7 +119,6 @@ export default function AdminApprove() {
           </p>
         </div>
 
-        {/* Decorative Badge */}
         <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-50 to-purple-50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-blue-100">
           <Shield size={18} className="text-blue-600 shrink-0" />
           <span className="text-xs sm:text-sm text-blue-700 font-medium">
@@ -161,7 +129,6 @@ export default function AdminApprove() {
 
       {/* ================= KPI Stats Cards ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Maps over a configuration array to render 3 uniform statistic cards */}
         {[ 
           { label: "Pending Review", count: pendingCount, color: "yellow" },
           { label: "Approved Stores", count: approvedCount, color: "green" },
@@ -170,7 +137,6 @@ export default function AdminApprove() {
           <div key={i} className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm flex justify-between items-center">
             <div>
               <p className="text-slate-600 text-sm">{stat.label}</p>
-              {/* Uses dynamic Tailwind classes based on the 'color' string */}
               <p className={`text-2xl sm:text-3xl font-bold text-${stat.color}-600 mt-2`}>
                 {stat.count}
               </p>
@@ -252,7 +218,6 @@ export default function AdminApprove() {
               </div>
 
               <div className="p-5 sm:p-6">
-                {/* Store Details Component (reusable UI element containing owner info, tax ID, etc.) */}
                 <StoreInfo store={store} />
                 
                 {/* CONDITIONAL ACTION BUTTONS */}
@@ -274,7 +239,7 @@ export default function AdminApprove() {
                       disabled={processingId !== null} 
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-all"
                     >
-                      {/* Swaps the icon for a spinner if this card is currently processing */}
+                     
                       {processingId === store.id ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />} 
                       Approve
                     </button>

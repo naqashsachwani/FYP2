@@ -1,28 +1,21 @@
-// Marks this component as a Client Component, enabling React hooks and browser APIs.
 "use client";
 
-// --- Imports ---
 import { useEffect, useState } from "react";
-// Import UI icons from Lucide
 import { Loader2, AlertCircle, PlusCircle, CheckCircle, MessageSquareWarning, X, Package, ShieldAlert, Lock, Clock } from "lucide-react";
-// Import toast for non-blocking notifications
 import toast from "react-hot-toast";
-// Import Clerk authentication hook
 import { useAuth } from "@clerk/nextjs";
 
 export default function StoreRequestsPage() {
-  // Extract authentication status and the current user's ID from Clerk
   const { isLoaded, userId } = useAuth();
   
   // --- Main State ---
-  const [requests, setRequests] = useState([]); // Stores the list of previous requests/complaints
-  const [activeGoals, setActiveGoals] = useState([]); // Stores active goals to populate the form dropdown
-  const [loading, setLoading] = useState(true); // Controls the initial full-page loading spinner
+  const [requests, setRequests] = useState([]); 
+  const [activeGoals, setActiveGoals] = useState([]); 
+  const [loading, setLoading] = useState(true); 
 
   // --- Modal & Form State ---
-  const [isModalOpen, setIsModalOpen] = useState(false); // Controls visibility of the "New Request" modal
-  const [isSubmitting, setIsSubmitting] = useState(false); // Controls the spinner on the submit button
-  
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   // Holds the data for the new request form
   const [formData, setFormData] = useState({
     title: "",
@@ -32,7 +25,6 @@ export default function StoreRequestsPage() {
     description: ""
   });
 
-  // --- Data Fetching ---
   // Retrieves both past requests and active goals from the backend
   const fetchData = async () => {
     try {
@@ -40,22 +32,19 @@ export default function StoreRequestsPage() {
       if (!res.ok) throw new Error("Failed to load data");
       const data = await res.json();
       
-      setRequests(data.requests); // Populate requests list
-      setActiveGoals(data.activeGoals); // Populate goals dropdown
+      setRequests(data.requests); 
+      setActiveGoals(data.activeGoals); 
     } catch (error) {
       toast.error("Could not load requests.");
     } finally {
-      setLoading(false); // Turn off the page spinner
+      setLoading(false); 
     }
   };
 
-  // Triggers the data fetch once Clerk has fully loaded the user session
   useEffect(() => {
     if (isLoaded && userId) fetchData();
   }, [isLoaded, userId]);
 
-  // --- Form Handlers ---
-  // Intelligently updates the form state when a goal is selected from the dropdown
   const handleGoalSelection = (goalId) => {
     // Find the full goal object from the activeGoals array based on the selected ID
     const selectedGoal = activeGoals.find(g => g.id === goalId);
@@ -70,9 +59,9 @@ export default function StoreRequestsPage() {
 
   // Handles the submission of the "New Request" form
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent standard HTML form submission
-    setIsSubmitting(true); // Lock the button
-    const toastId = toast.loading("Submitting request..."); // Show a sticky loading toast
+    e.preventDefault(); 
+    setIsSubmitting(true); 
+    const toastId = toast.loading("Submitting request..."); 
 
     try {
       // Send the POST request to the backend
@@ -92,31 +81,28 @@ export default function StoreRequestsPage() {
       // Reset the UI upon success
       setIsModalOpen(false);
       setFormData({ title: "", type: "PRICE_LOCK", goalId: "", targetUserId: "", description: "" });
-      fetchData(); // Refresh the list to show the newly created request
+      fetchData(); 
 
     } catch (error) {
       toast.error(error.message || "Failed to submit request", { id: toastId });
     } finally {
-      setIsSubmitting(false); // Unlock the button
+      setIsSubmitting(false); 
     }
   };
 
-  // ✅ HELPER: Determines the visual steps for the progress tracker
   // Generates an array of step objects based on the current string status of the request
   const getProgressSteps = (status) => {
     return [
-      { label: "Submitted", active: true }, // Always active once created
+      { label: "Submitted", active: true }, 
       { label: "Under Review", active: ["IN_PROGRESS", "RESOLVED", "REJECTED"].includes(status) },
       { 
         label: status === "REJECTED" ? "Rejected" : "Resolved", 
         active: ["RESOLVED", "REJECTED"].includes(status),
-        isError: status === "REJECTED" // Flags the final step to turn red if rejected
+        isError: status === "REJECTED" 
       }
     ];
   };
 
-  // --- Render Guards ---
-  // Show a full-page spinner while waiting for Clerk to load or data to fetch
   if (loading || !isLoaded) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
   }
@@ -126,7 +112,6 @@ export default function StoreRequestsPage() {
     <div className="p-6 md:p-8 text-slate-800 w-full">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* === Header === */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
@@ -147,7 +132,6 @@ export default function StoreRequestsPage() {
 
         {/* === Requests List === */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          {/* Empty State UI */}
           {requests.length === 0 ? (
             <div className="text-center py-16 px-4">
               <CheckCircle className="w-12 h-12 text-slate-200 mx-auto mb-3" />
@@ -155,17 +139,13 @@ export default function StoreRequestsPage() {
               <p className="text-slate-500 mt-1 text-sm">You haven't made any requests or complaints yet.</p>
             </div>
           ) : (
-            // Populated List UI
             <div className="divide-y divide-slate-100">
               {requests.map((req) => (
                 <div key={req.id} className="p-6 hover:bg-slate-50 transition flex flex-col xl:flex-row gap-8 justify-between">
                   
-                  {/* Left Side: Request Details */}
                   <div className="flex-1 space-y-4">
-                    {/* Tags and Date */}
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1">
-                        {/* Dynamic Icon based on Request Type */}
                         {req.type === "PRICE_LOCK" ? <Lock size={12} /> : <AlertCircle size={12} />}
                         {req.type.replace('_', ' ')}
                       </span>
@@ -198,10 +178,8 @@ export default function StoreRequestsPage() {
                     )}
                   </div>
                   
-                  {/* Right Side: Visual Progress Tracker & Admin Notes */}
                   <div className="w-full xl:w-80 shrink-0 flex flex-col gap-4">
                     
-                    {/* ✅ INDIGO THEMED VISUAL PROGRESS TRACKER */}
                     <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
                       <p className="text-xs font-bold text-slate-400 uppercase mb-4 text-center tracking-wider">Request Status</p>
                       <div className="flex justify-between items-center relative px-2">
@@ -212,7 +190,6 @@ export default function StoreRequestsPage() {
                         {/* Map over the dynamic steps generated by the getProgressSteps helper */}
                         {getProgressSteps(req.status).map((step, idx) => (
                           <div key={idx} className="flex flex-col items-center gap-1.5 bg-white px-1 relative z-10">
-                            {/* Circle Indicator: Colors dynamically update based on step status */}
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
                                step.isError && step.active ? "bg-red-50 border-red-500 text-red-600"  // Rejected state (Red)
                                : step.active ? "bg-indigo-50 border-indigo-500 text-indigo-600"  // Active state (Indigo)
@@ -220,7 +197,6 @@ export default function StoreRequestsPage() {
                             }`}>
                               {step.isError ? <ShieldAlert size={14} /> : <CheckCircle size={14} />}
                             </div>
-                            {/* Step Label */}
                             <span className={`text-[10px] font-bold uppercase tracking-wide ${step.active ? (step.isError ? "text-red-600" : "text-indigo-600") : "text-slate-400"}`}>
                               {step.label}
                             </span>

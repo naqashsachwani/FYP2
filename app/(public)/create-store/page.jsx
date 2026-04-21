@@ -17,16 +17,11 @@ export default function CreateStore() {
 
   // ================= STATE MANAGEMENT =================
   
-  // Controls the UI mode: 
-  // false = Show Input Form
-  // true  = Show Status Card
   const [alreadySubmitted, setAlreadySubmitted] = useState(false)
 
-  // Stores the current application status ('pending', 'approved', 'rejected')
   const [status, setStatus] = useState("")
   const [loading, setLoading] = useState(true)
   
-  // UI feedback messages displayed in the Status Card
   const [message, setMessage] = useState("")
   
   const [rejectionReason, setRejectionReason] = useState("")
@@ -63,11 +58,9 @@ export default function CreateStore() {
       // If the backend returns that a store/application exists
       if (data.exists) {
         setStatus(data.store.status)
-        setAlreadySubmitted(true) // Lock the form view
+        setAlreadySubmitted(true) 
         
-        // PRE-FILL FORM DATA:
-        // Populate the form state with existing data. This is crucial for 
-        // the "Resubmit" flow, so the user doesn't have to re-type everything.
+        // PRE-FILL FORM DATA: Populate the form state with existing data. T
         setStoreInfo(prev => ({
             ...prev,
             name: data.store.name,
@@ -78,13 +71,11 @@ export default function CreateStore() {
             address: data.store.address,
         }))
 
-        // Handle specific status scenarios
         if (data.store.status === "approved") {
             setMessage("Your store has been approved! Redirecting...")
             setTimeout(() => router.push("/store"), 2000)
         } else if (data.store.status === "rejected") {
             setMessage("Your application was rejected.")
-            // If the admin left a note, save it to state
             if(data.store.storeApplication?.reviewNotes) {
                 setRejectionReason(data.store.storeApplication.reviewNotes)
             }
@@ -128,7 +119,6 @@ export default function CreateStore() {
       formData.append("address", storeInfo.address)
       if(storeInfo.image) formData.append("image", storeInfo.image) 
 
-      // Financial & Legal details
       formData.append("taxId", storeInfo.taxId)
       formData.append("cnic", storeInfo.cnic)
       formData.append("bankName", storeInfo.bankName)
@@ -139,10 +129,9 @@ export default function CreateStore() {
         headers: { Authorization: `Bearer ${token}` },
       })
 
-      // Success Feedback
       toast.success(data.message)
-      setAlreadySubmitted(true) // Switch to Status view
-      setStatus("pending")      // Optimistically update status
+      setAlreadySubmitted(true) 
+      setStatus("pending")      
       setMessage("Your application is under review.")
       setRejectionReason("")    // Clear old errors
     } catch (error) {
@@ -297,7 +286,6 @@ export default function CreateStore() {
           </div>
         </div>
       ) : (
-        // ================= VIEW 2: STATUS CARD =================
         // Displays when user has already submitted an application
         <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-indigo-50 to-purple-100">
           <div className="bg-white p-8 rounded-3xl shadow-xl max-w-lg w-full">

@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma"
 import { getAuth } from "@clerk/nextjs/server" 
 import { NextResponse } from "next/server" 
 import imagekit from "@/configs/imageKit" 
-import { sendNotification } from "@/lib/sendNotification" // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification" 
 
 // ================== POST: Create or Resubmit Store Application ==================
 export async function POST(request) {
@@ -104,7 +104,7 @@ export async function POST(request) {
         })
       })
 
-      // ✅ FIRE ENGINE: Notify user of resubmission
+      // FIRE ENGINE: Notify user of resubmission
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (user) {
           await sendNotification({
@@ -158,7 +158,7 @@ export async function POST(request) {
       })
     })
 
-    // ✅ FIRE ENGINE: Notify user of initial submission
+    // FIRE ENGINE: Notify user of initial submission
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({

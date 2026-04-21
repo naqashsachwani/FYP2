@@ -5,7 +5,7 @@ import {
   syncUserUpdation,
   syncUserDeletion,
   deleteCouponOnExpiry,
-  weeklyDepositReminder // ✅ NEW: Import the reminder function
+  weeklyDepositReminder // 
 } from "@/inngest/functions";                      
 
 export const { GET, POST, PUT } = serve({
@@ -15,6 +15,6 @@ export const { GET, POST, PUT } = serve({
     syncUserUpdation,     
     syncUserDeletion,     
     deleteCouponOnExpiry, 
-    weeklyDepositReminder // ✅ NEW: Register the function
+    weeklyDepositReminder // 
   ],
 });

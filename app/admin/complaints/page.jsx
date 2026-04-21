@@ -1,16 +1,9 @@
-"use client"; // Declares this as a Client Component to enable hooks and interactivity.
+"use client"; 
 
-// --- Imports ---
 import { useEffect, useState } from "react";
-// UI Icons from lucide-react for visual indicators
 import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock } from "lucide-react";
-import toast from "react-hot-toast"; // Notification library
+import toast from "react-hot-toast"; 
 
-// ==========================================
-// GOAL DETAILS MODAL COMPONENT (Compact)
-// ==========================================
-// This helper component fetches and displays the deep technical details of a 
-// specific savings goal when an admin wants to investigate a dispute.
 const GoalDetailsModal = ({ goalId, onClose }) => {
   // Local state for the modal's data and loading status
   const [goal, setGoal] = useState(null);
@@ -127,9 +120,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
   );
 };
 
-// ==========================================
-// MAIN ADMIN COMPLAINTS PAGE
-// ==========================================
 export default function AdminComplaintsPage() {
   // --- Data State ---
   const [complaints, setComplaints] = useState([]);
@@ -470,7 +460,6 @@ export default function AdminComplaintsPage() {
                     </div>
                   )}
 
-                  {/* PERSISTENT RESOLUTION HISTORY */}
                   {/* Shown only when the ticket is already resolved or rejected */}
                   {c.adminNotes && c.status !== 'OPEN' && (
                      <div className="mt-5 p-4 bg-blue-50 rounded-xl border border-blue-100 flex gap-3 items-start">
