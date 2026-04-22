@@ -22,7 +22,7 @@
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "imagekit": "^6.0.0",
-    "inngest": "^3.47.0",
+    "inngest": "^3.54.0",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",

@@ -1,7 +1,7 @@
 import { inngest } from "./client"
 import prisma from "@/lib/prisma"
 
-// ✅ NEW IMPORTS FOR NOTIFICATIONS
+//  NEW IMPORTS FOR NOTIFICATIONS
 import { sendNotification } from "@/lib/sendNotification"
 import { depositReminderTemplate } from "@/lib/emailTemplates"
 
@@ -77,7 +77,7 @@ export const deleteCouponOnExpiry = inngest.createFunction(
 )
 
 // ==========================================
-// ✅ NEW: WEEKLY DEPOSIT REMINDER CRON JOB
+//   DEPOSIT REMINDER CRON JOB
 // ==========================================
 export const weeklyDepositReminder = inngest.createFunction(
   { id: "weekly-deposit-reminder" },
