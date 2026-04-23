@@ -53,5 +53,12 @@ export async function GET(request, context) {
 
   // ================== SUCCESS RESPONSE ==================
   // Return product details including ratings and store info
-  return NextResponse.json({ product });
+  return NextResponse.json(
+    { product },
+    {
+      headers: {
+        'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+      },
+    }
+  );
 }

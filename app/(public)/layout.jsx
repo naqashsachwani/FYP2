@@ -2,7 +2,7 @@
 
 import Navbar from "@/components/Navbar"; // Top navigation bar persistent across all public pages
 import Footer from "@/components/Footer"; // Bottom footer persistent across all public pages
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux"; // Redux hooks for state management
 import { fetchProducts } from "@/lib/features/product/productSlice";
 import { uploadCart } from "@/lib/features/cart/cartSlice";
@@ -22,6 +22,7 @@ export default function PublicLayout({ children }) {
     const { getToken } = useAuth(); 
     const { cartItems } = useSelector((state) => state.cart);
     const products = useSelector((state) => state.product.list);
+    const hasSyncedInitialCart = useRef(false);
 
     // ================= EFFECT 1: Initial Product Fetch =================
     // Runs exactly once when the layout (and thus the application) first mounts.
@@ -29,30 +30,32 @@ export default function PublicLayout({ children }) {
         if (products.length === 0) {
             dispatch(fetchProducts({}));
         }
-    }, []); // Empty dependency array ensures this effect only runs on initial mount.
+    }, [dispatch, products.length]);
 
     // Runs whenever the 'user' object changes.
     useEffect(() => {
-        if (user) {
+        if (user && isLoaded) {
             dispatch(fetchCart({ getToken }));     
             dispatch(fetchAddress({ getToken }));    
             dispatch(fetchUserRatings({ getToken }));
         }
-    }, [user]); 
+    }, [dispatch, getToken, isLoaded, user]); 
 
    
     useEffect(() => {
-        // Only attempt to sync if the user is fully logged in.
-        if (user && isLoaded) {
-            // Set a 1000ms (1 second) timer.
-            const timeoutId = setTimeout(() => {
-                dispatch(uploadCart({ getToken }));
-            }, 1000); 
- 
-            // React calls this cleanup function, clearing the old timer, and starts a fresh 1-second countdown.
-            return () => clearTimeout(timeoutId);
+        if (!user || !isLoaded) {
+            hasSyncedInitialCart.current = false;
+            return;
         }
-    }, [cartItems, user, isLoaded]); 
+
+        // Skip the first cart change after hydration so we don't POST the same cart we just fetched.
+        if (!hasSyncedInitialCart.current) {
+            hasSyncedInitialCart.current = true;
+            return;
+        }
+
+        dispatch(uploadCart({ getToken }));
+    }, [cartItems, dispatch, getToken, isLoaded, user]); 
 
     return (
         <>

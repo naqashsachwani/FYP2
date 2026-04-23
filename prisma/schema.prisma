@@ -371,6 +371,7 @@ model Goal {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, status])
   @@index([productId])
   @@index([status])
   @@index([endDate])
@@ -432,6 +433,7 @@ model Delivery {
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([status, updatedAt])
   @@index([trackingNumber])
 }
 
@@ -455,6 +457,7 @@ model Notification {
   updatedAt  DateTime  @updatedAt
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([isRead])
   @@index([createdAt])
 }
@@ -570,6 +573,8 @@ model Escrow {
   @@index([goalId])
   @@index([orderId])
   @@index([status])
+  @@index([status, updatedAt])
+  @@index([status, releasedAt])
 }
 
 model Transaction {
@@ -623,6 +628,7 @@ model RefundRequest {
   @@index([goalId])
   @@index([orderId])
   @@index([status])
+  @@index([status, updatedAt])
 }
 
 model DeliveryTracking {

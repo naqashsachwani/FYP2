@@ -15,57 +15,55 @@ export default function Product() {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
-   
-    const fetchProduct = async () => {
+    useEffect(() => {
+        const foundInRedux = products.find((item) => item.id === productId);
 
-        const foundInRedux = products.find(
-            (item) => item.id === productId
-        );
-
-        // If found in the global state, set it immediately and turn off the loading spinner.
         if (foundInRedux) {
             setProduct(foundInRedux);
             setLoading(false);
         }
+    }, [productId, products]);
 
-        // ALWAYS fetch from the API in the background
-        // Even if we found the product in Redux, we make a network call to guarantee data freshness.
-        try {
-            const res = await fetch(`/api/products/${productId}`, {
-                cache: 'no-store'
-            });
+    useEffect(() => {
+        let isMounted = true;
 
-            if (!res.ok) {
-                if (!foundInRedux) {
-                    console.error("Product not found");
+        const fetchProduct = async () => {
+            try {
+                const res = await fetch(`/api/products/${productId}`);
+
+                if (!res.ok) {
+                    if (isMounted) {
+                        console.error("Product not found");
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (isMounted) {
+                    setProduct(data.product || data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch fresh product data:", error);
+            } finally {
+                if (isMounted) {
                     setLoading(false);
                 }
-                return; 
             }
+        };
 
-            // Convert the successful HTTP response to a JSON object
-            const data = await res.json();
-
-            // overwrite the Redux data (if any) with the 100% fresh API data
-            setProduct(data.product || data);
-
-        } catch (error) {
-            console.error("Failed to fetch fresh product data:", error);
-        } finally {     
-            setLoading(false);
-        }
-    };
-
-    
-    useEffect(() => {
         if (productId) {
+            setLoading(true);
             fetchProduct();
         }
+
         window.scrollTo(0, 0);
+        return () => {
+            isMounted = false;
+        };
+    }, [productId]);
 
-    }, [productId, products]); // Dependency array ensures re-fetch on route change or store update
-
-   
     // Prevents rendering the main layout before data is available
     if (loading) {
         return (

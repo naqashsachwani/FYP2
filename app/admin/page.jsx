@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import dynamic from "next/dynamic"
 import { toast } from "react-hot-toast"
 import {
   CircleDollarSignIcon,
@@ -16,23 +15,23 @@ import {
   CheckCircle,
   Download,
   RotateCcw,
-  TrendingUp 
 } from "lucide-react"
-import {
-  LineChart, 
-  Line,    
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+
+const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+      <div className="h-[350px] w-full animate-pulse rounded-2xl bg-slate-100" />
+    </div>
+  ),
+})
 
 export default function AdminDashboard() {
   const { getToken } = useAuth()
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || 'Rs'
 
   const [loading, setLoading] = useState(true)
+  const [reportLoading, setReportLoading] = useState(false)
   
   // Object storing all the key metrics fetched from the backend
   const [dashboardData, setDashboardData] = useState({
@@ -90,7 +89,7 @@ export default function AdminDashboard() {
       setLoading(true);
       const token = await getToken()
       
-      const { data } = await axios.get(`/api/admin/dashboard?_t=${Date.now()}`, {
+      const { data } = await axios.get('/api/admin/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       })
       
@@ -125,8 +124,15 @@ export default function AdminDashboard() {
 
   // --- REPORT GENERATION ---
   // Function to generate and download a PDF executive report using jsPDF
-  const GenerateReport = () => {
-    const doc = new jsPDF();
+  const GenerateReport = async () => {
+    try {
+      setReportLoading(true)
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
+
+      const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const today = new Date();
     const brandColor = [15, 23, 42]; 
@@ -200,6 +206,12 @@ export default function AdminDashboard() {
     });
 
     doc.save(`DreamSaver_Audit_${today.toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to generate report.")
+    } finally {
+      setReportLoading(false)
+    }
   }
 
   // --- Configuration Arrays for UI Mapping ---
@@ -266,7 +278,7 @@ export default function AdminDashboard() {
             <button onClick={fetchDashboardData} disabled={loading} className={`p-2 rounded-full border shadow-sm transition-all ${loading ? "bg-gray-100" : "bg-white hover:bg-gray-50"}`}>
                 <RotateCcw size={20} className={`text-slate-600 ${loading ? "animate-spin" : ""}`} />
             </button>
-            <button onClick={GenerateReport} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg hover:bg-slate-800 transition-all">
+            <button onClick={GenerateReport} disabled={reportLoading} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg hover:bg-slate-800 transition-all disabled:opacity-70">
                 <Download size={16} /> <span className="text-sm font-medium">Download Report</span>
             </button>
           </div>
@@ -307,27 +319,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* ================= CHART SECTION (LINE CHART) ================= */}
-        <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><TrendingUp className="text-blue-600" size={24} /> Platform Revenue Analytics</h2>
-                    <p className="text-sm text-slate-500">Earnings from fees (Last 7 Days)</p>
-                </div>
-            </div>
-            {/* Height constraint required for ResponsiveContainer to work */}
-            <div className="h-[350px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} tickFormatter={(value) => `${currency}${value}`} />
-                        {/* Custom Tooltip styling when hovering over data points */}
-                        <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} itemStyle={{ color: '#1e293b', fontWeight: 600 }} formatter={(value) => [`${currency}${value}`, "Revenue"]} />
-                        <Line type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} dot={{ r: 4, fill: "#4f46e5", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6, strokeWidth: 0, fill: "#4f46e5" }} />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
+        <RevenueLineChart
+          chartData={chartData}
+          currency={currency}
+          title="Platform Revenue Analytics"
+          subtitle="Earnings from fees (Last 7 Days)"
+        />
 
       </div>
     </div>

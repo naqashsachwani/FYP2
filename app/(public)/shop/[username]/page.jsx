@@ -1,10 +1,25 @@
 import prisma from "@/lib/prisma"; 
 import Image from "next/image"; 
+import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation"; 
 import { StoreIcon, BadgeCheck } from "lucide-react"; 
 import StoreProducts from "./StoreProducts"; 
 
 // Server Component to fetch and render the store page.
+
+const getCachedStore = unstable_cache(
+    async (username) => prisma.store.findUnique({
+        where: { username },
+        include: {
+            products: {
+                where: { inStock: true },
+                include: { ratings: true }
+            }
+        }
+    }),
+    ['public-store-page'],
+    { revalidate: 60 }
+);
 
 export default async function ViewStorePage({ params }) {
   
@@ -12,15 +27,7 @@ export default async function ViewStorePage({ params }) {
     const decodedUsername = decodeURIComponent(resolvedParams.username);
 
     // Fetch the store and active products directly from the PostgreSQL database using Prisma.
-    const store = await prisma.store.findUnique({
-        where: { username: decodedUsername }, 
-        include: {
-            products: { 
-                where: { inStock: true }, 
-                include: { ratings: true } 
-            }
-        }
-    });
+    const store = await getCachedStore(decodedUsername);
 
     if (!store) {
         return notFound();

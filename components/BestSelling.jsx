@@ -24,7 +24,7 @@ const BestSelling = () => {
     ?.slice() // Create a copy to avoid mutating Redux state
     .sort(
       (a, b) =>
-        (b.rating?.length || 0) - (a.rating?.length || 0) // Descending order
+        (b.ratings?.length || 0) - (a.ratings?.length || 0) // Descending order
     )
     .slice(0, displayQuantity)
 

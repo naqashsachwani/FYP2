@@ -42,12 +42,15 @@ const Navbar = () => {
 
     const checkRoles = async () => {
       try {
-        const adminRes = await fetch('/api/admin/is-admin');
-        const adminData = await adminRes.json();
+        const [adminRes, sellerRes] = await Promise.all([
+          fetch('/api/admin/is-admin'),
+          fetch('/api/store/is-seller'),
+        ]);
+        const [adminData, sellerData] = await Promise.all([
+          adminRes.json(),
+          sellerRes.json(),
+        ]);
         setShowAdminBtn(adminData.isAdmin === true);
-
-        const sellerRes = await fetch('/api/store/is-seller');
-        const sellerData = await sellerRes.json();
         setShowSellerBtn(!!sellerData.isSeller);
       } catch (error) {
         console.error("Role verification failed", error);
@@ -71,8 +74,14 @@ const Navbar = () => {
       checkRoles(); 
       fetchNotifications(); 
 
-      // Auto-refresh every 30 seconds
-      intervalId = setInterval(fetchNotifications, 30000);
+      const refreshIfVisible = () => {
+        if (document.visibilityState === 'visible') {
+          fetchNotifications();
+        }
+      };
+
+      // Auto-refresh every 60 seconds while the tab is visible.
+      intervalId = setInterval(refreshIfVisible, 60000);
     }
 
     return () => {

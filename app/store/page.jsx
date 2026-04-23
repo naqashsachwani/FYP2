@@ -3,38 +3,35 @@
 import Loading from "@/components/Loading" 
 import { useAuth } from "@clerk/nextjs" 
 import axios from "axios"
+import dynamic from "next/dynamic"
 import { 
     CircleDollarSignIcon, 
     ShoppingBasketIcon, 
     TruckIcon, 
     ClockIcon,
     DownloadIcon,
-    TrendingUp,
     Package 
 } from "lucide-react" 
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast" 
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import {
-  LineChart, 
-  Line,      
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts'
+
+const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineChart"), {
+    ssr: false,
+    loading: () => (
+        <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+            <div className="h-[350px] w-full animate-pulse rounded-2xl bg-slate-100" />
+        </div>
+    ),
+})
 
 export default function Dashboard() {
 
     // --- AUTHENTICATION & CONFIG ---
     const { getToken } = useAuth()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || 'Rs'
-    const router = useRouter() 
 
     const [loading, setLoading] = useState(true)
+    const [reportLoading, setReportLoading] = useState(false)
     
     // Object storing all the key metrics fetched from the backend for the store
     const [dashboardData, setDashboardData] = useState({
@@ -111,7 +108,14 @@ export default function Dashboard() {
     }
 
     // --- REPORT GENERATION ---
-    const GenerateReport = () => {
+    const GenerateReport = async () => {
+        try {
+        setReportLoading(true)
+        const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable'),
+        ])
+
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
@@ -233,6 +237,12 @@ export default function Dashboard() {
 
         // Prompt the user to save the generated PDF file
         doc.save(`DreamSaver_Store_Report_${today.toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to generate report.")
+        } finally {
+            setReportLoading(false)
+        }
     }
 
     // Trigger the fetch function exactly once when the component mounts
@@ -314,7 +324,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={GenerateReport}
-                            className="group flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all duration-200"
+                            disabled={reportLoading}
+                            className="group flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-70"
                         >
                             <DownloadIcon size={18} className="group-hover:-translate-y-0.5 transition-transform" />
                             <span className="font-medium text-sm">Download Report</span>
@@ -349,55 +360,12 @@ export default function Dashboard() {
                 </div>
 
                 {/* ================= Chart Section (Line Chart) ================= */}
-                <div className="w-full bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                <TrendingUp className="text-blue-600" size={24} />
-                                Revenue Analytics
-                            </h2>
-                            <p className="text-sm text-slate-500 mt-1">Daily earnings for the last 7 days</p>
-                        </div>
-                    </div>
-
-                    <div className="h-[350px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                {/* X-Axis maps to the 'name' key (e.g. "Mon", "Tue") */}
-                                <XAxis 
-                                    dataKey="name" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{fill: '#64748b', fontSize: 12}} 
-                                    dy={10}
-                                />
-                                {/* Y-Axis automatically scales and applies currency formatting */}
-                                <YAxis 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{fill: '#64748b', fontSize: 12}} 
-                                    tickFormatter={(value) => `${currency}${value}`}
-                                />
-                                {/* Custom Tooltip styling when hovering over data points */}
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    itemStyle={{ color: '#1e293b', fontWeight: 600 }}
-                                    formatter={(value) => [`${currency}${value}`, "Revenue"]}
-                                />
-                                {/* The actual line plotting the 'revenue' dataKey */}
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="revenue" 
-                                    stroke="#4f46e5" 
-                                    strokeWidth={3} 
-                                    dot={{ r: 4, fill: "#4f46e5", strokeWidth: 2, stroke: "#fff" }}
-                                    activeDot={{ r: 6, strokeWidth: 0, fill: "#4f46e5" }}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                <RevenueLineChart
+                    chartData={chartData}
+                    currency={currency}
+                    title="Revenue Analytics"
+                    subtitle="Daily earnings for the last 7 days"
+                />
 
             </div>
         </div>

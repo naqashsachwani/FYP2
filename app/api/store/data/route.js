@@ -19,13 +19,36 @@ export async function GET(request) {
         }
 
         // 4. Query the database for a store matching the username and active status
-        const store = await prisma.store.findUnique({
-            where: { username, isActive: true }, // Look for an active store with this username
-            include: {
-                // Include all products of the store
-                products: { 
-                    include: { rating: true } // Also include all ratings for each product
-                }
+        const store = await prisma.store.findFirst({
+            where: { username, isActive: true },
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                username: true,
+                logo: true,
+                isActive: true,
+                products: {
+                    where: { inStock: true },
+                    select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        mrp: true,
+                        price: true,
+                        images: true,
+                        category: true,
+                        inStock: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        ratings: {
+                            select: {
+                                rating: true,
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
             }
         });
 
@@ -38,7 +61,14 @@ export async function GET(request) {
         }
 
         // 6. Return the store data including products and ratings
-        return NextResponse.json({ store });
+        return NextResponse.json(
+            { store },
+            {
+                headers: {
+                    'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+                },
+            }
+        );
 
     } catch (error) {
         // 7. Catch any unexpected errors and log them
