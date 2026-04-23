@@ -4,6 +4,9 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { sendNotification } from "@/lib/sendNotification"; 
 import { depositConfirmationTemplate } from "@/lib/emailTemplates"; 
+import { writeSecurityAuditLog } from "@/lib/security/auditLog";
+import { getRequestContext } from "@/lib/security/requestContext";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 // Helper: Normalize Prisma Decimals
 const normalize = (obj) => JSON.parse(
@@ -17,10 +20,20 @@ const normalize = (obj) => JSON.parse(
 export async function POST(req, { params }) {
   const { goalId } = await params;
   const { userId } = getAuth(req);
+  const context = getRequestContext(req, userId);
 
   if (!userId) return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
 
   try {
+    const rateLimit = checkRateLimit({
+      key: `goal-confirm:${userId}:${context.ipAddress}`,
+      limit: 10,
+      windowMs: 5 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many payment confirmations. Please try again shortly." }, { status: 429 });
+    }
+
     const { amount } = await req.json();
 
     if (!amount || amount <= 0) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
@@ -28,6 +41,7 @@ export async function POST(req, { params }) {
     // 1. Fetch Goal (Read operation outside transaction for speed)
     const goal = await prisma.goal.findUnique({ where: { id: goalId } });
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
+    if (goal.userId !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     if (goal.status === "COMPLETED") {
       return NextResponse.json({ error: "Goal already completed." }, { status: 400 });
@@ -155,6 +169,16 @@ export async function POST(req, { params }) {
             });
         }
     }
+
+    await writeSecurityAuditLog({
+      action: "GOAL_DEPOSIT_CONFIRM",
+      actorUserId: userId,
+      entityType: "Goal",
+      entityId: goalId,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { amount: Number(amount), completed: result.status === "COMPLETED" },
+    });
 
     return NextResponse.json({
       success: true,

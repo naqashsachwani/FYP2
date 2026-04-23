@@ -3,6 +3,10 @@ import authSeller from "@/middlewares/authSeller"; // Middleware to verify if us
 import { NextResponse } from "next/server"; // Next.js response helper
 import imagekit from "@/configs/imageKit"; // ImageKit configuration for image uploads
 import prisma from "@/lib/prisma"; // Prisma client for database operations
+import { writeSecurityAuditLog } from "@/lib/security/auditLog";
+import { getRequestContext } from "@/lib/security/requestContext";
+import { checkRateLimit } from "@/lib/security/rateLimit";
+import { validateImageFiles } from "@/lib/security/uploadValidation";
 
 //  GET: Fetch all products for the authenticated seller
 export async function GET(request) {
@@ -31,9 +35,19 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     const storeId = await authSeller(userId);
+    const context = getRequestContext(request, userId);
 
     if (!storeId)
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+
+    const rateLimit = checkRateLimit({
+      key: `store-product-create:${userId}:${context.ipAddress}`,
+      limit: 10,
+      windowMs: 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many product changes. Please try again shortly." }, { status: 429 });
+    }
 
     const formData = await request.formData(); // Get submitted form data
     const name = formData.get("name");
@@ -46,6 +60,11 @@ export async function POST(request) {
     // Validate required fields
     if (!name || !description || !mrp || !price || !category || images.length < 1)
       return NextResponse.json({ error: "Missing product details" }, { status: 400 });
+
+    const uploadValidation = validateImageFiles(images);
+    if (!uploadValidation.ok) {
+      return NextResponse.json({ error: uploadValidation.error }, { status: 400 });
+    }
 
     // Upload images to ImageKit and get optimized URLs
     const imageUrls = await Promise.all(
@@ -69,8 +88,18 @@ export async function POST(request) {
     );
 
     // Save product to database
-    await prisma.product.create({
+    const product = await prisma.product.create({
       data: { name, description, mrp, price, category, images: imageUrls, storeId },
+    });
+
+    await writeSecurityAuditLog({
+      action: "STORE_PRODUCT_CREATE",
+      actorUserId: userId,
+      entityType: "Product",
+      entityId: product.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { storeId, category },
     });
 
     return NextResponse.json({ message: "Product added successfully" });
@@ -85,9 +114,19 @@ export async function PUT(request) {
   try {
     const { userId } = getAuth(request);
     const storeId = await authSeller(userId);
+    const context = getRequestContext(request, userId);
 
     if (!storeId)
       return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+
+    const rateLimit = checkRateLimit({
+      key: `store-product-update:${userId}:${context.ipAddress}`,
+      limit: 20,
+      windowMs: 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many product changes. Please try again shortly." }, { status: 429 });
+    }
 
     const formData = await request.formData();
     const id = formData.get("id"); // Product ID to update
@@ -98,11 +137,23 @@ export async function PUT(request) {
     const imageFile = formData.get("image"); // Optional new image
 
     if (!id) return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
+    const existingProduct = await prisma.product.findFirst({
+      where: { id, storeId },
+      select: { id: true },
+    });
+    if (!existingProduct) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
 
     let updateData = { name, description, price, mrp };
 
     // If a new image is provided, upload it and update images array
     if (imageFile && typeof imageFile !== "string") {
+      const uploadValidation = validateImageFiles([imageFile], { maxImages: 1 });
+      if (!uploadValidation.ok) {
+        return NextResponse.json({ error: uploadValidation.error }, { status: 400 });
+      }
+
       const buffer = Buffer.from(await imageFile.arrayBuffer());
       const response = await imagekit.upload({
         file: buffer,
@@ -124,8 +175,18 @@ export async function PUT(request) {
 
     // Update product in database
     await prisma.product.update({
-      where: { id },
+      where: { id: existingProduct.id },
       data: updateData,
+    });
+
+    await writeSecurityAuditLog({
+      action: "STORE_PRODUCT_UPDATE",
+      actorUserId: userId,
+      entityType: "Product",
+      entityId: existingProduct.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { storeId },
     });
 
     return NextResponse.json({ message: "Product updated successfully" });
@@ -140,6 +201,7 @@ export async function DELETE(request) {
   try {
     const { userId } = getAuth(request);
     const storeId = await authSeller(userId);
+    const context = getRequestContext(request, userId);
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id"); // Product ID to delete
@@ -149,7 +211,25 @@ export async function DELETE(request) {
     if (!id)
       return NextResponse.json({ error: "Missing product ID" }, { status: 400 });
 
-    await prisma.product.delete({ where: { id } });
+    const existingProduct = await prisma.product.findFirst({
+      where: { id, storeId },
+      select: { id: true },
+    });
+    if (!existingProduct) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    await prisma.product.delete({ where: { id: existingProduct.id } });
+
+    await writeSecurityAuditLog({
+      action: "STORE_PRODUCT_DELETE",
+      actorUserId: userId,
+      entityType: "Product",
+      entityId: existingProduct.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { storeId },
+    });
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {

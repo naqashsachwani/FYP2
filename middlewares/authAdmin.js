@@ -11,13 +11,26 @@ const authAdmin = async (userId) => {
 
         //  Fetch the user details from Clerk
         const user = await client.users.getUser(userId);
+        const email = user.emailAddresses?.[0]?.emailAddress;
+        const emailAllowList = (process.env.ADMIN_EMAIL || "")
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean);
+        const role = user.publicMetadata?.role || user.privateMetadata?.role;
+        const isAdminRole = role === "admin" || role === "superadmin";
+        const isAdminEmail = emailAllowList.includes(email);
+        const requireMfa = process.env.ADMIN_REQUIRE_MFA !== "false";
+        const hasMfa = user.twoFactorEnabled === true;
 
-        //  Check if the user's email is in the ADMIN_EMAIL list
-        // ADMIN_EMAIL is a comma-separated string of admin emails in .env
-        // e.g., ADMIN_EMAIL="admin1@example.com,admin2@example.com"
-        return process.env.ADMIN_EMAIL.split(',').includes(
-            user.emailAddresses[0].emailAddress // Take the first verified email
-        );
+        if (!(isAdminRole || isAdminEmail)) {
+            return false;
+        }
+
+        if (requireMfa && !hasMfa) {
+            return false;
+        }
+
+        return true;
 
     } catch (error) {
         // Log any errors for debugging

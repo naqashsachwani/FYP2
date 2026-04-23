@@ -1,10 +1,29 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuth } from "@clerk/nextjs/server";
 import { sendNotification } from "@/lib/sendNotification"; 
+import { writeSecurityAuditLog } from "@/lib/security/auditLog";
+import { getRequestContext } from "@/lib/security/requestContext";
+import { checkRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(request, { params }) {
   try {
     const { goalId } = await params;
+    const { userId } = getAuth(request);
+    const context = getRequestContext(request, userId);
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit({
+      key: `goal-redeem:${userId}:${context.ipAddress}`,
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many redemption attempts. Please try again later." }, { status: 429 });
+    }
     
     const body = await request.json();
     const { addressId, deliveryDate } = body; 
@@ -19,10 +38,11 @@ export async function POST(request, { params }) {
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
+    if (goal.userId !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     if (goal.delivery) return NextResponse.json({ success: true, deliveryId: goal.delivery.id });
 
     // 1. Get Address (Includes Latitude/Longitude)
-    const address = await prisma.address.findUnique({ where: { id: addressId } });
+    const address = await prisma.address.findFirst({ where: { id: addressId, userId } });
     if (!address) return NextResponse.json({ error: "Invalid address" }, { status: 400 });
 
     // 2. Create Delivery
@@ -56,6 +76,16 @@ export async function POST(request, { params }) {
             notifyEmail: true
         });
     }
+
+    await writeSecurityAuditLog({
+      action: "GOAL_REDEEM",
+      actorUserId: userId,
+      entityType: "Goal",
+      entityId: goalId,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { addressId, deliveryId: newDelivery.id },
+    });
 
     return NextResponse.json({ success: true, deliveryId: newDelivery.id });
 

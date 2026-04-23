@@ -3,14 +3,28 @@ import { getAuth } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server" 
 import imagekit from "@/configs/imageKit" 
 import { sendNotification } from "@/lib/sendNotification" 
+import { writeSecurityAuditLog } from "@/lib/security/auditLog"
+import { getRequestContext } from "@/lib/security/requestContext"
+import { checkRateLimit } from "@/lib/security/rateLimit"
+import { validateImageFiles } from "@/lib/security/uploadValidation"
 
 // ================== POST: Create or Resubmit Store Application ==================
 export async function POST(request) {
   try {
     // ================== AUTHENTICATION ==================
     const { userId } = getAuth(request)
+    const context = getRequestContext(request, userId)
     if (!userId) 
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const rateLimit = checkRateLimit({
+      key: `store-application:${userId}:${context.ipAddress}`,
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    })
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many store application attempts. Please try again later." }, { status: 429 })
+    }
 
     // ================== FORM DATA ==================
     const formData = await request.formData()
@@ -36,6 +50,11 @@ export async function POST(request) {
     // ================== IMAGE UPLOAD ==================
     let logoUrl = null
     if (imageFile && typeof imageFile !== "string") {
+      const uploadValidation = validateImageFiles([imageFile], { maxImages: 1, maxFileBytes: 3 * 1024 * 1024 })
+      if (!uploadValidation.ok) {
+        return NextResponse.json({ error: uploadValidation.error }, { status: 400 })
+      }
+
       // Convert file to buffer
       const buffer = Buffer.from(await imageFile.arrayBuffer())
       // Upload to ImageKit
@@ -118,11 +137,21 @@ export async function POST(request) {
           });
       }
 
+      await writeSecurityAuditLog({
+        action: "STORE_APPLICATION_RESUBMIT",
+        actorUserId: userId,
+        entityType: "Store",
+        entityId: existingStore.id,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        metadata: { username, status: "pending" },
+      })
+
       return NextResponse.json({ message: "Application resubmitted successfully!" })
     }
 
     // ================== NEW STORE CREATION ==================
-    await prisma.$transaction(async (tx) => {
+    const createdStore = await prisma.$transaction(async (tx) => {
       //  Create store
       const newStore = await tx.store.create({
         data: {
@@ -156,6 +185,8 @@ export async function POST(request) {
           status: "PENDING"
         }
       })
+
+      return newStore
     })
 
     // FIRE ENGINE: Notify user of initial submission
@@ -171,6 +202,16 @@ export async function POST(request) {
             notifyEmail: true
         });
     }
+
+    await writeSecurityAuditLog({
+      action: "STORE_APPLICATION_CREATE",
+      actorUserId: userId,
+      entityType: "Store",
+      entityId: createdStore.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+      metadata: { username, status: "pending" },
+    })
 
     return NextResponse.json({ message: "Store application submitted successfully!" })
 

@@ -1,6 +1,16 @@
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+const applySecurityHeaders = (response: NextResponse) => {
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Content-Security-Policy", "frame-ancestors 'none';");
+  return response;
+};
+
+export default clerkMiddleware(() => {
+  const response = NextResponse.next();
+  return applySecurityHeaders(response);
+});
 
 export const config = {
   matcher: [

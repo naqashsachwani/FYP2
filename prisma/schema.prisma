@@ -719,3 +719,21 @@ model Complaint {
   @@index([filerStoreId])
   @@index([status])
 }
+
+model SecurityAuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  actorUserId String?
+  entityType  String?
+  entityId    String?
+  status      String   @default("SUCCESS")
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
