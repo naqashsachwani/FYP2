@@ -1,7 +1,9 @@
 import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification";
+import imagekit from "@/configs/imageKit"; // ✅ IMPORT IMAGEKIT
+import crypto from "crypto"; // ✅ IMPORT CRYPTO FOR ID GENERATION
 
 // ==============================
 // GET: Fetch User's Complaints
@@ -20,7 +22,6 @@ export async function GET(req) {
       orderBy: { createdAt: 'desc' }
     });
 
-    //  UPDATED: Include product images for the frontend picker
     const goals = await prisma.goal.findMany({
       where: { userId },
       include: { 
@@ -28,7 +29,7 @@ export async function GET(req) {
           select: { 
             name: true, 
             storeId: true,
-            images: true // ADD THIS
+            images: true 
           } 
         } 
       },
@@ -50,7 +51,13 @@ export async function POST(req) {
     const { userId } = getAuth(req);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { title, description, type, goalId } = await req.json();
+    // ✅ CHANGED: Parse FormData instead of JSON to handle the file
+    const formData = await req.formData();
+    const title = formData.get("title");
+    const description = formData.get("description");
+    const type = formData.get("type");
+    const goalId = formData.get("goalId");
+    const file = formData.get("image"); // Optional image file
 
     if (!title || !description || !type) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -58,8 +65,8 @@ export async function POST(req) {
 
     let targetStoreId = null;
 
-    //  THE 7-DAY RULE LOGIC
-    if (goalId) {
+    // THE 7-DAY RULE LOGIC
+    if (goalId && goalId !== "null" && goalId !== "") {
       const goal = await prisma.goal.findUnique({
         where: { id: goalId },
         include: { delivery: true, product: true }
@@ -67,16 +74,11 @@ export async function POST(req) {
 
       if (!goal) return NextResponse.json({ error: "Linked goal not found" }, { status: 404 });
       
-      // Automatically link the store associated with this goal
       targetStoreId = goal.product?.storeId;
 
-      // Only enforce 7-day limit for Product/Delivery issues on Delivered items
       if (["DELIVERY", "PRODUCT_ISSUE"].includes(type) && goal.delivery?.status === "DELIVERED") {
-        // Fallback to updatedAt if deliveryDate isn't explicitly set
         const deliveryDate = new Date(goal.delivery.deliveryDate || goal.delivery.updatedAt);
         const currentDate = new Date();
-        
-        // Calculate difference in days
         const diffInMs = currentDate - deliveryDate;
         const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
@@ -88,27 +90,45 @@ export async function POST(req) {
       }
     }
 
+    // ✅ IMAGE UPLOAD LOGIC
+    let imageUrl = null;
+    if (file && file.size > 0) {
+      // Convert file to buffer for ImageKit SDK
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploadRes = await imagekit.upload({
+        file: buffer,
+        fileName: `complaint-${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`,
+        folder: "/complaints"
+      });
+      imageUrl = uploadRes.url;
+    }
+
+    // ✅ GENERATE HUMAN-READABLE COMPLAINT ID
+    const complaintId = `CMP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+
     // Create the complaint
     const newComplaint = await prisma.complaint.create({
       data: {
+        complaintId, // Save unique ID
         title,
         description,
         type,
         filerUserId: userId,
         targetStoreId, 
-        goalId: goalId || null, // Optional
+        goalId: (goalId && goalId !== "null" && goalId !== "") ? goalId : null,
+        imageUrl, // Save image URL if it exists
         status: "OPEN"
       }
     });
 
-    //  FIRE ENGINE: Acknowledge the user's complaint
+    // ✅ FIRE ENGINE: Acknowledge the user's complaint with the new ID
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({
             userId: user.id,
             email: user.email,
             title: "Complaint Received 📝",
-            message: `We have received your complaint regarding "${title}". Our admin team will review it shortly.`,
+            message: `We have received your complaint (ID: ${complaintId}) regarding "${title}". Our admin team will review it shortly.`,
             type: "COMPLAINT_POSTED",
             notifyInApp: true,
             notifyEmail: true

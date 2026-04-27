@@ -14,9 +14,6 @@ const Footer = () => {
   }, []);
 
   /* ===================== SOCIAL ICON SVGs ===================== */
-  /* Custom SVG icons are used instead of lucide icons
-     to allow fine control over hover animations and styling */
-
   const FacebookIcon = () => (
     <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
       className="group-hover:scale-110 transition-transform duration-200">
@@ -31,7 +28,6 @@ const Footer = () => {
     </svg>
   )
 
-  // ✅ FIXED: Updated with standard 24x24 Twitter/X bird path so it renders correctly
   const TwitterIcon = () => (
     <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"
       className="group-hover:scale-110 transition-transform duration-200 fill-current border-none">
@@ -52,6 +48,8 @@ const Footer = () => {
       title: "WEBSITE",
       links: [
         { text: "Home", path: "/" },
+        // ✅ NEW: Added Track Order link
+        { text: "Track Order", path: "/track-order" },
         { text: "Support & Complaints", path: "/complaints" }, 
       ],
     },
@@ -75,30 +73,19 @@ const Footer = () => {
 
   return (
     <footer className="bg-gradient-to-b from-slate-50 to-white border-t border-slate-200 mt-20">
-
-      {/* Decorative top gradient line */}
       <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-green-500 w-full" />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* ===================== MAIN FOOTER CONTENT ===================== */}
         <div className="py-12 lg:py-16 flex flex-col lg:flex-row gap-10 lg:gap-16">
-
-          {/* ================= BRAND + TRUST BADGE ================= */}
           <div className="flex-1 max-w-md">
-
-            {/* Brand Logo */}
             <Link href="/" className="inline-flex text-3xl lg:text-4xl font-bold text-slate-800 hover:scale-105 transition">
               <span className="text-green-600">Dream</span>Saver
               <span className="text-green-600 text-4xl lg:text-5xl">.</span>
             </Link>
 
-            {/* Brand Description */}
             <p className="mt-4 text-slate-600 text-sm lg:text-base">
               Welcome to DreamSaver, where your goals become reality.
             </p>
 
-            {/* Trust & Security Badge */}
             <div className="mt-6 p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3 transition-all hover:shadow-md">
               <div className="p-2 bg-green-100 rounded-lg shrink-0">
                 <ShieldCheck className="text-green-600" size={24} />
@@ -111,7 +98,6 @@ const Footer = () => {
               </div>
             </div>
 
-            {/* Social Media Links */}
             <div className="flex gap-3 mt-6">
               {socialIcons.map((item, i) => (
                 <Link key={i} href={item.link} target="_blank" aria-label={item.name} className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md border hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
@@ -121,7 +107,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* ================= FOOTER NAV LINKS ================= */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {linkSections.map((section, index) => (
               <div key={index}>
@@ -144,14 +129,12 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* ================= FOOTER BOTTOM BAR ================= */}
         <div className="border-t py-6 flex flex-col sm:flex-row justify-between gap-4 text-sm text-slate-600">
           <span>© {mounted ? new Date().getFullYear() : "2026"} DreamSaver. All rights reserved.</span>
           <span className="flex items-center gap-1">
             Made with <Heart size={14} className="text-red-500 fill-red-500" /> for amazing shoppers
           </span>
         </div>
-
       </div>
     </footer>
   )

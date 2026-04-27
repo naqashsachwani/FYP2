@@ -682,8 +682,10 @@ model WalletTransaction {
 
 model Complaint {
   id              String          @id @default(cuid())
+  complaintId     String?          @unique // ✅ NEW: Human-readable ID (e.g., CMP-12345)
   title           String
   description     String
+  imageUrl        String?         // ✅ NEW: Optional uploaded image
   
   type            ComplaintType
   status          ComplaintStatus @default(OPEN)
