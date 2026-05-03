@@ -10,7 +10,8 @@ import {
     TruckIcon, 
     ClockIcon,
     DownloadIcon,
-    Package 
+    Package,
+    TrendingDown 
 } from "lucide-react" 
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast" 
@@ -26,24 +27,22 @@ const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineCh
 
 export default function Dashboard() {
 
-    // --- AUTHENTICATION & CONFIG ---
     const { getToken } = useAuth()
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || 'Rs'
 
     const [loading, setLoading] = useState(true)
     const [reportLoading, setReportLoading] = useState(false)
     
-    // Object storing all the key metrics fetched from the backend for the store
     const [dashboardData, setDashboardData] = useState({
         totalProducts: 0,
         totalEarnings: 0,
+        totalPenalties: 0,
         totalOrders: 0, 
         ordersDelivered: 0,
         pendingDeliveries: 0,
-        allOrders: [] // Raw array of orders used for chart math and PDF generation
+        allOrders: [] 
     })
     
-    // Stores the processed array formatted specifically for the Recharts library
     const [chartData, setChartData] = useState([])
 
     const processChartData = (orders = []) => {
@@ -63,7 +62,6 @@ export default function Dashboard() {
                 return orderDate === comparisonDate;
             });
 
-            // Sum the 'total' field (representing store revenue) for all orders on this day
             const dailyRevenue = daysOrders.reduce((acc, curr) => acc + (Number(curr.total) || 0), 0);
             
             data.push({
@@ -74,13 +72,10 @@ export default function Dashboard() {
         return data;
     }
 
-    // --- API INTEGRATION ---
-    // function to retrieve dashboard statistics from the backend
     const fetchDashboardData = async () => {
         try {
             const token = await getToken()
             
-            // Fetch data from the store-specific dashboard endpoint
             const { data } = await axios.get('/api/store/dashboard', {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -88,15 +83,14 @@ export default function Dashboard() {
             const safeData = {
                 totalProducts: Number(data.dashboardData.totalProducts) || 0,
                 totalEarnings: Number(data.dashboardData.totalEarnings) || 0,
+                totalPenalties: Number(data.dashboardData.totalPenalties) || 0,
                 totalOrders: Number(data.dashboardData.totalOrders) || 0, 
                 ordersDelivered: Number(data.dashboardData.ordersDelivered) || 0,
                 pendingDeliveries: Number(data.dashboardData.pendingDeliveries) || 0,
                 allOrders: data.dashboardData.allOrders || [] 
             }
 
-            // Update state with the safe data
             setDashboardData(safeData)
-            // Process the raw orders immediately and update the chart state
             setChartData(processChartData(safeData.allOrders))
 
         } catch (error) {
@@ -107,7 +101,6 @@ export default function Dashboard() {
         }
     }
 
-    // --- REPORT GENERATION ---
     const GenerateReport = async () => {
         try {
         setReportLoading(true)
@@ -122,9 +115,8 @@ export default function Dashboard() {
         const today = new Date();
         const brandColor = [30, 41, 59]; 
 
-        // PDF Header Formatting
         doc.setFillColor(...brandColor);
-        doc.rect(0, 0, pageWidth, 40, 'F'); // Draw a solid rectangle across the top
+        doc.rect(0, 0, pageWidth, 40, 'F'); 
 
         doc.setFontSize(24);
         doc.setTextColor(255, 255, 255); 
@@ -146,38 +138,68 @@ export default function Dashboard() {
         doc.setTextColor(...brandColor);
         doc.text("1. Performance Overview", 14, yPos);
         
-        const cardWidth = 45;
+        // ✅ UPDATED: Grid Layout for 6 PDF Cards
+        const usableWidth = pageWidth - 28; // 14mm margins on each side
+        const cols = 3; // 3 cards per row
+        const gapX = 5;
+        const gapY = 5;
+        const cardWidth = (usableWidth - (gapX * (cols - 1))) / cols;
         const cardHeight = 25;
-        const gap = 5;
-        const startX = 14;
+        
         yPos += 5;
 
-        // Array of key metrics to draw in the PDF
+        // Ensure all 6 stats match the UI
         const stats = [
-            { label: "Total Earnings", value: `${currency}${dashboardData.totalEarnings.toLocaleString()}` },
-            { label: "Products", value: dashboardData.totalProducts.toString() },
+            { label: "Net Earnings", value: `${currency}${dashboardData.totalEarnings.toLocaleString()}` },
+            { label: "Dispute Penalties", value: `${currency}${dashboardData.totalPenalties.toLocaleString()}` },
+            { label: "Total Products", value: dashboardData.totalProducts.toString() },
             { label: "Total Orders", value: dashboardData.totalOrders.toString() },
-            { label: "Delivered", value: dashboardData.ordersDelivered.toString() }
+            { label: "Delivered", value: dashboardData.ordersDelivered.toString() },
+            { label: "Pending", value: dashboardData.pendingDeliveries.toString() }
         ];
 
-        // Loop through the stats array to draw "cards" in the PDF
         stats.forEach((stat, index) => {
-            const x = startX + (index * (cardWidth + gap)); 
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const x = 14 + (col * (cardWidth + gapX)); 
+            const y = yPos + (row * (cardHeight + gapY));
+
+            // Default card styles
             doc.setFillColor(248, 250, 252); 
             doc.setDrawColor(226, 232, 240); 
-            doc.roundedRect(x, yPos, cardWidth, cardHeight, 3, 3, 'FD'); 
 
+            // Color coding for Earnings & Penalties
+            if (stat.label === "Dispute Penalties") {
+                doc.setFillColor(254, 242, 242); // Red tint
+                doc.setDrawColor(254, 226, 226); 
+            } else if (stat.label === "Net Earnings") {
+                doc.setFillColor(236, 253, 245); // Green tint
+                doc.setDrawColor(167, 243, 208); 
+            }
+
+            doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD'); 
+
+            // Text Label
             doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(stat.label, x + 5, yPos + 8); 
+            if (stat.label === "Dispute Penalties") doc.setTextColor(220, 38, 38);
+            else if (stat.label === "Net Earnings") doc.setTextColor(5, 150, 105);
+            else doc.setTextColor(100, 116, 139);
+            
+            doc.text(stat.label, x + 5, y + 8); 
 
+            // Value
             doc.setFontSize(14);
-            doc.setTextColor(...brandColor);
+            if (stat.label === "Dispute Penalties") doc.setTextColor(220, 38, 38);
+            else if (stat.label === "Net Earnings") doc.setTextColor(5, 150, 105);
+            else doc.setTextColor(...brandColor);
+            
             doc.setFont("helvetica", "bold");
-            doc.text(stat.value, x + 5, yPos + 18); 
+            doc.text(stat.value, x + 5, y + 18); 
         });
 
-        yPos += cardHeight + 15;
+        // Advance the Y position below the grid (2 rows)
+        yPos += (2 * cardHeight) + gapY + 15;
+
         doc.setFontSize(14);
         doc.setTextColor(...brandColor);
         doc.text("2. Operational Metrics", 14, yPos);
@@ -185,8 +207,8 @@ export default function Dashboard() {
         yPos += 5;
         doc.setFontSize(10);
         doc.setTextColor(50);
-        // Calculate the Delivery Completion Rate dynamically, guarding against division by zero
-        const healthText = `Pending Deliveries: ${dashboardData.pendingDeliveries} | Delivery Completion Rate: ${dashboardData.ordersDelivered > 0 ? ((dashboardData.ordersDelivered / (dashboardData.ordersDelivered + dashboardData.pendingDeliveries)) * 100).toFixed(1) + '%' : 'N/A'}`;
+        // Cleaned up the health text since Pending and Penalties are now distinct cards
+        const healthText = `Delivery Completion Rate: ${dashboardData.ordersDelivered > 0 ? ((dashboardData.ordersDelivered / (dashboardData.ordersDelivered + dashboardData.pendingDeliveries)) * 100).toFixed(1) + '%' : 'N/A'}`;
         doc.text(healthText, 14, yPos + 5);
 
         yPos += 15;
@@ -195,17 +217,15 @@ export default function Dashboard() {
         doc.setFont("helvetica", "bold");
         doc.text("3. Daily Revenue Breakdown (Last 7 Days)", 14, yPos);
 
-        // If chartData is empty, provide a fallback row to prevent errors
         const auditRows = chartData.length > 0 ? chartData.map(day => [
             day.name,
             `${currency}${day.revenue.toLocaleString()}`,
-            day.revenue > 0 ? 'Active' : 'No Sales'
+            day.revenue > 0 ? 'Active' : day.revenue < 0 ? 'Penalty Applied' : 'No Sales'
         ]) : [['-', '-', '-']];
 
-        // Generate the table
         autoTable(doc, {
             startY: yPos + 5,
-            head: [['Day', 'Revenue', 'Status']],
+            head: [['Day', 'Net Change', 'Status']],
             body: auditRows,
             theme: 'grid',
             headStyles: { 
@@ -226,7 +246,6 @@ export default function Dashboard() {
                 0: { fontStyle: 'bold' },
                 1: { halign: 'right' }
             },
-            // Custom footer hook that prints the page number at the bottom of every page
             didDrawPage: function (data) {
                 doc.setFontSize(8);
                 doc.setTextColor(150);
@@ -235,7 +254,6 @@ export default function Dashboard() {
             }
         });
 
-        // Prompt the user to save the generated PDF file
         doc.save(`DreamSaver_Store_Report_${today.toISOString().split('T')[0]}.pdf`);
         } catch (error) {
             console.error(error)
@@ -245,20 +263,26 @@ export default function Dashboard() {
         }
     }
 
-    // Trigger the fetch function exactly once when the component mounts
     useEffect(() => {
         fetchDashboardData()
     }, [])
 
-    // --- Configuration Array for UI Mapping ---
     const dashboardCardsData = [
         { 
-            title: 'Total Earnings', 
+            title: 'Net Earnings', 
             value: currency + dashboardData.totalEarnings.toLocaleString(), 
             icon: CircleDollarSignIcon,
             gradient: 'from-emerald-500 to-green-600',
             bgLight: 'bg-emerald-50',
             textColor: 'text-emerald-600'
+        },
+        { 
+            title: 'Dispute Penalties', 
+            value: currency + dashboardData.totalPenalties.toLocaleString(), 
+            icon: TrendingDown,
+            gradient: 'from-red-500 to-rose-600',
+            bgLight: 'bg-red-50',
+            textColor: 'text-red-600'
         },
         { 
             title: 'Total Products', 
@@ -294,7 +318,6 @@ export default function Dashboard() {
         },
     ]
 
-    // Render Guard: Display a full-page animated pulse loader if data is currently fetching
     if (loading) return (
         <div className="min-h-[70vh] flex items-center justify-center bg-slate-50/50">
             <div className="text-center space-y-3">
@@ -304,12 +327,10 @@ export default function Dashboard() {
         </div>
     )
 
-    // --- Main Render ---
     return (
         <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8">
             <div className="max-w-7xl mx-auto space-y-8">
                 
-                {/* ================= Header Section ================= */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
                     <div>
                         <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -320,7 +341,6 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={GenerateReport}
@@ -333,9 +353,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* ================= Stats Grid ================= */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {/* Map over the dashboardCardsData array to generate the metric cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {dashboardCardsData.map((card, index) => (
                         <div 
                             key={index} 
@@ -359,7 +377,6 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* ================= Chart Section (Line Chart) ================= */}
                 <RevenueLineChart
                     chartData={chartData}
                     currency={currency}

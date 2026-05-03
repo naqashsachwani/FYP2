@@ -55,11 +55,18 @@ enum GoalStatus {
   SAVED
 }
 
+// ✅ UPDATED: Added Strict Status Machine steps for Logistics
 enum DeliveryStatus {
   PENDING
-  DISPATCHED
-  IN_TRANSIT
-  DELIVERED
+  ASSIGNED      // Admin assigned to a rider, waiting for acceptance
+  ACCEPTED      // Rider accepted
+  PICKED_UP     // Rider verified OTP at the store
+  DISPATCHED    // Legacy support / general use
+  IN_TRANSIT    // Rider is on the way
+  DELIVERED     // Rider verified OTP with the customer
+  FAILED        // Delivery failed
+  REASSIGNED    // Passed to a new rider
+  CANCELLED
 }
 
 // --- NOTIFICATION ENUMS ---
@@ -82,7 +89,7 @@ enum NotificationType {
   PAYMENT_CONFIRMATION
 }
 
-// --- NEW ENUMS ---
+// --- COMPLAINTS & WALLET ENUMS ---
 enum ComplaintStatus {
   OPEN
   IN_PROGRESS
@@ -97,6 +104,7 @@ enum ComplaintType {
   PRODUCT_ISSUE
   USER_BEHAVIOR
   STORE_BEHAVIOR
+  RIDER_ISSUE      
   OTHER
   PRICE_LOCK
 }
@@ -106,6 +114,26 @@ enum WalletTransactionType {
   DEPOSIT_PAYMENT   // Money used from wallet to pay for a new goal
   WITHDRAWAL        // User withdrew money to their bank
 }
+
+// --- ✅ NEW: RIDER & LOGISTICS ENUMS ---
+enum RiderApprovalStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum PayoutStatus {
+  PENDING
+  TRANSFERRED
+}
+
 
 // ---------- MODELS ----------
 
@@ -131,10 +159,13 @@ model User {
   notifications      Notification[]
   couponUsages       CouponUsage[]
 
-  // --- NEW: WALLET & COMPLAINTS ---
+  // WALLET & COMPLAINTS
   wallet             Wallet?
   filedComplaints    Complaint[]        @relation("ComplaintsFiledByUser")
   targetedComplaints Complaint[]        @relation("ComplaintsAgainstUser")
+
+  // ✅ NEW: RIDER PROFILE (Optional to prevent data loss)
+  riderProfile       RiderProfile?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -179,7 +210,6 @@ model Store {
   priceLocks       PriceLock[]
   refunds          Refund[]
 
-  // --- NEW: COMPLAINTS ---
   filedComplaints    Complaint[]       @relation("ComplaintsFiledByStore")
   targetedComplaints Complaint[]       @relation("ComplaintsAgainstStore")
 
@@ -235,8 +265,6 @@ model Order {
   refundRequests RefundRequest[]
   escrows        Escrow[]
   priceLocks     PriceLock[]
-  
-  // --- NEW: COMPLAINTS ---
   complaints     Complaint[]
 
   @@index([userId])
@@ -363,8 +391,6 @@ model Goal {
   escrow        Escrow?        @relation("GoalEscrow")
   priceLock     PriceLock?     @relation("GoalPriceLock")
   ratings       Rating[]
-  
-  // --- NEW: COMPLAINTS ---
   complaints    Complaint[]
 
   createdAt DateTime @default(now())
@@ -423,11 +449,23 @@ model Delivery {
   longitude       Float?         
   location        String?        
 
+  // ✅ NEW: LOGISTICS & CHAIN OF CUSTODY 
+  pickupCode      String?       // Given to Store
+  deliveryCode    String?       // Given to Customer
+  currentRiderId  String?
+  failureReason   String?       // Why the delivery failed
+
   // Relations
   goal              Goal               @relation(fields: [goalId], references: [id], onDelete: Cascade)
   notifications     Notification[]
   deliveryTrackings DeliveryTracking[]
   ratings           Rating[]
+
+  // ✅ NEW: RIDER RELATIONS
+  rider           RiderProfile?        @relation("ActiveDeliveries", fields: [currentRiderId], references: [id])
+  assignments     DeliveryAssignment[]
+  proof           ProofOfDelivery?
+  payout          RiderPayout?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -449,9 +487,9 @@ model Notification {
   channel    NotificationChannel @default(IN_APP)
 
   // Relations
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delivery   Delivery? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  goal       Goal?     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery Delivery? @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  goal     Goal?     @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -647,7 +685,7 @@ model DeliveryTracking {
   @@index([recordedAt])
 }
 
-// ================= NEW: DIGITAL WALLET =================
+// ================= DIGITAL WALLET =================
 
 model Wallet {
   id        String   @id @default(cuid())
@@ -667,8 +705,8 @@ model WalletTransaction {
   walletId    String
   amount      Decimal               @db.Decimal(18, 2) // Positive for credit, Negative for debit
   type        WalletTransactionType
-  description String?               
-  referenceId String?               
+  description String?                
+  referenceId String?                
 
   // Relations
   wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
@@ -678,27 +716,23 @@ model WalletTransaction {
   @@index([walletId])
 }
 
-// ================= NEW: COMPLAINTS =================
+// ================= COMPLAINTS =================
 
 model Complaint {
   id              String          @id @default(cuid())
-  complaintId     String?          @unique // ✅ NEW: Human-readable ID (e.g., CMP-12345)
+  complaintId     String?          @unique 
   title           String
   description     String
-  imageUrl        String?         // ✅ NEW: Optional uploaded image
+  imageUrl        String?         
   
   type            ComplaintType
   status          ComplaintStatus @default(OPEN)
 
-  // WHO IS COMPLAINING? 
   filerUserId     String?
   filerStoreId    String?
-
-  // WHO ARE THEY COMPLAINING ABOUT? 
   targetUserId    String?
   targetStoreId   String?
 
-  // SPECIFIC TRANSACTION 
   goalId          String?
   orderId         String?
 
@@ -738,4 +772,89 @@ model SecurityAuditLog {
   @@index([action])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+// ==========================================
+// ✅ NEW: RIDER & LOGISTICS MODULE (Sprint 1)
+// ==========================================
+
+model RiderProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Verification details
+  phoneNumber     String   // ✅ NEW: Added Phone Number
+  vehicleType     String
+  vehiclePlate    String
+  cnicNumber      String   @unique
+  licenseNumber   String   @unique
+  idImageUrl      String?  
+
+  // Operations & Finance
+  status          RiderApprovalStatus @default(PENDING_APPROVAL)
+  isOnline        Boolean             @default(false)
+  currentLat      Float?
+  currentLng      Float?
+  totalEarnings   Float               @default(0.0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  assignments     DeliveryAssignment[]
+  deliveries      Delivery[]           @relation("ActiveDeliveries")
+  payouts         RiderPayout[]
+  proofs          ProofOfDelivery[]
+}
+
+model DeliveryAssignment {
+  id              String   @id @default(cuid())
+  deliveryId      String
+  riderId         String
+  
+  status          AssignmentStatus @default(PENDING)
+  respondedAt     DateTime?        
+
+  createdAt       DateTime @default(now())
+
+  // Relations
+  delivery        Delivery     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  rider           RiderProfile @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+  @@index([riderId])
+}
+
+model ProofOfDelivery {
+  id              String   @id @default(cuid())
+  deliveryId      String   @unique
+  riderId         String
+
+  pickupOtpUsed   String?
+  deliveryOtpUsed String?
+  proofImageUrl   String?  
+  signatureUrl    String?  
+  
+  createdAt       DateTime @default(now())
+
+  // Relations
+  delivery        Delivery     @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  rider           RiderProfile @relation(fields: [riderId], references: [id])
+}
+
+model RiderPayout {
+  id              String   @id @default(cuid())
+  riderId         String
+  deliveryId      String   @unique
+  
+  amount          Float
+  status          PayoutStatus @default(PENDING)
+  transferredAt   DateTime?
+
+  createdAt       DateTime @default(now())
+
+  // Relations
+  rider           RiderProfile @relation(fields: [riderId], references: [id])
+  delivery        Delivery     @relation(fields: [deliveryId], references: [id])
 }

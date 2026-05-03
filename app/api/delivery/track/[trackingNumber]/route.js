@@ -22,7 +22,9 @@ export async function GET(request, { params }) {
               include: { store: true } 
             } 
           } 
-        }
+        },
+        // ✅ NEW: Include Rider data for the public page
+        rider: { include: { user: true } }
       }
     });
 

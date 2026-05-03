@@ -1,81 +1,75 @@
-'use client' // Client component (required for interactivity)
+'use client' 
 
 import Link from "next/link"
 import { MapPin, Phone, Mail, ArrowRight, Heart, ShieldCheck } from "lucide-react"
 import { useState, useEffect } from "react"
 
-// Footer Component
-const Footer = () => {
-  // Add state to fix Next.js hydration mismatch with the date
+/* ===================== STATIC ASSETS (Moved Outside Component) ===================== */
+const FacebookIcon = () => (
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+    <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H8v-3h2.5V9.5a3.5 3.5 0 0 1 3.8-3.9h2.7v3h-1.8a1.1 1.1 0 0 0-1.2 1.2V12H17l-.5 3h-2.7v7A10 10 0 0 0 22 12z" />
+  </svg>
+)
+
+const InstagramIcon = () => (
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+    <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10zm-5 3.5A4.5 4.5 0 1 0 16.5 12 4.5 4.5 0 0 0 12 7.5z" />
+  </svg>
+)
+
+const TwitterIcon = () => (
+  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 fill-current border-none">
+    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
+  </svg>
+)
+
+const LinkedinIcon = () => (
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+    <path d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14z" />
+  </svg>
+)
+
+const linkSections = [
+  {
+    title: "WEBSITE",
+    links: [
+      { text: "Home", path: "/" },
+      { text: "Track Order", path: "/track-order" },
+      { text: "Support & Complaints", path: "/complaints" }, 
+      { text: "Become a Rider", path: "/rider/rider-signup" }, 
+    ],
+  },
+  {
+    title: "CONTACT",
+    links: [
+      { text: "+92-301-467-7899", path: "/", icon: Phone },
+      { text: "contact@dreamsaver.com", path: "/", icon: Mail },
+      { text: "ABC Street, Karachi", path: "/", icon: MapPin },
+    ],
+  },
+]
+
+const socialIcons = [
+  { icon: FacebookIcon, link: "https://www.facebook.com", name: "Facebook" },
+  { icon: InstagramIcon, link: "https://www.instagram.com", name: "Instagram" },
+  { icon: TwitterIcon, link: "https://twitter.com", name: "Twitter" },
+  { icon: LinkedinIcon, link: "https://www.linkedin.com", name: "LinkedIn" },
+]
+
+// ===================== FOOTER COMPONENT ===================== 
+export default function Footer() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  /* ===================== SOCIAL ICON SVGs ===================== */
-  const FacebookIcon = () => (
-    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
-      className="group-hover:scale-110 transition-transform duration-200">
-      <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H8v-3h2.5V9.5a3.5 3.5 0 0 1 3.8-3.9h2.7v3h-1.8a1.1 1.1 0 0 0-1.2 1.2V12H17l-.5 3h-2.7v7A10 10 0 0 0 22 12z" />
-    </svg>
-  )
-
-  const InstagramIcon = () => (
-    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
-      className="group-hover:scale-110 transition-transform duration-200">
-      <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10zm-5 3.5A4.5 4.5 0 1 0 16.5 12 4.5 4.5 0 0 0 12 7.5z" />
-    </svg>
-  )
-
-  const TwitterIcon = () => (
-    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"
-      className="group-hover:scale-110 transition-transform duration-200 fill-current border-none">
-      <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
-    </svg>
-  )
-
-  const LinkedinIcon = () => (
-    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"
-      className="group-hover:scale-110 transition-transform duration-200">
-      <path d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14z" />
-    </svg>
-  )
-
-  /* ===================== FOOTER LINK SECTIONS ===================== */
-  const linkSections = [
-    {
-      title: "WEBSITE",
-      links: [
-        { text: "Home", path: "/" },
-        // ✅ NEW: Added Track Order link
-        { text: "Track Order", path: "/track-order" },
-        { text: "Support & Complaints", path: "/complaints" }, 
-      ],
-    },
-    {
-      title: "CONTACT",
-      links: [
-        { text: "+92-301-467-7899", path: "/", icon: Phone },
-        { text: "contact@dreamsaver.com", path: "/", icon: Mail },
-        { text: "ABC Street, Karachi", path: "/", icon: MapPin },
-      ],
-    },
-  ]
-
-  /* ===================== SOCIAL MEDIA ICONS ===================== */
-  const socialIcons = [
-    { icon: FacebookIcon, link: "https://www.facebook.com", name: "Facebook" },
-    { icon: InstagramIcon, link: "https://www.instagram.com", name: "Instagram" },
-    { icon: TwitterIcon, link: "https://twitter.com", name: "Twitter" },
-    { icon: LinkedinIcon, link: "https://www.linkedin.com", name: "LinkedIn" },
-  ]
-
   return (
     <footer className="bg-gradient-to-b from-slate-50 to-white border-t border-slate-200 mt-20">
       <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-green-500 w-full" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-12 lg:py-16 flex flex-col lg:flex-row gap-10 lg:gap-16">
+          
           <div className="flex-1 max-w-md">
             <Link href="/" className="inline-flex text-3xl lg:text-4xl font-bold text-slate-800 hover:scale-105 transition">
               <span className="text-green-600">Dream</span>Saver
@@ -139,5 +133,3 @@ const Footer = () => {
     </footer>
   )
 }
-
-export default Footer

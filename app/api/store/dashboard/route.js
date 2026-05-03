@@ -18,6 +18,7 @@ export async function GET(req) {
         dashboardData: {
           totalProducts: 0,
           totalEarnings: 0,
+          totalPenalties: 0,
           totalOrders: 0,
           ordersDelivered: 0,
           pendingDeliveries: 0,
@@ -27,7 +28,7 @@ export async function GET(req) {
     }
 
     // 2. Run Parallel Queries
-    const [totalProducts, financialRecords, deliveryStats] = await prisma.$transaction([
+    const [totalProducts, financialRecords, deliveryStats, penaltyRecords] = await prisma.$transaction([
       // A. Count Products
       prisma.product.count({ where: { storeId: store.id } }),
 
@@ -53,13 +54,21 @@ export async function GET(req) {
         select: {
           status: true // Pending, Dispatched, In_Transit, Delivered
         }
+      }),
+
+      // D. Fetch Penalties (Deductions from Store Revenue)
+      prisma.refund.findMany({
+        where: { storeId: store.id, status: "COMPLETED" },
+        select: { amount: true, createdAt: true }
       })
     ]);
 
-    // 3. Process Financial Data (Earnings)
+    // 3. Process Financial Data (Earnings & Penalties)
     let totalEarnings = 0;
+    let totalPenalties = 0;
     const allOrders = [];
 
+    // Process Income
     financialRecords.forEach(record => {
       const gross = Number(record.amount);
       const net = Number(record.netAmount);
@@ -81,14 +90,25 @@ export async function GET(req) {
       }
     });
 
+    // Process Deductions
+    penaltyRecords.forEach(record => {
+      const penaltyAmount = Number(record.amount);
+      totalPenalties += penaltyAmount;
+      allOrders.push({
+        createdAt: record.createdAt,
+        total: -penaltyAmount // Negative impact on daily chart
+      });
+    });
+
+    // Apply Penalties to Total Net Earnings
+    totalEarnings -= totalPenalties;
+
     // 4. Process Delivery Data (Order Counts)
     let ordersDelivered = 0;
     let pendingDeliveries = 0;
 
     deliveryStats.forEach(d => {
-        // Normalize status check (case insensitive just in case)
         const status = d.status?.toUpperCase();
-
         if (status === 'DELIVERED') {
             ordersDelivered++;
         } else if (['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'IN TRANSIT'].includes(status)) {
@@ -102,6 +122,7 @@ export async function GET(req) {
       dashboardData: {
         totalProducts,
         totalEarnings: Math.round(totalEarnings),
+        totalPenalties: Math.round(totalPenalties),
         totalOrders, 
         ordersDelivered,
         pendingDeliveries,

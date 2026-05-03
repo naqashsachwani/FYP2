@@ -1,36 +1,41 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { sendNotification } from "@/lib/sendNotification"; //  IMPORT ENGINE
+import { sendNotification } from "@/lib/sendNotification";
+import { getAuth } from '@clerk/nextjs/server'; 
 
-// GET: Fetch Delivery Details
+// GET: Fetch Delivery Details (Smart Lookup)
 export async function GET(request, { params }) {
   const { id } = await params;
 
   try {
-    const delivery = await prisma.delivery.findUnique({
-      where: { id: id },
+    const delivery = await prisma.delivery.findFirst({
+      where: {
+        OR: [
+          { id: id },
+          { goalId: id },
+          { trackingNumber: id }
+        ]
+      },
       include: {
-        // Include latest tracking first
         deliveryTrackings: { orderBy: { recordedAt: 'desc' } },
-        goal: { include: { product: { include: { store: true } }, user: true } }
+        goal: { include: { product: { include: { store: true } }, user: true } },
+        rider: { include: { user: true } }
       }
     });
 
     if (!delivery) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Handle BigInt serialization if necessary
     const sanitized = JSON.parse(JSON.stringify(delivery, (key, value) => 
       (typeof value === 'bigint') ? value.toString() : value
     ));
 
     return NextResponse.json(sanitized);
   } catch (error) {
-    console.error("GET Error:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }
 
-// POST: Handle Status & Location Updates
+// POST: Handle Status Updates (Triggered by Customer "Confirm Received" or Store Dashboard)
 export async function POST(request, { params }) {
   const { id } = await params;
   
@@ -38,79 +43,95 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const { status, latitude, longitude, location } = body;
 
+    const existingDelivery = await prisma.delivery.findFirst({
+        where: {
+          OR: [
+            { id: id },
+            { goalId: id },
+            { trackingNumber: id }
+          ]
+        },
+        include: { goal: { include: { user: true, product: true } } }
+    });
+
+    if (!existingDelivery) return NextResponse.json({ error: "Delivery not found" }, { status: 404 });
+
+    const trueDeliveryId = existingDelivery.id;
     const dataToUpdate = {};
 
-    // 1. Handle Status Update (ONLY if explicitly provided in body)
     if (status) {
         dataToUpdate.status = status;
+
         if (status === 'DELIVERED') {
             dataToUpdate.deliveryDate = new Date();
+
+            // Process Rider Payout if assigned
+            if (existingDelivery.currentRiderId) {
+                const existingPayout = await prisma.riderPayout.findUnique({ 
+                    where: { deliveryId: trueDeliveryId } 
+                });
+                
+                if (!existingPayout) {
+                    const itemPrice = parseFloat(existingDelivery.goal?.targetAmount || existingDelivery.goal?.product?.price || 0);
+                    const payoutAmount = itemPrice >= 5000 ? 400.0 : 200.0;
+                    
+                    // ✅ THE FIX: Create the payout as PENDING and DO NOT update RiderProfile.totalEarnings.
+                    // The money will stay locked until the Admin clicks "Pay Rider" in Escrow.
+                    await prisma.riderPayout.create({
+                        data: { 
+                            riderId: existingDelivery.currentRiderId, 
+                            deliveryId: trueDeliveryId, 
+                            amount: payoutAmount,
+                            status: 'PENDING' 
+                        }
+                    });
+                }
+            }
         }
     }
 
-    // 2. Handle Location Update
-    // We check '!== undefined' so we can explicitly pass 'null' to hide the driver
-    if (latitude !== undefined) {
-        dataToUpdate.latitude = latitude === null ? null : parseFloat(latitude);
-    }
-    if (longitude !== undefined) {
-        dataToUpdate.longitude = longitude === null ? null : parseFloat(longitude);
-    }
-    if (location !== undefined) {
-        dataToUpdate.location = location;
-    }
+    if (latitude !== undefined) dataToUpdate.latitude = latitude === null ? null : parseFloat(latitude);
+    if (longitude !== undefined) dataToUpdate.longitude = longitude === null ? null : parseFloat(longitude);
+    if (location !== undefined) dataToUpdate.location = location;
 
-    // If payload is empty, reject (Basic validation)
-    if (Object.keys(dataToUpdate).length === 0) {
-        return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
-    }
+    if (Object.keys(dataToUpdate).length === 0) return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
 
-    // 3. Update the Delivery Record
     const updatedDelivery = await prisma.delivery.update({
-      where: { id: id },
+      where: { id: trueDeliveryId },
       data: dataToUpdate
     });
 
-    // 4. Create Tracking History (ONLY if coordinates are valid numbers)
     if (latitude && longitude) {
       await prisma.deliveryTracking.create({
         data: {
-          deliveryId: id,
+          deliveryId: trueDeliveryId,
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude),
           location: location || 'En Route',
-          //  CRITICAL FIX: Use the EXISTING status. Do NOT default to 'IN_TRANSIT'.
           status: status || updatedDelivery.status, 
         }
       });
     }
 
-    //  FIRE ENGINE: Notify User on Major Status Changes (Dispatched or Delivered)
     if (status && ['DISPATCHED', 'DELIVERED'].includes(status)) {
-        const deliveryInfo = await prisma.delivery.findUnique({
-            where: { id: id },
-            include: { goal: { include: { user: true, product: true } } }
-        });
-
-        if (deliveryInfo?.goal?.user) {
+        if (existingDelivery?.goal?.user) {
             const isDelivered = status === 'DELIVERED';
             await sendNotification({
-                userId: deliveryInfo.goal.userId,
-                email: deliveryInfo.goal.user.email,
+                userId: existingDelivery.goal.userId,
+                email: existingDelivery.goal.user.email,
                 title: isDelivered ? "Order Delivered! 📦" : "Order Dispatched! 🚚",
                 message: isDelivered 
-                    ? `Your order for ${deliveryInfo.goal.product?.name} has been delivered successfully. Enjoy!` 
-                    : `Your order for ${deliveryInfo.goal.product?.name} has been dispatched and is on its way.`,
+                    ? `Your order for ${existingDelivery.goal.product?.name} has been delivered successfully. Enjoy!` 
+                    : `Your order for ${existingDelivery.goal.product?.name} has been dispatched and is on its way.`,
                 type: "DELIVERY_UPDATE",
-                deliveryId: id,
-                goalId: deliveryInfo.goalId,
+                deliveryId: trueDeliveryId,
+                goalId: existingDelivery.goalId,
                 notifyInApp: true,
                 notifyEmail: true
             });
         }
     }
 
-    // Sanitize response
     const sanitizedResponse = JSON.parse(JSON.stringify(updatedDelivery, (key, value) => 
        (typeof value === 'bigint') ? value.toString() : value
     ));
@@ -118,7 +139,6 @@ export async function POST(request, { params }) {
     return NextResponse.json({ success: true, data: sanitizedResponse });
 
   } catch (error) {
-    console.error("Update Error:", error);
     return NextResponse.json({ error: "Update Failed: " + error.message }, { status: 500 });
   }
 }

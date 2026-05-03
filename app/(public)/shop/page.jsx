@@ -1,13 +1,15 @@
 'use client' 
 
-import { Suspense, useState, useMemo } from "react"
+import { Suspense, useState, useMemo, useEffect } from "react"
 import { useSelector } from "react-redux" 
 import { useSearchParams } from "next/navigation" 
-import { ChevronDown, PackageX, SlidersHorizontal } from "lucide-react" // Lightweight SVG icons
-import ProductCard from "@/components/ProductCard" // Reusable component for individual product display
+import { ChevronDown, PackageX, SlidersHorizontal } from "lucide-react" 
+import ProductCard from "@/components/ProductCard" 
 
 function ShopContent() {
-    // Extract the global list of products fetched previously and stored in Redux.
+    // ✅ FIX: Track when the component has mounted on the client
+    const [isMounted, setIsMounted] = useState(false)
+
     const products = useSelector(state => state.product.list)
     const searchParams = useSearchParams()
     const searchQuery = searchParams.get("search")?.toLowerCase() || ""
@@ -19,6 +21,11 @@ function ShopContent() {
     
     const [showMobileFilters, setShowMobileFilters] = useState(false)
 
+    // ✅ FIX: Set mounted to true after first client-side render
+    useEffect(() => {
+        setIsMounted(true)
+    }, [])
+
     const predefinedCategories = [
         "Electronics", "Men's Fashion", "Women's Fashion", "Home & Kitchen",
         "Sports & Outdoors", "Beauty & Personal Care", "Automotive & JDM",
@@ -27,21 +34,15 @@ function ShopContent() {
         "Tools & Home Improvement", "Furniture", "Office Supplies"
     ];
     
-    // Extract categories from the actual products in the database. .filter(Boolean) removes null/undefined values.
     const dynamicCategories = products.map(p => p.category).filter(Boolean);
-    
-    // Merge the two lists, use a Set to remove any duplicates, and sort them alphabetically.
     const uniqueCategories = [...new Set([...predefinedCategories, ...dynamicCategories])].sort();
     const categories = ["All", ...uniqueCategories];
 
     // --- FILTER & SORT LOGIC  ---
     const processedProducts = useMemo(() => {
-        
-        // Filtering Phase
         let result = products.filter(product => {
             const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
 
-            // Check if the search query string exists anywhere in the product's name, category, or description.
             const matchesSearch = !searchQuery || 
                 product.name?.toLowerCase().includes(searchQuery) ||
                 product.category?.toLowerCase().includes(searchQuery) ||
@@ -52,32 +53,36 @@ function ShopContent() {
             const max = maxPrice === "" ? Infinity : Number(maxPrice);
             const matchesPrice = price >= min && price <= max;
 
-            // The product must pass ALL active filters to be included in the final array.
             return matchesCategory && matchesSearch && matchesPrice;
         });
 
-        // Takes the filtered array and reorganizes it based on the user's dropdown selection.
         switch (sortOrder) {
-            case "price-asc":
-                return result.sort((a, b) => (a.price || 0) - (b.price || 0)); 
-            case "price-desc":
-                return result.sort((a, b) => (b.price || 0) - (a.price || 0)); 
-            case "name-asc":
-                return result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-            case "name-desc":
-                return result.sort((a, b) => (b.name || "").localeCompare(a.name || "")); 
-            default:
-                return result; 
+            case "price-asc": return result.sort((a, b) => (a.price || 0) - (b.price || 0)); 
+            case "price-desc": return result.sort((a, b) => (b.price || 0) - (a.price || 0)); 
+            case "name-asc": return result.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            case "name-desc": return result.sort((a, b) => (b.name || "").localeCompare(a.name || "")); 
+            default: return result; 
         }
-    }, [products, searchQuery, selectedCategory, minPrice, maxPrice, sortOrder]); // Dependency array for useMemo
+    }, [products, searchQuery, selectedCategory, minPrice, maxPrice, sortOrder]);
 
-    
     const clearFilters = () => {
         setSelectedCategory("All");
         setSortOrder("default");
         setMinPrice("");
         setMaxPrice("");
     };
+
+    // ✅ FIX: Show a loading state during SSR to prevent Hydration mismatches
+    if (!isMounted) {
+        return (
+            <div className="min-h-[70vh] flex items-center justify-center">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
+                    <p className="text-slate-500 font-medium">Loading store...</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-[70vh] mx-4 sm:mx-6">
@@ -99,14 +104,13 @@ function ShopContent() {
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
                             className="lg:hidden flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium"
                         >
-                            <SlidersHorizontal size={18} />
-                            Filters
+                            <SlidersHorizontal size={18} /> Filters
                         </button>
                     </div>
 
                     <div className={`flex flex-col sm:flex-row flex-wrap items-center gap-3 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
                         
-                        {/* Category Dropdown (Controlled Input) */}
+                        {/* Category Dropdown */}
                         <div className="relative w-full sm:w-48 shrink-0">
                             <select 
                                 value={selectedCategory}
@@ -122,26 +126,20 @@ function ShopContent() {
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                         </div>
 
-                        {/* Price Range Inputs (Min & Max) */}
+                        {/* Price Range */}
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             <input 
-                                type="number" 
-                                placeholder="Min Rs" 
-                                value={minPrice}
-                                onChange={(e) => setMinPrice(e.target.value)}
+                                type="number" placeholder="Min Rs" value={minPrice} onChange={(e) => setMinPrice(e.target.value)}
                                 className="w-full sm:w-24 px-3 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 shadow-sm placeholder:text-slate-400"
                             />
                             <span className="text-slate-400 font-medium">-</span>
                             <input 
-                                type="number" 
-                                placeholder="Max Rs" 
-                                value={maxPrice}
-                                onChange={(e) => setMaxPrice(e.target.value)}
+                                type="number" placeholder="Max Rs" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}
                                 className="w-full sm:w-24 px-3 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 shadow-sm placeholder:text-slate-400"
                             />
                         </div>
 
-                        {/* Sort Order Dropdown (Controlled Input) */}
+                        {/* Sort Dropdown */}
                         <div className="relative w-full sm:w-48 shrink-0">
                             <select 
                                 value={sortOrder}
@@ -157,7 +155,7 @@ function ShopContent() {
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                         </div>
 
-                        {/* Clear Filters Button */}
+                        {/* Clear Filters */}
                         {(selectedCategory !== "All" || sortOrder !== "default" || minPrice || maxPrice) && (
                             <button 
                                 onClick={clearFilters}
@@ -168,46 +166,30 @@ function ShopContent() {
                         )}
                     </div>
                 </div>
-               
+                
                 {processedProducts.length === 0 ? (
-                    
-                    // Empty State UI (No products match the filters/search)
                     <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-3xl border border-slate-100 shadow-sm mb-32">
                         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                             <PackageX className="text-slate-300 w-10 h-10" />
                         </div>
                         <h3 className="text-xl font-bold text-slate-800 mb-2">No products found</h3>
-                        <p className="text-slate-500 max-w-md">
-                            We couldn't find any items matching your current filters and search query.
-                        </p>
-                        <button 
-                            onClick={clearFilters}
-                            className="mt-6 px-6 py-2.5 bg-green-50 text-green-700 font-bold rounded-xl hover:bg-green-100 transition-colors"
-                        >
+                        <p className="text-slate-500 max-w-md">We couldn't find any items matching your current filters and search query.</p>
+                        <button onClick={clearFilters} className="mt-6 px-6 py-2.5 bg-green-50 text-green-700 font-bold rounded-xl hover:bg-green-100 transition-colors">
                             Reset Filters
                         </button>
                     </div>
-
                 ) : (
-                    
-                    // Display Products Grid
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 xl:gap-8 mx-auto mb-32">
-                        {/* Maps over the sorted/filtered array, generating a <ProductCard> for each. */}
                         {processedProducts.map((product) => (
-                            <ProductCard 
-                                key={product.id} 
-                                product={product} 
-                            />
+                            <ProductCard key={product.id} product={product} />
                         ))}
                     </div>
-                    
                 )}
             </div>
         </div>
     )
 }
 
-// This is the actual component Next.js mounts for the /shop route.
 export default function Shop() {
   return (
     <Suspense fallback={
@@ -220,6 +202,5 @@ export default function Shop() {
     }>
       <ShopContent />
     </Suspense>
-
   );
 }

@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// --- HELPER: AUTO-SYNC FUNCTION ---
 async function runAutoSync() {
   try {
     const missingEscrows = await prisma.goal.findMany({
@@ -43,17 +42,22 @@ export async function GET(req) {
   try {
     const normalize = (val) => Number(val || 0);
 
-    // 1. Stats
     const earningsAgg = await prisma.escrow.aggregate({
       _sum: { platformFee: true },
       where: { status: { in: ["RELEASED", "REFUNDED"] } }
     });
+
     const depositsAgg = await prisma.escrow.aggregate({
       _sum: { amount: true },
       where: { status: "HELD" }
     });
 
-    // 2. Pending Actions
+    // ✅ NEW: Aggregate Rider Costs
+    const riderPayoutsAgg = await prisma.riderPayout.aggregate({
+      _sum: { amount: true },
+      where: { status: "TRANSFERRED" } 
+    });
+
     const pendingReleases = await prisma.escrow.findMany({
       where: { status: "HELD", goal: { delivery: { status: "DELIVERED" } } },
       include: { goal: { include: { user: true, product: { include: { store: true } } } } }
@@ -64,7 +68,11 @@ export async function GET(req) {
       include: { user: true, goal: { include: { product: true } } }
     });
 
-    // 3. Paginated History
+    const pendingRiderPayouts = await prisma.riderPayout.findMany({
+      where: { status: "PENDING" },
+      include: { rider: { include: { user: true } }, delivery: { include: { goal: { include: { product: true } } } } }
+    });
+
     let whereClause = {};
     if (filter === "ACTIVE") whereClause = { status: "HELD" };
     if (filter === "HISTORY") whereClause = { status: { in: ["RELEASED", "REFUNDED"] } };
@@ -80,39 +88,37 @@ export async function GET(req) {
         goal: {
           include: {
             user: { select: { name: true } },
-            product: { 
-              //  FIX: Removed 'name: true' from here. 
-              // 'include' fetches all scalar fields (like name) automatically.
-              include: { 
-                store: { select: { name: true } } 
-              } 
-            } 
+            product: { include: { store: { select: { name: true } } } }
           }
         }
       }
     });
 
-    // 4. Response Construction
     const actionable = [
         ...pendingReleases.map(e => ({
             id: e.id, sourceTable: "ESCROW", goalId: e.goalId, amount: normalize(e.amount),
-            type: "RELEASE", 
-            customerName: e.goal?.user?.name, 
-            storeName: e.goal?.product?.store?.name, 
-            productName: e.goal?.product?.name
+            type: "RELEASE", customerName: e.goal?.user?.name, storeName: e.goal?.product?.store?.name, productName: e.goal?.product?.name
         })),
         ...pendingRefunds.map(r => ({
             id: r.id, sourceTable: "REFUND_REQUEST", goalId: r.goalId, amount: normalize(r.amount),
-            type: "REFUND", 
-            customerName: r.user?.name, 
-            storeName: "N/A", 
-            productName: r.goal?.product?.name 
+            type: "REFUND", customerName: r.user?.name, storeName: "N/A", productName: r.goal?.product?.name 
+        })),
+        ...pendingRiderPayouts.map(p => ({
+            id: p.id, sourceTable: "RIDER_PAYOUT", deliveryId: p.deliveryId, amount: normalize(p.amount), 
+            type: "RIDER_PAYOUT", customerName: p.rider?.user?.name, storeName: "Rider Payout", productName: p.delivery?.goal?.product?.name
         }))
     ];
 
+    // ✅ Process Net Earnings
+    const grossEarnings = normalize(earningsAgg._sum.platformFee);
+    const riderCosts = normalize(riderPayoutsAgg._sum.amount);
+    const netEarnings = grossEarnings - riderCosts;
+
     return NextResponse.json({
       stats: {
-        totalEarnings: normalize(earningsAgg._sum.platformFee),
+        totalEarnings: netEarnings,     // Net
+        grossEarnings: grossEarnings,   // Raw Escrow Fees
+        riderCosts: riderCosts,         // Rider Expenses
         totalHeld: normalize(depositsAgg._sum.amount),
         pendingActions: actionable.length
       },

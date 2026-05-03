@@ -7,29 +7,26 @@ import { sendNotification } from "@/lib/sendNotification";
 
 export async function GET(req) {
   try {
-    // Authenticate the request
     const { userId } = getAuth(req);
     
-    // Fetch data from PostgreSQL via Prisma
     const complaints = await prisma.complaint.findMany({
       include: {
-        filerUser: { select: { name: true, image: true, email: true } },
+        // ✅ FIXED: Fetch the entire user object to securely verify if they are a 'RIDER' or 'USER'
+        filerUser: true, 
         filerStore: { select: { name: true, logo: true } },
-        targetUser: { select: { name: true, email: true } },
+        targetUser: { select: { name: true, email: true } }, 
         targetStore: { select: { name: true, userId: true } },
         goal: { 
           include: { 
-            product: true,
-            user: { select: { name: true, id: true, email: true } }, // ✅ Ensure we grab the buyer's email for notifications later
+            product: { include: { store: true } }, 
+            user: { select: { name: true, id: true, email: true } },
             escrow: true 
           } 
         }
       },
-      // Sort so the newest complaints are at the top of the admin's queue
       orderBy: { createdAt: 'desc' }
     });
 
-    // Return the data payload
     return NextResponse.json({ complaints });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch complaints" }, { status: 500 });
@@ -39,24 +36,25 @@ export async function GET(req) {
 // PATCH: Resolve or Reject a Complaint
 export async function PATCH(req) {
   try {
-    // Parse the incoming JSON payload from the admin's form submission
-    const { complaintId, status, adminNotes, newPrice, processRefund, issueCoupon, couponValue, expiryDays } = await req.json();
+    const { 
+        complaintId, status, adminNotes, newPrice, 
+        processRefund, issueCoupon, couponValue, expiryDays,
+        creditWallet, creditAmount
+    } = await req.json();
 
-    // Fetch the existing complaint record to verify it exists and to grab necessary related IDs
     const complaint = await prisma.complaint.findUnique({
       where: { id: complaintId },
       include: { 
-        goal: { include: { user: true } }, // Ensure user email is available for notifications
+        goal: { include: { user: true, product: { include: { store: true } } } }, 
         filerStore: true, 
         filerUser: true,
-        targetUser: true
+        targetUser: true,
+        targetStore: true
       }
     });
 
-    // If the complaint ID is invalid, stop execution
     if (!complaint) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // --- State Variables for Post-Transaction Actions ---
     let successfulCoupon = null; 
     let pendingNotifications = []; 
 
@@ -68,16 +66,15 @@ export async function PATCH(req) {
       });
 
       let generatedCouponCode = null;
-      const validDays = Number(expiryDays) || 30; // Fallback to 30 days if no input was provided
+      const validDays = Number(expiryDays) || 30; 
 
+      // 1. COUPON LOGIC
       if (issueCoupon && status === "RESOLVED" && complaint.filerUserId) {
         generatedCouponCode = `SORRY-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
         
-        // Calculate exact expiration Date object
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + validDays);
 
-        // Create the coupon record in the database
         const newCoupon = await tx.coupon.create({
           data: {
             code: generatedCouponCode,
@@ -95,79 +92,136 @@ export async function PATCH(req) {
         successfulCoupon = newCoupon; 
       }
 
+      // 2. FULL WALLET REFUND LOGIC
       if (processRefund && status === "RESOLVED" && complaint.goal) {
         const refundAmount = Number(complaint.goal.saved);
 
         if (refundAmount > 0) {
-          // Mark the savings goal as dead/refunded
           await tx.goal.update({
             where: { id: complaint.goalId },
             data: { status: "REFUNDED" }
           });
 
-          // Update the User's Digital Wallet
           const wallet = await tx.wallet.upsert({
             where: { userId: complaint.goal.userId },
             create: { userId: complaint.goal.userId, balance: refundAmount },
             update: { balance: { increment: refundAmount } }
           });
 
-          // Create a Wallet Transaction Ledger entry 
           await tx.walletTransaction.create({
             data: {
               walletId: wallet.id,
               amount: refundAmount,
-              type: "REFUND_CREDIT", // Must match Prisma ENUM
+              type: "REFUND_CREDIT", 
               description: `Admin Resolution Refund for ${complaint.goal.product?.name || "Goal"}`,
               referenceId: complaint.goalId
             }
           });
 
-          // Update the Escrow Account to reflect that funds were drained
           const escrow = await tx.escrow.findUnique({ where: { goalId: complaint.goalId } });
           if (escrow) {
             await tx.escrow.update({
               where: { id: escrow.id },
-              // Note: Platform fee is 0 because the platform takes no cut on admin-forced full refunds
-              data: { status: "REFUNDED", netAmount: refundAmount, platformFee: 0, notes: "Refunded to User" }
+              data: { status: "REFUNDED", netAmount: refundAmount, platformFee: 0, notes: "Refunded to User Wallet" }
             });
           }
 
-          let message = `Your complaint was resolved. Rs ${refundAmount.toLocaleString()} has been added to your Wallet.`;
-          // If a coupon was also generated, append it to the same notification message
+          if (complaint.goal.product?.storeId) {
+             await tx.refund.create({
+                data: {
+                   userId: complaint.goal.userId,
+                   goalId: complaint.goalId,
+                   storeId: complaint.goal.product.storeId,
+                   amount: refundAmount,
+                   reason: `Dispute Penalty (Complaint: ${complaint.complaintId})`,
+                   status: "COMPLETED"
+                }
+             });
+
+             pendingNotifications.push({
+                userId: complaint.goal.product.store.userId,
+                email: complaint.goal.product.store.email,
+                type: "SYSTEM_ALERT",
+                title: "Store Penalty Applied ⚠️",
+                message: `A dispute (ID: ${complaint.complaintId}) was resolved in favor of the customer. Rs ${refundAmount.toLocaleString()} has been refunded and deducted from your store revenue.`
+             });
+          }
+
+          let message = `Your complaint (ID: ${complaint.complaintId}) was resolved. Rs ${refundAmount.toLocaleString()} has been credited to your Digital Wallet.`;
           if (generatedCouponCode) {
             message += ` As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days!`;
           }
 
           pendingNotifications.push({
             userId: complaint.goal.userId,
-            email: complaint.goal.user?.email, // Only available because we used include: { user: true } in the first query
+            email: complaint.goal.user?.email,
             type: "REFUND_ISSUED", 
-            title: "Refund Approved ",
+            title: "Refund Approved 💳",
             message: message
           });
         }
       } 
 
-      // Check if the ticket was specifically a PRICE_LOCK request, it was approved, and a new price was provided
-      else if (complaint.type === "PRICE_LOCK" && status === "RESOLVED" && newPrice) {
+      // 3. CUSTOM WALLET CREDIT / RIDER PAYOUT LOGIC
+      if (creditWallet && status === "RESOLVED" && Number(creditAmount) > 0 && complaint.filerUserId) {
+          const payoutAmount = Number(creditAmount);
+
+          const wallet = await tx.wallet.upsert({
+            where: { userId: complaint.filerUserId },
+            create: { userId: complaint.filerUserId, balance: payoutAmount },
+            update: { balance: { increment: payoutAmount } }
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              walletId: wallet.id,
+              amount: payoutAmount,
+              type: "REFUND_CREDIT", 
+              description: `Admin Resolution Payout (Complaint ID: ${complaint.complaintId})`,
+              referenceId: complaint.goalId || null
+            }
+          });
+
+          const riderProfile = await tx.riderProfile.findUnique({
+              where: { userId: complaint.filerUserId }
+          });
+          if (riderProfile) {
+              await tx.riderProfile.update({
+                  where: { id: riderProfile.id },
+                  data: { totalEarnings: { increment: payoutAmount } }
+              });
+          }
+
+          let message = `Rs ${payoutAmount.toLocaleString()} has been credited to your Digital Wallet for your complaint (ID: ${complaint.complaintId}).`;
+          if (generatedCouponCode && !processRefund) { 
+            message += ` As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days!`;
+          }
+
+          pendingNotifications.push({
+            userId: complaint.filerUserId,
+            email: complaint.filerUser?.email,
+            type: "REFUND_ISSUED", 
+            title: "Funds Credited 💳",
+            message: message
+          });
+      }
+
+      // 4. PRICE LOCK ADJUSTMENTS
+      if (complaint.type === "PRICE_LOCK" && status === "RESOLVED" && newPrice) {
         const adjustedPrice = Number(newPrice);
         
-        // Update the target goal amount in the database
         await tx.goal.update({ 
             where: { id: complaint.goalId }, 
             data: { targetAmount: adjustedPrice } 
         });
 
-        //  Queue Notification to the Store Owner (confirming their request succeeded)
         pendingNotifications.push({ 
           userId: complaint.filerStore.userId, 
           type: "SYSTEM_ALERT", 
           title: "Price Lock Updated", 
-          message: `New price: Rs ${adjustedPrice.toLocaleString()}` 
+          message: `New price: Rs ${adjustedPrice.toLocaleString()} (Complaint ID: ${complaint.complaintId})` 
         });
 
-        //  Queue Notification to the User (alerting them that their target savings goal has increased due to inflation/store request)
         pendingNotifications.push({ 
           userId: complaint.goal.userId, 
           email: complaint.goal.user?.email,
@@ -178,45 +232,41 @@ export async function PATCH(req) {
         });
       } 
       
+      // 5. GENERAL RESOLUTION ALERTS
       else {
-          // Identify who filed the complaint (could be a user or a store)
           const filerUserId = complaint.filerUserId || complaint.filerStore?.userId;
-          if (filerUserId) {
-              let message = `Your complaint "${complaint.title}" is now ${status}. Admin Note: ${adminNotes}`;
+          if (filerUserId && !processRefund && !creditWallet) {
+              let message = `Your complaint (ID: ${complaint.complaintId}) titled "${complaint.title}" has been ${status}. Admin Note: ${adminNotes}`;
               
-              // If a coupon was generated for a standard complaint, append it
               if (generatedCouponCode && status === "RESOLVED") {
-                 message = `Your complaint was resolved. As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days! Admin Note: ${adminNotes}`;
+                 message = `Your complaint (ID: ${complaint.complaintId}) was resolved. As an apology, here is a promo code: ${generatedCouponCode} (Discount: ${couponValue}). Valid for ${validDays} days! Admin Note: ${adminNotes}`;
               }
 
-              // Queue Notification to the person who filed the complaint letting them know a decision was reached
               pendingNotifications.push({ 
                 userId: filerUserId, 
                 email: complaint.filerUser?.email,
                 type: status === "RESOLVED" ? "COMPLAINT_RESOLVED" : "SYSTEM_ALERT", 
-                title: `Complaint ${status}`, 
+                title: status === "RESOLVED" ? "Complaint Resolved ✅" : "Complaint Rejected ❌", 
                 message: message 
               });
           }
 
-          // If the complaint was resolved (meaning the admin agreed with the filer), 
           if (status === "RESOLVED") {
              const warningTargetId = complaint.targetUserId || complaint.targetStore?.userId;
              if (warningTargetId) {
-                // Queue Notification to the reported party
                 pendingNotifications.push({ 
                   userId: warningTargetId, 
                   email: complaint.targetUser?.email,
                   type: "SYSTEM_ALERT", 
-                  title: " Official Admin Warning", 
-                  message: `A complaint against your account was reviewed. Admin Note: ${adminNotes}` 
+                  title: "Official Admin Warning ⚠️", 
+                  message: `A complaint (ID: ${complaint.complaintId}) against your account was reviewed. Admin Note: ${adminNotes}` 
                 });
              }
           }
       }
-    }); // <-- End of Prisma Transaction Block
+    }); 
     
-    // Send all queued notifications using a simple loop
+    // Execute Notifications
     for (const notif of pendingNotifications) {
       await sendNotification({
         ...notif, 
@@ -225,7 +275,6 @@ export async function PATCH(req) {
       });
     }
 
-    // Schedule coupon expiration in Inngest
     if (successfulCoupon) {
       await inngest.send({
         name: "app/coupon.expired",

@@ -1,97 +1,141 @@
-import prisma from "@/lib/prisma"; // Prisma client for DB operations
-import authSeller from "@/middlewares/authSeller"; // Middleware to check if user is a seller
-import { getAuth } from "@clerk/nextjs/server"; // Clerk server-side authentication
-import { NextResponse } from "next/server"; // Next.js response helper
+import prisma from "@/lib/prisma"; 
+import authSeller from "@/middlewares/authSeller"; 
+import { getAuth } from "@clerk/nextjs/server"; 
+import { NextResponse } from "next/server"; 
 import { sendNotification } from "@/lib/sendNotification"; 
 
-// ================== POST: Update Order Status ==================
+// POST: Update Order Status OR Assign Rider
 export async function POST(request) {
   try {
-    //  Get authenticated user
     const { userId } = getAuth(request);
-
-    //  Verify seller and get their storeId
     const storeId = await authSeller(userId);
+    if (!storeId) return NextResponse.json({ error: "Not authorized" }, { status: 401 });
 
-    //  Unauthorized if user is not a seller
-    if (!storeId) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+    const body = await request.json();
+
+    // ✅ NEW: Handle Store Assigning a Rider
+    if (body.action === 'ASSIGN_RIDER') {
+        const { deliveryId, riderId } = body;
+        
+        // Ensure delivery belongs to this store
+        const delivery = await prisma.delivery.findUnique({
+            where: { id: deliveryId },
+            include: { goal: { include: { product: true } } }
+        });
+
+        if (delivery?.goal?.product?.storeId !== storeId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+        // Create assignment request
+        await prisma.deliveryAssignment.create({
+            data: { deliveryId, riderId, status: 'PENDING' }
+        });
+
+        const riderProfile = await prisma.riderProfile.findUnique({ where: { id: riderId }, include: { user: true }});
+        
+        // Notify Rider
+        if (riderProfile?.user?.email) {
+            await sendNotification({
+                userId: riderProfile.userId,
+                email: riderProfile.user.email,
+                title: "New Delivery Request! 📦",
+                message: `A store has requested you for a delivery. Please check your Rider Dashboard to accept.`,
+                type: "SYSTEM_ALERT",
+                notifyInApp: true,
+                notifyEmail: true
+            });
+        }
+        return NextResponse.json({ success: true, message: "Rider assigned" });
     }
 
-    //  Extract orderId and new status from request body
-    const { orderId, status } = await request.json();
+    // Normal Status Update Logic
+    const { orderId, status } = body;
+    const orderToUpdate = await prisma.order.findFirst({ where: { id: orderId, storeId }, include: { user: true } });
+    if (!orderToUpdate) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-    //  Grab order and user details BEFORE updating so we can notify them
-    const orderToUpdate = await prisma.order.findFirst({
-        where: { id: orderId, storeId },
-        include: { user: true }
-    });
+    await prisma.order.updateMany({ where: { id: orderId, storeId }, data: { status } });
 
-    //  Update the order status, ensuring it belongs to this store
-    await prisma.order.updateMany({
-      where: { id: orderId, storeId }, // Only allow updating orders for this store
-      data: { status },
-    });
-
-    //  FIRE ENGINE: Notify customer of order status update
     if (orderToUpdate?.user) {
         await sendNotification({
             userId: orderToUpdate.userId,
             email: orderToUpdate.user.email,
-            title: "Order Status Updated ",
+            title: "Order Status Updated 📦",
             message: `The status of your recent order has been updated to: ${status.toUpperCase()}.`,
-            type: "DELIVERY_UPDATE", // Using a relevant type
+            type: "DELIVERY_UPDATE", 
             notifyInApp: true,
             notifyEmail: true
         });
     }
 
-    // Return success message
     return NextResponse.json({ message: "Order status updated successfully" });
 
   } catch (error) {
-    // Log errors for debugging
-    console.error(error);
-
-    // Return 400 Bad Request with error details
-    return NextResponse.json({ error: error.code || error.message }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ================== GET: Get All Orders for a Store ==================
+// GET: Get Unified Orders & Active Riders
 export async function GET(request) {
   try {
-    //  Get authenticated user
     const { userId } = getAuth(request);
-
-    //  Verify seller and get storeId
     const storeId = await authSeller(userId);
+    if (!storeId) return NextResponse.json({ error: "Not authorized" }, { status: 401 });
 
-    //  Unauthorized if not a seller
-    if (!storeId) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-    }
-
-    // Fetch all orders for this store
-    const orders = await prisma.order.findMany({
-      where: { storeId }, // Only orders for this store
-      include: {
-        user: true, // Include user info
-        address: true, // Include shipping/billing address
-        coupon: true, // Include applied coupon
-        orderItems: { include: { product: true } }, // Include products in the order
-      },
-      orderBy: { createdAt: "desc" }, // Most recent orders first
+    // ✅ NEW: Fetch all approved riders so the store can pick one
+    const availableRiders = await prisma.riderProfile.findMany({
+        where: { status: 'APPROVED' },
+        include: { user: true }
     });
 
-    //  Return the list of orders
-    return NextResponse.json({ orders });
+    const standardOrders = await prisma.order.findMany({
+      where: { storeId },
+      include: { user: true, priceLocks: { include: { product: true } } },
+    });
+
+    const goalDeliveries = await prisma.delivery.findMany({
+      where: { goal: { product: { storeId: storeId } } },
+      include: {
+        goal: { include: { user: true, product: true } },
+        rider: { include: { user: true } },
+        assignments: { orderBy: { createdAt: 'desc' }, take: 1 } // Check if a request is pending
+      }
+    });
+
+    const unifiedOrders = [
+        ...standardOrders.map(order => ({
+            id: order.id, type: "STANDARD", 
+            trackingNumber: `ORD-${order.id.substring(0, 6).toUpperCase()}`,
+            customerName: order.user?.name || "Guest",
+            productName: order.priceLocks?.[0]?.product?.name || "Standard Order Item",
+            date: order.createdAt, status: order.status,
+            address: order.shippingAddress || order.address || "No address provided",
+            riderName: null, raw: order 
+        })),
+        ...goalDeliveries.map(delivery => {
+            const latestAssignment = delivery.assignments?.[0];
+            const isWaitingForRider = latestAssignment && latestAssignment.status === 'PENDING';
+            
+            return {
+                id: delivery.id, type: "DELIVERY", 
+                trackingNumber: delivery.trackingNumber,
+                customerName: delivery.goal?.user?.name || "Unknown",
+                productName: delivery.goal?.product?.name || "Unknown",
+                date: delivery.createdAt, status: delivery.status,
+                address: delivery.shippingAddress,
+                riderName: delivery.rider?.user?.name || null,
+                isWaitingForRider: isWaitingForRider, // ✅ Tell UI if store is waiting
+                raw: delivery 
+            }
+        })
+    ];
+
+    unifiedOrders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const sanitizedOrders = JSON.parse(JSON.stringify(unifiedOrders, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+    const sanitizedRiders = JSON.parse(JSON.stringify(availableRiders, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+
+    return NextResponse.json({ orders: sanitizedOrders, riders: sanitizedRiders });
 
   } catch (error) {
-    // Log errors for debugging
-    console.error(error);
-
-    // Return 400 Bad Request with error details
-    return NextResponse.json({ error: error.code || error.message }, { status: 400 });
+    return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }

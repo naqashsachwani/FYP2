@@ -8,11 +8,9 @@ export async function GET(req) {
     const { userId } = getAuth(req);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // 1. Get the Store ID linked to this user
     const store = await prisma.store.findUnique({ where: { userId } });
     if (!store) return NextResponse.json({ error: "Store not found" }, { status: 404 });
 
-    // 2. Fetch complaints filed by this store
     const requests = await prisma.complaint.findMany({
       where: { filerStoreId: store.id },
       include: {
@@ -28,15 +26,18 @@ export async function GET(req) {
       orderBy: { createdAt: 'desc' }
     });
 
-    // 3. Fetch active goals for the dropdown (so they can request price lock changes)
+    // ✅ FETCH IMAGES: Ensure product images are fetched for the dropdown
     const activeGoals = await prisma.goal.findMany({
       where: { 
         product: { storeId: store.id },
-        status: "ACTIVE" 
+        status: { in: ["ACTIVE", "COMPLETED"] } 
       },
       include: { 
-        product: { select: { name: true } },
-        user: { select: { name: true } }
+        product: { select: { name: true, images: true } }, // Images added here
+        user: { select: { id: true, name: true } },
+        delivery: {
+           include: { rider: { include: { user: { select: { id: true, name: true } } } } }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -62,21 +63,18 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Create the request/complaint
     const newRequest = await prisma.complaint.create({
       data: {
         title,
         description,
         type,
         filerStoreId: store.id,
-        // If it's a buyer issue or price lock, link the user/goal
-        targetUserId: targetUserId || null,
+        targetUserId: targetUserId || null, 
         goalId: goalId || null,
         status: "OPEN"
       }
     });
 
-    // FIRE ENGINE: Acknowledge the store owner's request
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({

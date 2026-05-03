@@ -9,7 +9,8 @@ import {
   Wallet, 
   LogOut,
   Users,
-  MessageSquareWarning // ✅ Added Icon for Complaints
+  MessageSquareWarning,
+  Bike // ✅ Added Icon for Riders
 } from "lucide-react"
 
 import Image from "next/image"
@@ -24,10 +25,11 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Dashboard', href: '/admin', icon: LayoutGrid },
     { name: 'Users', href: '/admin/users', icon: Users }, 
     { name: 'Stores', href: '/admin/stores', icon: StoreIcon },
+    // ✅ ADDED: Riders Management page link
+    { name: 'Riders', href: '/admin/riders', icon: Bike }, 
     { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
     { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
     { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, 
-    // ✅ ADDED: Requests & Complaints
     { name: 'Requests & Complaints', href: '/admin/complaints', icon: MessageSquareWarning }, 
   ]
 

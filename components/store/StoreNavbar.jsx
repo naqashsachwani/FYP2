@@ -1,54 +1,49 @@
-'use client' // Marks this as a Client Component (needed for hooks & Clerk)
+'use client' 
 
-// Clerk authentication hooks & components
 import { useUser, useClerk } from "@clerk/nextjs" 
-
-// React hooks
 import { useState, useEffect } from "react"
-
-// Next.js routing
 import Link from "next/link"
-
-// Icons
-import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, Trash2, ChevronLeft, ChevronRight, X } from "lucide-react" 
+import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, Trash2, ChevronLeft, ChevronRight, X, Truck } from "lucide-react" 
 import toast from "react-hot-toast"
 
-// Store Navbar Component
 const StoreNavbar = ({ onMenuClick }) => {
 
-  // Get current logged-in user and Clerk functions
   const { user } = useUser()
   const { openUserProfile, signOut } = useClerk()
   
-  // Custom Dropdown States
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   
-  // State for the Admin Button
   const [showAdminBtn, setShowAdminBtn] = useState(false)
+  const [showRiderBtn, setShowRiderBtn] = useState(false) // ✅ Added Rider State
 
-  // Notification States
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifPage, setNotifPage] = useState(1)
   const NOTIFS_PER_PAGE = 5
   const [selectedNotif, setSelectedNotif] = useState(null)
 
-  // Hydration safety
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Fetch admin role and notifications (with polling)
   useEffect(() => {
     let intervalId;
 
     const checkRoles = async () => {
       try {
+        // Check Admin
         const adminRes = await fetch('/api/admin/is-admin')
         const adminData = await adminRes.json()
         setShowAdminBtn(adminData.isAdmin === true)
+
+        // ✅ Check Rider (Used for safe fallback)
+        const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
+        if (riderRes && riderRes.ok) {
+            const riderData = await riderRes.json();
+            setShowRiderBtn(riderData.isRider === true);
+        }
       } catch (error) {
         console.error("Role verification failed", error)
       }
@@ -70,7 +65,6 @@ const StoreNavbar = ({ onMenuClick }) => {
     if (mounted && user) {
       checkRoles()
       fetchNotifications()
-      // Auto-refresh every 30 seconds
       intervalId = setInterval(fetchNotifications, 30000);
     }
 
@@ -79,7 +73,6 @@ const StoreNavbar = ({ onMenuClick }) => {
     };
   }, [mounted, user])
 
-  // Pagination Logic
   const totalNotifPages = Math.max(1, Math.ceil(notifications.length / NOTIFS_PER_PAGE));
   const currentNotifications = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
 
@@ -87,7 +80,6 @@ const StoreNavbar = ({ onMenuClick }) => {
       if (notifPage > totalNotifPages) setNotifPage(totalNotifPages);
   }, [notifications.length, notifPage, totalNotifPages]);
 
-  // Notification Handlers
   const markAsRead = async (id, e = null) => {
     if (e) e.stopPropagation();
     try {
@@ -122,13 +114,10 @@ const StoreNavbar = ({ onMenuClick }) => {
 
   return (
     <>
-      {/* Sticky top navigation bar */}
       <header className="w-full bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 sm:px-8 lg:px-12 py-3">
 
-          {/* ================= LEFT SECTION ================= */}
           <div className="flex items-center gap-4">
-            {/* Mobile Sidebar Toggle */}
             <button
               onClick={onMenuClick}
               className="sm:hidden p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
@@ -136,26 +125,21 @@ const StoreNavbar = ({ onMenuClick }) => {
               <Menu size={22} />
             </button>
 
-            {/* BRAND / LOGO */}
             <Link
               href="/" 
               className="relative text-3xl sm:text-4xl font-extrabold text-gray-800 select-none"
             >
-              <span className="text-blue-600">Dream</span>
-              Saver
+              <span className="text-blue-600">Dream</span>Saver
               <span className="text-blue-600 text-5xl leading-0">.</span>
 
-              {/* Store badge */}
               <span className="absolute text-[10px] font-semibold -top-1 -right-10 px-2.5 py-[1px] rounded-full flex items-center gap-1 text-white bg-blue-500 shadow-sm">
                 Store
               </span>
             </Link>
           </div>
 
-          {/* ================= RIGHT SECTION ================= */}
           <div className="flex items-center gap-2 sm:gap-4">
 
-            {/* Greeting (hidden on mobile) */}
             <p className="hidden sm:block text-gray-700 text-sm font-medium mr-2">
               Hi, <span className="text-blue-600">{user?.firstName}</span>
             </p>
@@ -164,7 +148,6 @@ const StoreNavbar = ({ onMenuClick }) => {
               <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
             ) : (
               <>
-                {/* NOTIFICATION BELL */}
                 {user && (
                   <div className="relative">
                     <button
@@ -237,7 +220,6 @@ const StoreNavbar = ({ onMenuClick }) => {
                   </div>
                 )}
 
-                {/* USER PROFILE DROPDOWN */}
                 <div className="relative">
                   <button
                     onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
@@ -248,13 +230,10 @@ const StoreNavbar = ({ onMenuClick }) => {
 
                   {isProfileOpen && (
                     <>
-                      {/* Invisible overlay to close dropdown when clicking anywhere else */}
                       <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
 
-                      {/* Dropdown Menu Container */}
                       <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
                         
-                        {/* User Info Header */}
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1">
                           <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                           <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -268,7 +247,6 @@ const StoreNavbar = ({ onMenuClick }) => {
                             <Settings size={16} className="text-slate-500" /> Manage Account
                           </button>
 
-                          {/* SECURE ADMIN LINK */}
                           {showAdminBtn && (
                             <Link
                               href="/admin"
@@ -279,7 +257,17 @@ const StoreNavbar = ({ onMenuClick }) => {
                             </Link>
                           )}
 
-                          {/* TRUE LINK FOR HOMEPAGE */}
+                          {/* ✅ NEW: Rider Dashboard Link (Visible to Admins as requested, and Riders) */}
+                          {(showAdminBtn || showRiderBtn) && (
+                            <Link
+                              href="/rider/dashboard"
+                              onClick={() => setIsProfileOpen(false)}
+                              className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                            >
+                              <Truck size={16} className="text-slate-500" /> Rider Dashboard
+                            </Link>
+                          )}
+
                           <Link
                             href="/"
                             onClick={() => setIsProfileOpen(false)}
@@ -289,7 +277,6 @@ const StoreNavbar = ({ onMenuClick }) => {
                           </Link>
                         </div>
 
-                        {/* Sign Out Section */}
                         <div className="border-t border-slate-100 mt-2 pt-2 px-2">
                           <button
                             onClick={() => signOut({ redirectUrl: '/' })}
@@ -308,7 +295,6 @@ const StoreNavbar = ({ onMenuClick }) => {
         </div>
       </header>
 
-      {/* ✅ NOTIFICATION VIEW MODAL */}
       {selectedNotif && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -327,7 +313,6 @@ const StoreNavbar = ({ onMenuClick }) => {
               </p>
               
               <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
-                 {/* Falls back to standard message if HTML is not provided in DB */}
               </div>
             </div>
 

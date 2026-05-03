@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, Package, Truck, CheckCircle, Calendar, MapPin, Store, AlertCircle } from 'lucide-react';
+import { Search, Loader2, Package, Truck, CheckCircle, Calendar, MapPin, Store, AlertCircle, ShieldCheck } from 'lucide-react';
 
 export default function PublicTrackingPage() {
   const [trackingId, setTrackingId] = useState("");
@@ -20,11 +20,7 @@ export default function PublicTrackingPage() {
     try {
       const res = await fetch(`/api/delivery/track/${trackingId}`);
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to find tracking information.");
-      }
-
+      if (!res.ok) throw new Error(data.error || "Failed to find tracking information.");
       setDelivery(data);
     } catch (err) {
       setError(err.message);
@@ -35,13 +31,11 @@ export default function PublicTrackingPage() {
 
   const getStatusDetails = (status) => {
     switch (status) {
-      case 'DELIVERED':
-        return { color: 'bg-green-50 border-green-200 text-green-700', icon: <CheckCircle size={24} /> };
+      case 'DELIVERED': return { color: 'bg-green-50 border-green-200 text-green-700', icon: <CheckCircle size={24} /> };
       case 'IN_TRANSIT':
-      case 'DISPATCHED':
-        return { color: 'bg-blue-50 border-blue-200 text-blue-700', icon: <Truck size={24} /> };
-      default:
-        return { color: 'bg-gray-50 border-gray-200 text-gray-700', icon: <Package size={24} /> };
+      case 'PICKED_UP': return { color: 'bg-blue-50 border-blue-200 text-blue-700', icon: <Truck size={24} /> };
+      case 'FAILED': return { color: 'bg-red-50 border-red-200 text-red-700', icon: <AlertCircle size={24} /> };
+      default: return { color: 'bg-gray-50 border-gray-200 text-gray-700', icon: <Package size={24} /> };
     }
   };
 
@@ -49,7 +43,6 @@ export default function PublicTrackingPage() {
     <div className="min-h-[85vh] bg-gray-50 py-12 px-4 sm:px-6">
       <div className="max-w-2xl mx-auto space-y-8">
         
-        {/* Header & Search Bar */}
         <div className="text-center space-y-4">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900">Track Your Order</h1>
           <p className="text-gray-500">Enter your tracking number below to see the current status of your delivery.</p>
@@ -58,43 +51,45 @@ export default function PublicTrackingPage() {
             <div className="relative flex items-center">
               <Search className="absolute left-4 text-gray-400" size={20} />
               <input
-                type="text"
-                placeholder="e.g., TRK-123456"
-                value={trackingId}
+                type="text" placeholder="e.g., TRK-123456" value={trackingId}
                 onChange={(e) => setTrackingId(e.target.value.toUpperCase())}
                 className="w-full pl-12 pr-32 py-4 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900 font-medium uppercase transition-all"
               />
-              <button
-                type="submit"
-                disabled={loading || !trackingId.trim()}
-                className="absolute right-2 px-6 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition disabled:opacity-50"
-              >
+              <button type="submit" disabled={loading || !trackingId.trim()} className="absolute right-2 px-6 py-2 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition disabled:opacity-50">
                 {loading ? <Loader2 size={20} className="animate-spin" /> : "Track"}
               </button>
             </div>
           </form>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-100 p-4 rounded-2xl flex items-center gap-3 text-red-700 animate-in fade-in">
-            <AlertCircle size={20} />
-            <p className="font-medium">{error}</p>
+            <AlertCircle size={20} /> <p className="font-medium">{error}</p>
           </div>
         )}
 
-        {/* Tracking Results Card */}
         {delivery && !loading && (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 animate-in slide-in-from-bottom-4">
-            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-6">
-              <div>
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 animate-in slide-in-from-bottom-4 space-y-6">
+            
+            <div className="border-b border-gray-100 pb-4">
                 <p className="text-sm font-bold text-gray-400 tracking-wider uppercase mb-1">Tracking Number</p>
                 <p className="text-xl font-mono font-bold text-gray-900">{delivery.trackingNumber}</p>
-              </div>
             </div>
 
-            {/* Status Banner */}
-            <div className={`p-5 rounded-2xl border mb-8 flex items-center gap-4 ${getStatusDetails(delivery.status).color}`}>
+            {/* ✅ NEW: Customer Delivery OTP Box */}
+            {(delivery.status === 'PICKED_UP' || delivery.status === 'IN_TRANSIT') && delivery.deliveryCode && (
+              <div className="bg-slate-900 p-6 rounded-2xl text-center shadow-lg border border-slate-700">
+                <div className="flex items-center justify-center gap-2 text-green-400 mb-2">
+                  <ShieldCheck size={20} /> <span className="font-bold text-sm uppercase tracking-widest">Security OTP</span>
+                </div>
+                <p className="text-slate-300 text-sm mb-4">Give this code to your rider when they arrive.</p>
+                <div className="text-4xl font-mono tracking-[0.25em] font-extrabold text-white bg-slate-800 py-3 rounded-xl border border-slate-700">
+                  {delivery.deliveryCode}
+                </div>
+              </div>
+            )}
+
+            <div className={`p-5 rounded-2xl border flex items-center gap-4 ${getStatusDetails(delivery.status).color}`}>
               <div className="p-2 bg-white/50 rounded-xl shrink-0">
                 {getStatusDetails(delivery.status).icon}
               </div>
@@ -110,8 +105,19 @@ export default function PublicTrackingPage() {
               </div>
             </div>
 
-            {/* Product & Store Info */}
-            <div className="flex items-start gap-5 mb-8">
+            {/* ✅ NEW: Rider Details */}
+            {delivery.rider && (
+              <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-center gap-4">
+                <img src={delivery.rider.user?.image || "/default-avatar.png"} alt="Rider" className="w-12 h-12 rounded-full border-2 border-white shadow-sm" />
+                <div>
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Assigned Rider</p>
+                  <p className="font-bold text-blue-900">{delivery.rider.user?.name}</p>
+                  <p className="text-xs font-mono text-blue-700">{delivery.rider.vehicleType} - {delivery.rider.vehiclePlate}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-start gap-5">
                {delivery.goal?.product?.images?.[0] ? (
                  <img src={delivery.goal.product.images[0]} alt="Product" className="w-20 h-20 rounded-xl bg-gray-50 object-cover border border-gray-100 shrink-0" />
                ) : (
@@ -127,9 +133,8 @@ export default function PublicTrackingPage() {
                </div>
             </div>
 
-            {/* Destination */}
             <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-               <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Shipping Destination</h4>
+               <h4 className="text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Destination</h4>
                <div className="flex gap-3 text-sm text-gray-700 font-medium">
                  <MapPin size={16} className="mt-0.5 text-gray-400 shrink-0" /> 
                  <span className="leading-relaxed">{delivery.shippingAddress}</span>

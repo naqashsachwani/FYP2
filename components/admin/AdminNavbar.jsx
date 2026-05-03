@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useUser, useClerk } from "@clerk/nextjs" 
-import { CrownIcon, MenuIcon, XIcon, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight } from "lucide-react" 
+import { CrownIcon, MenuIcon, XIcon, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react" 
 import toast from "react-hot-toast"
 
 export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
@@ -12,12 +12,11 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
   
   const [mounted, setMounted] = useState(false)
   
-  // Dropdown States
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [showSellerBtn, setShowSellerBtn] = useState(false)
+  const [showRiderBtn, setShowRiderBtn] = useState(false) // ✅ Added Rider State
 
-  // Notification States
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifPage, setNotifPage] = useState(1)
@@ -28,7 +27,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
     setMounted(true)
   }, [])
 
-  // Fetch roles and notifications (with polling)
   useEffect(() => {
     let intervalId;
 
@@ -37,6 +35,13 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
         const sellerRes = await fetch('/api/store/is-seller');
         const sellerData = await sellerRes.json();
         setShowSellerBtn(!!sellerData.isSeller);
+
+        // ✅ Check Rider Status
+        const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
+        if (riderRes && riderRes.ok) {
+           const riderData = await riderRes.json();
+           setShowRiderBtn(riderData.isRider === true);
+        }
       } catch (error) {
         console.error("Role verification failed", error);
       }
@@ -58,7 +63,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
     if (mounted && user) {
       checkRoles();
       fetchNotifications();
-      // Auto-refresh every 30 seconds
       intervalId = setInterval(fetchNotifications, 30000);
     }
 
@@ -67,7 +71,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
     };
   }, [mounted, user]);
 
-  // Pagination Logic
   const totalNotifPages = Math.max(1, Math.ceil(notifications.length / NOTIFS_PER_PAGE));
   const currentNotifications = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
 
@@ -75,7 +78,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
       if (notifPage > totalNotifPages) setNotifPage(totalNotifPages);
   }, [notifications.length, notifPage, totalNotifPages]);
 
-  // Notification Handlers
   const markAsRead = async (id, e = null) => {
     if (e) e.stopPropagation();
     try {
@@ -112,9 +114,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
     <>
       <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm sticky top-0 z-50">
         
-        {/* ================= LEFT SECTION ================= */}
         <div className="flex items-center gap-3">
-          {/* MOBILE SIDEBAR TOGGLE */}
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
@@ -123,7 +123,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
             {isSidebarOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
           </button>
 
-          {/* LOGO + ADMIN BADGE */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <span className="text-2xl lg:text-3xl font-bold text-slate-800 group-hover:scale-105 transition-transform duration-200 ease-in-out inline-block">
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Dream</span>Saver
@@ -134,14 +133,12 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
           </Link>
         </div>
 
-        {/* ================= RIGHT SECTION ================= */}
         <div className="flex items-center gap-2 sm:gap-4">
           
           {!mounted ? (
             <div className="w-32 h-10 bg-slate-100 animate-pulse rounded-full hidden sm:block"></div>
           ) : (
             <>
-              {/* NOTIFICATION BELL */}
               {user && (
                 <div className="relative">
                   <button
@@ -193,7 +190,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                                 <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
                                 <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
                                   {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                               </span>
+                                </span>
                               </div>
                             ))
                           )}
@@ -214,7 +211,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                 </div>
               )}
 
-              {/* USER PROFILE DROPDOWN */}
               <div className="relative">
                 <button 
                   onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
@@ -252,6 +248,11 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                             <Store size={16} className="text-slate-500" /> Store Dashboard
                           </Link>
                         )}
+
+                        {/* ✅ NEW: Rider Dashboard Link. (Included in AdminNavbar because they are Admin, or Rider fallback) */}
+                        <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                           <Truck size={16} className="text-slate-500" /> Rider Dashboard
+                        </Link>
                       </div>
 
                       <div className="border-t border-slate-100 mt-2 pt-2 px-2">
@@ -268,7 +269,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
         </div>
       </header>
 
-      {/* ✅ NOTIFICATION VIEW MODAL */}
       {selectedNotif && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -287,7 +287,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
               </p>
               
               <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
-                 {/* Falls back to standard message if HTML is not provided in DB */}
               </div>
             </div>
 

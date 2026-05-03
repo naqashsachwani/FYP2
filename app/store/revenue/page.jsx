@@ -4,17 +4,14 @@ import { useEffect, useState } from "react";
 import { 
   Loader2, TrendingUp, DollarSign, Clock, AlertCircle, PackageCheck, 
   Search, Copy, X, CreditCard, Calendar, CheckCircle, ShieldAlert,
-  ChevronLeft, ChevronRight, RefreshCw 
+  ChevronLeft, ChevronRight, RefreshCw, TrendingDown 
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-
-// A popup modal that fetches and displays deep details for a specific transaction/goal.
 const GoalDetailsModal = ({ goalId, onClose }) => {
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch the specific goal's details whenever the goalId prop changes
   useEffect(() => {
     if (!goalId) return;
     const fetchDetails = async () => {
@@ -32,9 +29,8 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     fetchDetails();
   }, [goalId]);
 
-  if (!goalId) return null; // Guard clause
+  if (!goalId) return null; 
 
-  // Loading state: Shows a centered spinner with a blurred backdrop
   if (loading) {
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -45,30 +41,23 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     );
   }
 
-  if (!goal) return null; // Fallback if no goal data was returned
+  if (!goal) return null; 
 
-  // --- Financial Calculations ---
   const isRefunded = goal.status === 'REFUNDED' || goal.status === 'CANCELLED';
   const netShare = isRefunded ? goal.saved * 0.10 : goal.saved * 0.95;
-  // Contextual label explaining the math to the user
   const shareLabel = isRefunded ? "*10% Cancellation Share" : "*After 5% Platform Fee";
 
-  // Main Modal Render
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      {/* Modal Container */}
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         
-        {/* Modal Header */}
         <div className="flex justify-between items-center p-6 border-b bg-gray-50">
           <h2 className="text-xl font-bold text-gray-800">Transaction Details</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X size={20} /></button>
         </div>
         
-        {/* Modal Scrollable Body */}
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             
-            {/* Product & Status Info Card */}
             <div className="flex gap-4 items-start p-4 bg-gray-50 rounded-xl border border-gray-100">
                 <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0 border">
                 <img src={goal.product?.images?.[0] || "/placeholder.png"} className="w-full h-full object-cover" />
@@ -86,7 +75,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                 </div>
             </div>
 
-            {/* Financial Breakdown Grid */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 border rounded-xl bg-white shadow-sm">
                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Total Goal Amount</p>
@@ -99,7 +87,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                 </div>
             </div>
 
-            {/* Deposit History Table */}
             <div className="p-4 border rounded-xl bg-gray-50/50">
                 <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-3"><CreditCard size={16} /> Deposit History</h4>
                 <div className="flex justify-between items-center mb-4 px-1">
@@ -122,7 +109,6 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
                             <td className="p-3 text-right font-mono font-bold text-gray-900">Rs {d.amount.toLocaleString()}</td>
                             </tr>
                         ))}
-                        {/* Fallback if no deposits exist */}
                         {(!goal.deposits || goal.deposits.length === 0) && <tr><td colSpan="3" className="p-3 text-center text-gray-400 italic">No deposits recorded</td></tr>}
                     </tbody>
                 </table>
@@ -135,17 +121,14 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
 };
 
 export default function StoreRevenuePage() {
-  // --- Core State ---
-  const [data, setData] = useState(null); // Stores the full payload from the API
-  const [loading, setLoading] = useState(true); // Full-page loading spinner state
-  const [searchTerm, setSearchTerm] = useState(""); // Text typed into the search bar
-  const [selectedGoalId, setSelectedGoalId] = useState(null); // ID of the goal selected for the modal
+  const [data, setData] = useState(null); 
+  const [loading, setLoading] = useState(true); 
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const [selectedGoalId, setSelectedGoalId] = useState(null); 
   
-  // --- Pagination State ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // --- Data Fetching ---
   const fetchRevenue = async () => {
     setLoading(true);
     try {
@@ -161,30 +144,23 @@ export default function StoreRevenuePage() {
     }
   };
 
-  // Fetch data on initial mount
   useEffect(() => { fetchRevenue(); }, []);
-  
-  // Reset pagination to page 1 whenever the user types a new search term
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
-  // Utility function to copy text to clipboard and prevent the row click event from firing
   const copyToClipboard = (e, text) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     toast.success("ID Copied");
   };
 
-  // Filters the transactions array strictly on the client side
   const filteredTransactions = data?.transactions?.filter((item) => {
-    if (!searchTerm) return true; // If no search term, return all items
+    if (!searchTerm) return true; 
     const term = searchTerm.toLowerCase();
     
-    // Pre-format fields to strings for searching
     const dateStr = new Date(item.date).toLocaleDateString().toLowerCase();
     const amountStr = item.totalAmount.toString();
     const netStr = item.netPayout.toString();
     
-    // Combine all relevant fields into one giant string for easier text matching
     let searchableText = `
         ${item.goalId} 
         ${item.productName} 
@@ -195,37 +171,28 @@ export default function StoreRevenuePage() {
         ${netStr}
     `.toLowerCase();
 
-    // FIX: Manually inject "refund split" into the search string if the status is COMPENSATED.
-    if (item.status === 'COMPENSATED') {
-        searchableText += " refund split"; 
-    }
+    if (item.status === 'COMPENSATED') searchableText += " refund split"; 
+    if (item.status === 'PENALTY') searchableText += " deduction dispute penalty";
 
-    // Return true if the giant string contains the user's search term
     return searchableText.includes(term);
   }) || [];
 
-  // --- Pagination Math ---
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  // Slice the filtered array to only show the items for the current page
   const currentItems = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Pagination Handlers
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(prev => prev + 1); };
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(prev => prev - 1); };
 
-  // Render Guard: Wait until initial data is loaded
   if (loading && !data) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* Mount the modal conditionally if a goal is selected */}
       {selectedGoalId && <GoalDetailsModal goalId={selectedGoalId} onClose={() => setSelectedGoalId(null)} />}
 
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* HEADER & SEARCH TOOLBAR */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Revenue Dashboard</h1>
@@ -233,7 +200,6 @@ export default function StoreRevenuePage() {
           </div>
           
           <div className="flex gap-2 w-full md:w-auto">
-            {/* Search Input */}
             <div className="relative flex-1 md:w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input 
@@ -244,7 +210,6 @@ export default function StoreRevenuePage() {
                 className="pl-9 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
                 />
             </div>
-            {/* Manual Data Refresh Button */}
             <button 
                 onClick={fetchRevenue} 
                 className="p-2 bg-white border rounded-lg hover:bg-gray-50 shadow-sm transition-colors text-gray-600"
@@ -255,107 +220,108 @@ export default function StoreRevenuePage() {
           </div>
         </div>
 
-        {/* TOP STATS CARDS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
-              <div><p className="text-sm font-medium text-gray-500">Total Net Earnings</p><h3 className="text-3xl font-bold text-green-600 mt-2">Rs {data?.stats?.totalRevenue?.toLocaleString()}</h3></div>
-              <div className="p-3 bg-green-50 rounded-lg text-green-600"><TrendingUp size={24} /></div>
+              <div><p className="text-sm font-medium text-gray-500">Net Earnings</p><h3 className="text-2xl font-bold text-green-600 mt-1">Rs {data?.stats?.totalRevenue?.toLocaleString()}</h3></div>
+              <div className="p-2.5 bg-green-50 rounded-lg text-green-600"><TrendingUp size={20} /></div>
             </div>
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-green-50 rounded-full opacity-50 z-0"></div>
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-green-50 rounded-full opacity-50 z-0"></div>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
-              <div><p className="text-sm font-medium text-gray-500">Pending Payout (Est.)</p><h3 className="text-3xl font-bold text-orange-600 mt-2">Rs {data?.stats?.pendingPayouts?.toLocaleString()}</h3></div>
-              <div className="p-3 bg-orange-50 rounded-lg text-orange-600"><Clock size={24} /></div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
-            <div className="flex justify-between items-start relative z-10">
-              <div><p className="text-sm font-medium text-gray-500">Platform Fees</p><h3 className="text-3xl font-bold text-gray-800 mt-2">Rs {data?.stats?.platformFees?.toLocaleString()}</h3></div>
-              <div className="p-3 bg-gray-100 rounded-lg text-gray-600"><DollarSign size={24} /></div>
+              <div><p className="text-sm font-medium text-gray-500">Pending (Est.)</p><h3 className="text-2xl font-bold text-orange-600 mt-1">Rs {data?.stats?.pendingPayouts?.toLocaleString()}</h3></div>
+              <div className="p-2.5 bg-orange-50 rounded-lg text-orange-600"><Clock size={20} /></div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
             <div className="flex justify-between items-start relative z-10">
-              <div><p className="text-sm font-medium text-gray-500">Total Payouts</p><h3 className="text-3xl font-bold text-indigo-600 mt-2">{data?.stats?.completedOrders}</h3></div>
-              <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600"><PackageCheck size={24} /></div>
+              <div><p className="text-sm font-medium text-gray-500">Platform Fees</p><h3 className="text-2xl font-bold text-gray-800 mt-1">Rs {data?.stats?.platformFees?.toLocaleString()}</h3></div>
+              <div className="p-2.5 bg-gray-100 rounded-lg text-gray-600"><DollarSign size={20} /></div>
+            </div>
+          </div>
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div className="flex justify-between items-start relative z-10">
+              <div><p className="text-sm font-medium text-gray-500">Dispute Penalties</p><h3 className="text-2xl font-bold text-red-600 mt-1">Rs {data?.stats?.totalDeductions?.toLocaleString()}</h3></div>
+              <div className="p-2.5 bg-red-50 rounded-lg text-red-600"><TrendingDown size={20} /></div>
+            </div>
+          </div>
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
+            <div className="flex justify-between items-start relative z-10">
+              <div><p className="text-sm font-medium text-gray-500">Total Payouts</p><h3 className="text-2xl font-bold text-indigo-600 mt-1">{data?.stats?.completedOrders}</h3></div>
+              <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600"><PackageCheck size={20} /></div>
             </div>
           </div>
         </div>
 
-        {/* REVENUE TABLE */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           
-          {/* Table Header Row */}
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h2 className="text-lg font-bold text-gray-800">Payout History</h2>
+            <h2 className="text-lg font-bold text-gray-800">Payout & Ledger History</h2>
             <span className="text-xs text-gray-500">{filteredTransactions.length} records found</span>
           </div>
           
-          {/* Responsive Table Container */}
           <div className="overflow-x-auto min-h-[300px]">
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-500 uppercase font-medium">
                 <tr>
                   <th className="px-6 py-4">Goal ID</th>
-                  <th className="px-6 py-4">Date Released</th>
-                  <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4">Total Amount</th>
-                  <th className="px-6 py-4">Fee / Cut</th>
-                  <th className="px-6 py-4">Net Earning</th>
+                  <th className="px-6 py-4">Date Logged</th>
+                  <th className="px-6 py-4">Product / Reason</th>
+                  <th className="px-6 py-4">Base Amount</th>
+                  <th className="px-6 py-4">Fee / Adjustment</th>
+                  <th className="px-6 py-4">Net Impact</th>
                   <th className="px-6 py-4">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {/* Fallback UI if search returns no results */}
                 {currentItems.length === 0 ? (
-                    <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-400 flex flex-col items-center gap-2"><AlertCircle size={24} /><span>No payouts found.</span></td></tr>
+                    <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-400 flex flex-col items-center gap-2"><AlertCircle size={24} /><span>No records found.</span></td></tr>
                 ) : (
                     currentItems.map((item) => {
-                      // Check if the transaction represents a cancelled order where the store gets a 10% penalty fee
                       const isCompensated = item.status === "COMPENSATED";
-                      // Calculate the correct net display amount
+                      const isPenalty = item.status === "PENALTY"; 
                       const displayNet = isCompensated ? (item.totalAmount * 0.10) : item.netPayout;
                       
                       return (
-                        <tr key={item.id} onClick={() => setSelectedGoalId(item.goalId)} className="hover:bg-gray-50 cursor-pointer transition-colors group">
-                          {/* Column: Goal ID with Copy button */}
+                        <tr key={item.id} onClick={() => setSelectedGoalId(item.goalId)} className={`cursor-pointer transition-colors group ${isPenalty ? 'bg-red-50/30 hover:bg-red-50/60' : 'hover:bg-gray-50'}`}>
                           <td className="px-6 py-4 font-mono text-xs text-blue-600 group-hover:underline">
                               <div className="flex items-center gap-1">
                                   {item.goalId.slice(0, 8)}...
                                   <button onClick={(e) => copyToClipboard(e, item.goalId)} className="p-1 hover:bg-blue-100 rounded"><Copy size={12} /></button>
                               </div>
                           </td>
-                          {/* Column: Date & Time */}
                           <td className="px-6 py-4 text-gray-500">
                               {new Date(item.date).toLocaleDateString()}
                               <p className="text-xs text-gray-400">{new Date(item.date).toLocaleTimeString()}</p>
                           </td>
-                          {/* Column: Product Info */}
                           <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gray-200 rounded overflow-hidden flex-shrink-0 border">
+                                  {/* ✅ SHOW PRODUCT IMAGE FOR PENALTIES WITH A RED BORDER */}
+                                  <div className={`w-10 h-10 rounded overflow-hidden flex-shrink-0 border ${isPenalty ? 'border-red-400 shadow-sm' : 'border-gray-200'}`}>
                                       <img src={item.productImage} alt="Product" className="w-full h-full object-cover" />
                                   </div>
                                   <div>
-                                      <p className="font-bold text-gray-900">{item.productName}</p>
-                                      <p className="text-xs text-gray-500">Customer: {item.customerName}</p>
+                                      <p className="font-bold text-gray-900 line-clamp-1">{item.productName}</p>
+                                      <p className="text-xs text-gray-500 line-clamp-1">{isPenalty ? item.reason : `Customer: ${item.customerName}`}</p>
                                   </div>
                               </div>
                           </td>
-                          {/* Column: Total Raw Amount */}
-                          <td className="px-6 py-4 font-mono text-gray-600">Rs {item.totalAmount.toLocaleString()}</td>
-                          {/* Column: Platform Fee or Status Text */}
-                          <td className="px-6 py-4 font-mono text-red-500">
-                              {isCompensated ? "Refund Split" : `- Rs ${item.platformFee.toLocaleString()}`}
+                          <td className="px-6 py-4 font-mono text-gray-600">Rs {Math.abs(item.totalAmount).toLocaleString()}</td>
+                          <td className={`px-6 py-4 font-mono ${isPenalty ? 'text-gray-400 italic text-xs' : 'text-red-500'}`}>
+                              {isPenalty ? "N/A" : isCompensated ? "Refund Split" : `- Rs ${item.platformFee.toLocaleString()}`}
                           </td>
-                          {/* Column: Net Earnings for Store */}
-                          <td className="px-6 py-4 font-mono font-bold text-green-600 text-base">Rs {displayNet.toLocaleString()}</td>
+                          <td className={`px-6 py-4 font-mono font-bold text-base ${displayNet < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              {displayNet < 0 ? '-' : ''}Rs {Math.abs(displayNet).toLocaleString()}
+                          </td>
                           <td className="px-6 py-4">
-                              {isCompensated ? (
+                              {isPenalty ? (
+                                  <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 inline-flex items-center gap-1">
+                                      <ShieldAlert size={12} /> Penalty
+                                  </span>
+                              ) : isCompensated ? (
                                   <span className="px-2 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700 inline-flex items-center gap-1">
-                                      <ShieldAlert size={12} /> Compensated
+                                      <AlertCircle size={12} /> Compensated
                                   </span>
                               ) : (
                                   <span className="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 inline-flex items-center gap-1">
@@ -371,26 +337,16 @@ export default function StoreRevenuePage() {
             </table>
           </div>
 
-          {/* Pagination Controls */}
-          {/* Only render if there is data to paginate */}
           {filteredTransactions.length > 0 && (
             <div className="p-4 border-t flex justify-between items-center bg-gray-50 rounded-b-xl">
                <span className="text-xs text-gray-500">
                  Page {currentPage} of {totalPages}
                </span>
                <div className="flex gap-2">
-                  <button 
-                    onClick={handlePrevPage} 
-                    disabled={currentPage === 1} 
-                    className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                  >
+                  <button onClick={handlePrevPage} disabled={currentPage === 1} className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors">
                     <ChevronLeft size={16}/>
                   </button>
-                  <button 
-                    onClick={handleNextPage} 
-                    disabled={currentPage === totalPages} 
-                    className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors"
-                  >
+                  <button onClick={handleNextPage} disabled={currentPage === totalPages} className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50 transition-colors">
                     <ChevronRight size={16}/>
                   </button>
                </div>

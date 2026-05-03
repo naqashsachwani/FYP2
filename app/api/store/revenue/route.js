@@ -21,7 +21,6 @@ export async function GET(req) {
         status: { in: ["RELEASED", "REFUNDED"] },
         goal: { product: { storeId: store.id } }
       },
-      orderBy: { releasedAt: 'desc' },
       include: {
         goal: {
           include: {
@@ -43,35 +42,42 @@ export async function GET(req) {
       }
     });
 
-    // 4. Calculate Stats & Map Transactions
+    // 4. Fetch Penalties (Deductions from Store Revenue)
+    const penalties = await prisma.refund.findMany({
+      where: { storeId: store.id, status: "COMPLETED" },
+      include: {
+        goal: {
+          include: {
+            product: { select: { name: true, images: true } },
+            user: { select: { name: true } }
+          }
+        }
+      }
+    });
+
+    // 5. Calculate Stats & Map Transactions
     let totalRevenue = 0;
     let totalPlatformFees = 0;
+    let totalDeductions = 0;
     
-    const transactions = payouts.map(p => {
+    let transactions = payouts.map(p => {
         const total = Number(p.amount);
         let storeNet = 0;
-        let adminFee = 0; // This is what shows in the table column
+        let adminFee = 0; 
         let statusLabel = "PAID";
 
         if (p.status === "RELEASED") {
-            // --- DELIVERED: Store pays 5% fee ---
             adminFee = Number(p.platformFee); 
             storeNet = Number(p.netAmount);   
             statusLabel = "PAID";
-
-            //  Add to Fees Card (Store actually paid this)
             totalPlatformFees += adminFee; 
         } 
         else if (p.status === "REFUNDED") {
-            // --- CANCELLED: Store receives 10% free ---
             storeNet = total * 0.10; 
-            adminFee = 0; // Visual fix: Store didn't "pay" a fee here, they just got a cut
+            adminFee = 0; 
             statusLabel = "COMPENSATED";
-
-            //  DO NOT add to Fees Card (Store didn't pay anything)
         }
 
-        // Add to Total Earnings Card
         totalRevenue += storeNet;
 
         return {
@@ -82,11 +88,35 @@ export async function GET(req) {
             productImage: p.goal?.product?.images?.[0] || "/placeholder.png",
             customerName: p.goal?.user?.name || "Unknown User",
             totalAmount: total,
-            platformFee: adminFee, // Passed to frontend table
+            platformFee: adminFee,
             netPayout: storeNet,
             status: statusLabel 
         };
     });
+
+    // Inject Penalties into Transaction Ledger
+    const penaltyTransactions = penalties.map(p => {
+        const penaltyAmount = Number(p.amount);
+        totalDeductions += penaltyAmount;
+        totalRevenue -= penaltyAmount; // Deduct from total net revenue
+
+        return {
+            id: p.id,
+            goalId: p.goalId,
+            date: p.createdAt,
+            productName: p.goal?.product?.name || "Unknown Product",
+            productImage: p.goal?.product?.images?.[0] || "/placeholder.png",
+            customerName: p.goal?.user?.name || "Unknown User",
+            totalAmount: penaltyAmount,
+            platformFee: 0,
+            netPayout: -penaltyAmount, // Negative to signify deduction
+            status: "PENALTY",
+            reason: p.reason
+        };
+    });
+
+    // Merge and sort all transactions by Date
+    transactions = [...transactions, ...penaltyTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Calculate Pending (Est 95%)
     const pendingGross = pending.reduce((acc, curr) => acc + Number(curr.amount), 0);
@@ -98,7 +128,8 @@ export async function GET(req) {
       storeName: store.name,
       stats: {
         totalRevenue: normalize(totalRevenue),
-        platformFees: normalize(totalPlatformFees), // Now correctly excludes refund shares
+        platformFees: normalize(totalPlatformFees), 
+        totalDeductions: normalize(totalDeductions), // Sent to new card
         pendingPayouts: normalize(pendingNet),
         completedOrders: transactions.length
       },
