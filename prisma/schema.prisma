@@ -113,6 +113,7 @@ enum WalletTransactionType {
   REFUND_CREDIT     // Money added back from a cancelled goal/order
   DEPOSIT_PAYMENT   // Money used from wallet to pay for a new goal
   WITHDRAWAL        // User withdrew money to their bank
+  DELIVERY_PAYOUT
 }
 
 // --- ✅ NEW: RIDER & LOGISTICS ENUMS ---
@@ -720,7 +721,7 @@ model WalletTransaction {
 
 model Complaint {
   id              String          @id @default(cuid())
-  complaintId     String?          @unique 
+  complaintId     String?         @unique 
   title           String
   description     String
   imageUrl        String?         
@@ -730,6 +731,7 @@ model Complaint {
 
   filerUserId     String?
   filerStoreId    String?
+  filerRiderId    String?         // ✅ NEW: Completely isolates Rider Complaints
   targetUserId    String?
   targetStoreId   String?
 
@@ -745,6 +747,7 @@ model Complaint {
   // Relations
   filerUser       User?    @relation("ComplaintsFiledByUser", fields: [filerUserId], references: [id])
   filerStore      Store?   @relation("ComplaintsFiledByStore", fields: [filerStoreId], references: [id])
+  filerRider      RiderProfile? @relation("ComplaintsFiledByRider", fields: [filerRiderId], references: [id]) // ✅ NEW
   targetUser      User?    @relation("ComplaintsAgainstUser", fields: [targetUserId], references: [id])
   targetStore     Store?   @relation("ComplaintsAgainstStore", fields: [targetStoreId], references: [id])
 
@@ -753,6 +756,7 @@ model Complaint {
 
   @@index([filerUserId])
   @@index([filerStoreId])
+  @@index([filerRiderId])
   @@index([status])
 }
 
@@ -783,29 +787,28 @@ model RiderProfile {
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Verification details
-  phoneNumber     String   // ✅ NEW: Added Phone Number
+  phoneNumber     String   
   vehicleType     String
   vehiclePlate    String
   cnicNumber      String   @unique
   licenseNumber   String   @unique
   idImageUrl      String?  
 
-  // Operations & Finance
   status          RiderApprovalStatus @default(PENDING_APPROVAL)
   isOnline        Boolean             @default(false)
   currentLat      Float?
   currentLng      Float?
   totalEarnings   Float               @default(0.0)
+  walletBalance   Float               @default(0.0) // ✅ NEW: Isolated Rider Wallet
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Relations
   assignments     DeliveryAssignment[]
   deliveries      Delivery[]           @relation("ActiveDeliveries")
   payouts         RiderPayout[]
   proofs          ProofOfDelivery[]
+  complaints      Complaint[]          @relation("ComplaintsFiledByRider") // ✅ NEW
 }
 
 model DeliveryAssignment {
@@ -846,15 +849,16 @@ model ProofOfDelivery {
 model RiderPayout {
   id              String   @id @default(cuid())
   riderId         String
-  deliveryId      String   @unique
+  deliveryId      String?  @unique
   
   amount          Float
   status          PayoutStatus @default(PENDING)
+  type            String   @default("EARNING") // ✅ NEW: EARNING or WITHDRAWAL
+  description     String?  // ✅ NEW: Description for the ledger
   transferredAt   DateTime?
 
   createdAt       DateTime @default(now())
 
-  // Relations
   rider           RiderProfile @relation(fields: [riderId], references: [id])
-  delivery        Delivery     @relation(fields: [deliveryId], references: [id])
+  delivery        Delivery?    @relation(fields: [deliveryId], references: [id])
 }

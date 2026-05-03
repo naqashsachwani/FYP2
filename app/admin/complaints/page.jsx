@@ -195,10 +195,10 @@ export default function AdminComplaintsPage() {
     finally { setProcessingId(null); }
   };
 
-  // ✅ PERFECTED FILTER LOGIC
   const filteredComplaints = complaints.filter(c => {
     let matchStatus = true;
     if (statusFilter !== "ALL") {
+      // ✅ Restored the OPEN / IN_PROGRESS grouping logic
       if (statusFilter === "IN_PROGRESS") {
         matchStatus = c.status === "OPEN" || c.status === "IN_PROGRESS";
       } else {
@@ -208,17 +208,15 @@ export default function AdminComplaintsPage() {
     
     const matchType = typeFilter === "ALL" || c.type === typeFilter;
     
-    // ✅ FIXED: Strictly filters based on the Role identity of the filer, ignoring the complaint "type"
     let matchFiler = true;
     if (filerFilter === "USER") {
-        matchFiler = !!c.filerUserId && c.filerUser?.role !== "RIDER"; 
+        matchFiler = !!c.filerUserId && !c.filerRiderId; 
     }
     if (filerFilter === "STORE") {
         matchFiler = !!c.filerStoreId;
     }
     if (filerFilter === "RIDER") {
-        // Only matches if the person who submitted the form is designated as a RIDER
-        matchFiler = !!c.filerUserId && (c.filerUser?.role === "RIDER" || c.filerUser?.name?.toLowerCase().includes('rider')); 
+        matchFiler = !!c.filerRiderId; 
     }
     
     const term = searchTerm.toLowerCase();
@@ -326,13 +324,13 @@ export default function AdminComplaintsPage() {
                      
                      <div className="flex justify-between items-start mb-4">
                        <div className="flex items-center gap-3">
-                         <div className={`p-2 rounded-lg ${c.filerUserId ? (c.filerUser?.role === 'RIDER' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600') : 'bg-indigo-50 text-indigo-600'}`}>
-                           {c.filerUserId ? (c.filerUser?.role === 'RIDER' ? <Truck size={20}/> : <User size={20} />) : <StoreIcon size={20} />}
+                         <div className={`p-2 rounded-lg ${c.filerRiderId ? 'bg-orange-50 text-orange-600' : c.filerUserId ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                           {c.filerRiderId ? <Truck size={20}/> : c.filerUserId ? <User size={20} /> : <StoreIcon size={20} />}
                          </div>
                          <div>
                            <h3 className="font-bold text-slate-900">{c.title}</h3>
                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                             From: {c.filerUser?.name || c.filerStore?.name} • Type: {c.type.replace('_', ' ')}
+                             From: {c.filerRiderId ? c.filerRider?.user?.name : c.filerUserId ? c.filerUser?.name : c.filerStore?.name} • Type: {c.type.replace('_', ' ')}
                            </p>
                          </div>
                        </div>
@@ -411,7 +409,6 @@ export default function AdminComplaintsPage() {
 
                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                            
-                           {/* 1. Full Wallet Refund (For Customers) */}
                            {c.filerUserId && c.goal && ["PRODUCT_ISSUE", "REFUND", "DELIVERY"].includes(c.type) && (
                              <div className={`bg-white p-4 border rounded-lg shadow-sm transition-all ${processRefund ? 'border-blue-400 ring-1 ring-blue-400' : 'border-blue-200 hover:border-blue-300'}`}>
                                <label className="flex items-start gap-3 cursor-pointer">
@@ -428,8 +425,7 @@ export default function AdminComplaintsPage() {
                              </div>
                            )}
 
-                           {/* 2. Custom Wallet Credit (For Rider Payouts or Partial Refunds) */}
-                           {c.filerUserId && (
+                           {(c.filerUserId || c.filerRiderId) && (
                              <div className={`bg-white p-4 border rounded-lg shadow-sm transition-all ${creditWallet ? 'border-purple-400 ring-1 ring-purple-400' : 'border-purple-200 hover:border-purple-300'}`}>
                                <label className="flex items-start gap-3 cursor-pointer mb-3">
                                  <input type="checkbox" checked={creditWallet} onChange={(e) => setCreditWallet(e.target.checked)} className="mt-1 w-4 h-4 text-purple-600 rounded focus:ring-purple-500 border-gray-300" />
@@ -452,8 +448,7 @@ export default function AdminComplaintsPage() {
                              </div>
                            )}
 
-                           {/* 3. Issue Apology Coupon */}
-                           {c.filerUserId && (
+                           {c.filerUserId && !c.filerRiderId && (
                              <div className={`bg-white p-4 border rounded-lg shadow-sm transition-all ${issueCoupon ? 'border-emerald-400 ring-1 ring-emerald-400' : 'border-emerald-200 hover:border-emerald-300'}`}>
                                <label className="flex items-start gap-3 cursor-pointer mb-3">
                                  <input type="checkbox" checked={issueCoupon} onChange={(e) => setIssueCoupon(e.target.checked)} className="mt-1 w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500 border-gray-300" />

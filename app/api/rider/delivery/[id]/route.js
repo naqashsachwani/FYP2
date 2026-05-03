@@ -5,7 +5,6 @@ import authRider from '@/middlewares/authRider';
 import imagekit from "@/configs/imageKit";
 import { sendNotification } from "@/lib/sendNotification";
 
-// GET: Fetch Specific Delivery Details for the Rider
 export async function GET(req, { params }) {
   try {
     const { id } = await params;
@@ -32,7 +31,6 @@ export async function GET(req, { params }) {
   }
 }
 
-// POST: Handle Status Updates and Proof Upload
 export async function POST(req, { params }) {
   try {
     const { id } = await params;
@@ -41,7 +39,7 @@ export async function POST(req, { params }) {
     if (!riderId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     const formData = await req.formData();
-    const action = formData.get("action"); // 'PICKUP', 'DELIVER', 'FAIL'
+    const action = formData.get("action"); 
     
     const delivery = await prisma.delivery.findUnique({
       where: { id, currentRiderId: riderId },
@@ -50,7 +48,6 @@ export async function POST(req, { params }) {
 
     if (!delivery) return NextResponse.json({ error: "Invalid Delivery" }, { status: 400 });
 
-    // --- ACTION: VERIFY PICKUP ---
     if (action === 'PICKUP') {
       const updated = await prisma.delivery.update({
         where: { id },
@@ -74,12 +71,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ success: true, status: updated.status });
     }
 
-    // --- ACTION: VERIFY DELIVERY & UPLOAD PROOF ---
     if (action === 'DELIVER') {
       const file = formData.get("proofImage");
       let proofImageUrl = null;
 
-      // 1. Upload Optional Photo Proof
       if (file && file !== 'null') {
           const buffer = Buffer.from(await file.arrayBuffer());
           const uploadRes = await imagekit.upload({
@@ -90,7 +85,6 @@ export async function POST(req, { params }) {
           proofImageUrl = uploadRes.url;
       }
 
-      // 2. Create Proof Record
       await prisma.proofOfDelivery.create({
         data: {
           deliveryId: id,
@@ -99,7 +93,6 @@ export async function POST(req, { params }) {
         }
       });
 
-      // 3. Payout Logic (Rs 400 for >= 5000, Rs 200 for < 5000)
       const itemPrice = parseFloat(delivery.goal?.targetAmount || delivery.goal?.product?.price || 0);
       const payoutAmount = itemPrice >= 5000 ? 400.0 : 200.0;
       
@@ -108,19 +101,27 @@ export async function POST(req, { params }) {
       });
 
       if (!existingPayout) {
-          // ✅ THE FIX: Create the payout strictly as 'PENDING'.
-          // ❌ DELETED the prisma.riderProfile.update() that was instantly paying the rider.
+          // ✅ CREATED AS AN "EARNING" SO WALLET API CAN READ IT
           await prisma.riderPayout.create({
             data: { 
                 riderId, 
                 deliveryId: id, 
                 amount: payoutAmount,
-                status: 'PENDING' // Awaits admin approval in Escrow
+                type: 'EARNING',
+                status: 'TRANSFERRED', 
+                description: `Delivery Payout for ${delivery.trackingNumber || id.slice(-6)}`
             }
+          });
+          
+          await prisma.riderProfile.update({
+             where: { id: riderId },
+             data: { 
+                 totalEarnings: { increment: payoutAmount },
+                 walletBalance: { increment: payoutAmount }
+             }
           });
       }
 
-      // 4. Mark Delivery Complete
       const updated = await prisma.delivery.update({
         where: { id },
         data: { status: 'DELIVERED', deliveryDate: new Date() }
@@ -157,7 +158,6 @@ export async function POST(req, { params }) {
       return NextResponse.json({ success: true, status: updated.status });
     }
 
-    // --- ACTION: FAIL DELIVERY ---
     if (action === 'FAIL') {
       const reason = formData.get("reason");
       await prisma.delivery.update({

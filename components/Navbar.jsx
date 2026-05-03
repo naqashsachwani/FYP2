@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket, Wallet, Bell, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, History, ShieldCheck, Store, Settings, LogOut, Ticket, Wallet, Bell, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -24,13 +24,14 @@ const Navbar = () => {
   // Role & Notification States
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [showSellerBtn, setShowSellerBtn] = useState(false);
+  const [showRiderBtn, setShowRiderBtn] = useState(false); // ✅ NEW: Rider State
   
   // Notification Management
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifPage, setNotifPage] = useState(1);
   const NOTIFS_PER_PAGE = 5;
-  const [selectedNotif, setSelectedNotif] = useState(null); // For viewing full notification
+  const [selectedNotif, setSelectedNotif] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -42,16 +43,23 @@ const Navbar = () => {
 
     const checkRoles = async () => {
       try {
-        const [adminRes, sellerRes] = await Promise.all([
-          fetch('/api/admin/is-admin'),
-          fetch('/api/store/is-seller'),
-        ]);
-        const [adminData, sellerData] = await Promise.all([
-          adminRes.json(),
-          sellerRes.json(),
-        ]);
-        setShowAdminBtn(adminData.isAdmin === true);
-        setShowSellerBtn(!!sellerData.isSeller);
+        // Fetch all roles concurrently, catching errors so one failure doesn't break the others
+        const adminRes = await fetch('/api/admin/is-admin').catch(() => null);
+        const sellerRes = await fetch('/api/store/is-seller').catch(() => null);
+        const riderRes = await fetch('/api/rider/is-rider').catch(() => null); // ✅ NEW: Check Rider status
+
+        if (adminRes && adminRes.ok) {
+           const adminData = await adminRes.json();
+           setShowAdminBtn(adminData.isAdmin === true);
+        }
+        if (sellerRes && sellerRes.ok) {
+           const sellerData = await sellerRes.json();
+           setShowSellerBtn(!!sellerData.isSeller);
+        }
+        if (riderRes && riderRes.ok) {
+           const riderData = await riderRes.json();
+           setShowRiderBtn(riderData.isRider === true);
+        }
       } catch (error) {
         console.error("Role verification failed", error);
       }
@@ -80,7 +88,6 @@ const Navbar = () => {
         }
       };
 
-      // Auto-refresh every 60 seconds while the tab is visible.
       intervalId = setInterval(refreshIfVisible, 60000);
     }
 
@@ -89,11 +96,9 @@ const Navbar = () => {
     };
   }, [mounted, user]);
 
-  // Handle Notifications Pagination
   const totalNotifPages = Math.max(1, Math.ceil(notifications.length / NOTIFS_PER_PAGE));
   const currentNotifications = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
 
-  // If items are deleted and current page is now empty, go back a page
   useEffect(() => {
       if (notifPage > totalNotifPages) {
           setNotifPage(totalNotifPages);
@@ -215,7 +220,6 @@ const Navbar = () => {
                 <span className="hidden sm:block text-sm font-medium">My Goals</span>
               </Link>
 
-              {/* ✅ NOTIFICATION BELL (DESKTOP & MOBILE) */}
               {mounted && user && (
                 <div className="relative">
                   <button
@@ -233,7 +237,6 @@ const Navbar = () => {
                   {isBellOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                      {/* Responsive dropdown alignment */}
                       <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                           <p className="text-sm font-bold text-slate-800">Notifications</p>
@@ -268,33 +271,18 @@ const Navbar = () => {
                                 <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
                                 <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
                                   {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                               </span>
+                                </span>
                               </div>
                             ))
                           )}
                         </div>
 
-                        {/* Pagination Controls */}
                         {notifications.length > 0 && (
                             <div className="p-3 border-t border-slate-100 bg-gray-50 flex items-center justify-between shrink-0">
-                                <span className="text-xs font-semibold text-slate-500">
-                                    Page {notifPage} of {totalNotifPages}
-                                </span>
+                                <span className="text-xs font-semibold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
                                 <div className="flex gap-2">
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }}
-                                        disabled={notifPage === 1}
-                                        className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }}
-                                        disabled={notifPage === totalNotifPages}
-                                        className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} disabled={notifPage === 1} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronLeft size={16} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} disabled={notifPage === totalNotifPages} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronRight size={16} /></button>
                                 </div>
                             </div>
                         )}
@@ -349,6 +337,13 @@ const Navbar = () => {
                           {showSellerBtn && (
                             <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                               <Store size={16} className="text-slate-500" /> Store Dashboard
+                            </Link>
+                          )}
+
+                          {/* ✅ NEW: Rider Dashboard Link */}
+                          {(showAdminBtn || showRiderBtn) && (
+                            <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <Truck size={16} className="text-slate-500" /> Rider Dashboard
                             </Link>
                           )}
 
@@ -444,6 +439,13 @@ const Navbar = () => {
                     </Link>
                   )}
 
+                  {/* ✅ NEW: Rider Dashboard Link (Mobile) */}
+                  {(showAdminBtn || showRiderBtn) && (
+                    <Link href="/rider/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                      <Truck size={18} className="text-slate-500" /> Rider Dashboard
+                    </Link>
+                  )}
+
                   <Link href="/wallet" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                     <Wallet size={18} className="text-slate-500" /> My Wallet
                   </Link>
@@ -472,7 +474,7 @@ const Navbar = () => {
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 shrink-0">
               <div className="flex items-center gap-2 text-slate-800">
-                  <Bell className="text-green-600" size={20} />
+                  <Bell className="text-blue-600" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
               <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
@@ -485,16 +487,12 @@ const Navbar = () => {
               </p>
               
               <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
-                 {/* Falls back to standard message if HTML is not provided in DB */}
               </div>
             </div>
 
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
               <button 
-                onClick={() => {
-                  deleteNotification(selectedNotif.id, { stopPropagation: () => {} });
-                  setSelectedNotif(null);
-                }} 
+                onClick={() => { deleteNotification(selectedNotif.id, { stopPropagation: () => {} }); setSelectedNotif(null); }} 
                 className="flex-1 py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2"
               >
                 <Trash2 size={18} /> Delete

@@ -9,15 +9,12 @@ export async function GET(req) {
     const riderId = await authRider(userId);
     if (!riderId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    // Fetch the rider profile to get totalEarnings and status
     const profile = await prisma.riderProfile.findUnique({ where: { id: riderId } });
 
-    // ✅ STRICT ENFORCEMENT: Block suspended or rejected riders from accessing dashboard data
     if (profile?.status === 'SUSPENDED' || profile?.status === 'REJECTED') {
         return NextResponse.json({ error: "Account Suspended or Rejected" }, { status: 403 });
     }
 
-    // Fetch PENDING assignments (Delivery Requests from Store)
     const pendingAssignments = await prisma.deliveryAssignment.findMany({
       where: { riderId, status: 'PENDING' },
       include: {
@@ -29,7 +26,6 @@ export async function GET(req) {
       }
     });
 
-    // Fetch Active Deliveries (Accepted but not yet Delivered/Failed)
     const activeDeliveries = await prisma.delivery.findMany({
       where: { 
           currentRiderId: riderId, 
@@ -40,9 +36,36 @@ export async function GET(req) {
       }
     });
 
-    // Safely stringify BigInt values if any exist in the schema
+    const completedCount = await prisma.delivery.count({
+        where: { currentRiderId: riderId, status: 'DELIVERED' }
+    });
+
+    // 1. Fetch all payouts for accurate balance and for the Line Chart
+    const payouts = await prisma.riderPayout.findMany({
+        where: { riderId: riderId }
+    });
+    
+    // 2. Calculate dynamic wallet balance
+    const trueEarnings = payouts.filter(p => p.type === 'EARNING').reduce((acc, curr) => acc + curr.amount, 0);
+    const trueWithdrawals = payouts.filter(p => p.type === 'WITHDRAWAL').reduce((acc, curr) => acc + curr.amount, 0);
+    const dynamicBalance = trueEarnings - trueWithdrawals;
+
     const safeData = JSON.parse(JSON.stringify(
-        { profile, pendingAssignments, activeDeliveries }, 
+        { 
+            profile: {
+                ...profile,
+                totalEarnings: trueEarnings, 
+                walletBalance: dynamicBalance 
+            }, 
+            pendingAssignments, 
+            activeDeliveries,
+            payouts, // ✅ REQUIRED FOR THE LINE CHART TO WORK
+            stats: {
+                completedDeliveries: completedCount,
+                pendingDeliveries: pendingAssignments.length,
+                activeDeliveriesCount: activeDeliveries.length
+            }
+        }, 
         (key, value) => typeof value === 'bigint' ? value.toString() : value
     ));
 
@@ -59,28 +82,24 @@ export async function POST(req) {
     const riderId = await authRider(userId);
     if (!riderId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    // ✅ Security check: Verify suspension status before allowing assignment actions
     const profile = await prisma.riderProfile.findUnique({ where: { id: riderId } });
     if (profile?.status === 'SUSPENDED' || profile?.status === 'REJECTED') {
         return NextResponse.json({ error: "Account Suspended or Rejected" }, { status: 403 });
     }
 
-    const { assignmentId, deliveryId, action } = await req.json(); // Action = ACCEPT or REJECT
+    const { assignmentId, deliveryId, action } = await req.json(); 
 
     if (action === 'ACCEPT') {
-        // Update Assignment Status
         await prisma.deliveryAssignment.update({
             where: { id: assignmentId },
             data: { status: 'ACCEPTED', respondedAt: new Date() }
         });
 
-        // Link Rider to Delivery and set status to ACCEPTED
         await prisma.delivery.update({
             where: { id: deliveryId },
             data: { currentRiderId: riderId, status: 'ACCEPTED' }
         });
     } else {
-        // Reject the Assignment
         await prisma.deliveryAssignment.update({
             where: { id: assignmentId },
             data: { status: 'REJECTED', respondedAt: new Date() }
