@@ -64,7 +64,7 @@ export default function RiderActiveJobsPage() {
           currentItems.map((job) => (
             <div key={job.id} onClick={() => router.push(`/rider/delivery/${job.id}`)} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:border-blue-400 hover:shadow-md transition-all flex flex-col h-full group">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-blue-50/50 shrink-0">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">{job.status.replace("_", " ")}</span>
+                <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">{job.status.replace("_", " ")}</span>
                 <span className="text-xs font-mono font-bold text-slate-400 bg-white px-2 py-1 rounded shadow-sm border border-slate-200">{job.trackingNumber}</span>
               </div>
               <div className="p-5 flex-1 flex flex-col justify-center">

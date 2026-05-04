@@ -83,7 +83,6 @@ export default function RiderComplaintsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // ✅ SUCCESS TOAST NOW SHOWS THE PROPER CMP- ID
       toast.success(`Ticket ${data.complaint.complaintId || data.complaint.id.slice(-6)} filed.`, { id: toastId });
       setIsModalOpen(false);
       setFormData({ title: "", type: "USER_BEHAVIOR", description: "", goalId: "", targetUserId: "", targetStoreId: "" });
@@ -98,7 +97,7 @@ export default function RiderComplaintsPage() {
       { label: status === "REJECTED" ? "Rejected" : "Resolved", active: ["RESOLVED", "REJECTED"].includes(status), isError: status === "REJECTED" }
   ];
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   const selectedDelivery = deliveries.find(d => d.goalId === formData.goalId);
 
@@ -108,7 +107,7 @@ export default function RiderComplaintsPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-3"><MessageSquareWarning className="text-green-600 w-8 h-8" /> Rider Support</h1>
+            <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-3"><MessageSquareWarning className="text-blue-600 w-8 h-8" /> Rider Support</h1>
             <p className="text-slate-500 mt-1">Report issues with stores, customers, or payments.</p>
           </div>
           <button onClick={() => setIsModalOpen(true)} className="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition shadow-md flex items-center gap-2">
@@ -144,7 +143,6 @@ export default function RiderComplaintsPage() {
                   <div key={comp.id} className="p-6 hover:bg-slate-50 transition flex flex-col md:flex-row gap-6 justify-between">
                     <div className="flex-1 space-y-4">
                       <div className="flex flex-wrap items-center gap-3">
-                        {/* ✅ PROPERLY RENDERS THE CMP- ID */}
                         <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-md flex items-center gap-1 border border-slate-200">
                             <Hash size={14} className="text-slate-400" />
                             {comp.complaintId || comp.id.slice(-6).toUpperCase()}
@@ -167,20 +165,20 @@ export default function RiderComplaintsPage() {
                             <div key={idx} className="flex flex-col items-center gap-1 bg-white">
                               <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
                                  step.isError && step.active ? "bg-red-50 border-red-500 text-red-600 shadow-sm shadow-red-100" 
-                                 : step.active ? "bg-green-50 border-green-500 text-green-600 shadow-sm shadow-green-100" 
+                                 : step.active ? "bg-blue-50 border-blue-500 text-blue-600 shadow-sm shadow-blue-100" 
                                  : "bg-white border-slate-200 text-slate-300"
                               }`}>
                                 {step.isError ? <ShieldAlert size={12} /> : <CheckCircle size={12} />}
                               </div>
-                              <span className={`text-[10px] font-bold ${step.active ? (step.isError ? "text-red-600" : "text-green-600") : "text-slate-400"}`}>{step.label}</span>
+                              <span className={`text-[10px] font-bold ${step.active ? (step.isError ? "text-red-600" : "text-blue-600") : "text-slate-400"}`}>{step.label}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                       
                       {comp.adminNotes && (
-                        <div className={`p-4 rounded-xl border text-sm ${comp.status === 'REJECTED' ? 'bg-red-50 border-red-100 text-red-900' : 'bg-green-50 border-green-100 text-green-900'}`}>
-                          <p className={`text-[10px] font-bold uppercase mb-1 ${comp.status === 'REJECTED' ? 'text-red-700' : 'text-green-700'}`}>Admin Feedback</p>
+                        <div className={`p-4 rounded-xl border text-sm ${comp.status === 'REJECTED' ? 'bg-red-50 border-red-100 text-red-900' : 'bg-blue-50 border-blue-100 text-blue-900'}`}>
+                          <p className={`text-[10px] font-bold uppercase mb-1 ${comp.status === 'REJECTED' ? 'text-red-700' : 'text-blue-700'}`}>Admin Feedback</p>
                           <p className="leading-relaxed">{comp.adminNotes}</p>
                         </div>
                       )}
@@ -221,13 +219,13 @@ export default function RiderComplaintsPage() {
             <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Title / Tracking Number</label>
-                <input type="text" required maxLength={100} value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="E.g., Missing Payout for KHI-1234" className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-green-500 focus:bg-white outline-none text-slate-800 text-sm"/>
+                <input type="text" required maxLength={100} value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="E.g., Missing Payout for KHI-1234" className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-blue-500 focus:bg-white outline-none text-slate-800 text-sm"/>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Category</label>
-                  <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-green-500 focus:bg-white outline-none text-sm appearance-none text-slate-800 font-medium">
+                  <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-blue-500 focus:bg-white outline-none text-sm appearance-none text-slate-800 font-medium">
                     <option value="USER_BEHAVIOR">Report a Customer</option>
                     <option value="STORE_BEHAVIOR">Report a Store</option>
                     <option value="PAYMENT">Missing Delivery Payment</option>
@@ -264,7 +262,7 @@ export default function RiderComplaintsPage() {
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Detailed Description</label>
-                <textarea required rows={4} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Explain the issue clearly so Admin can assist..." className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-green-500 focus:bg-white outline-none resize-none text-sm text-slate-800"/>
+                <textarea required rows={4} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Explain the issue clearly so Admin can assist..." className="w-full border border-slate-200 bg-slate-50 px-4 py-3 rounded-xl focus:border-blue-500 focus:bg-white outline-none resize-none text-sm text-slate-800"/>
               </div>
 
               <div className="pt-2 flex gap-3 shrink-0">

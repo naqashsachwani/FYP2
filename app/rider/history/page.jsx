@@ -47,7 +47,7 @@ export default function RiderHistoryPage() {
         </div>
         <div className="relative w-full md:w-72">
            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-           <input type="text" placeholder="Search tracking ID, product..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-slate-500 outline-none" />
+           <input type="text" placeholder="Search tracking ID, product..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
       </div>
 
@@ -81,7 +81,7 @@ export default function RiderHistoryPage() {
                     <td className="px-6 py-4 text-slate-600">{job.goal?.user?.name}</td>
                     <td className="px-6 py-4 text-right">
                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border inline-flex items-center gap-1 ${
-                          job.status === 'DELIVERED' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                          job.status === 'DELIVERED' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-red-50 text-red-700 border-red-200'
                        }`}>
                           {job.status === 'DELIVERED' ? <CheckCircle size={10} /> : <ShieldAlert size={10} />}
                           {job.status}

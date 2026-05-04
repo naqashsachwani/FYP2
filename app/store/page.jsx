@@ -11,7 +11,9 @@ import {
     ClockIcon,
     DownloadIcon,
     Package,
-    TrendingDown 
+    TrendingDown,
+    Wallet,
+    CreditCard
 } from "lucide-react" 
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast" 
@@ -36,6 +38,8 @@ export default function Dashboard() {
     const [dashboardData, setDashboardData] = useState({
         totalProducts: 0,
         totalEarnings: 0,
+        availableBalance: 0,
+        totalWithdrawn: 0,
         totalPenalties: 0,
         totalOrders: 0, 
         ordersDelivered: 0,
@@ -83,6 +87,8 @@ export default function Dashboard() {
             const safeData = {
                 totalProducts: Number(data.dashboardData.totalProducts) || 0,
                 totalEarnings: Number(data.dashboardData.totalEarnings) || 0,
+                availableBalance: Number(data.dashboardData.availableBalance) || 0,
+                totalWithdrawn: Number(data.dashboardData.totalWithdrawn) || 0,
                 totalPenalties: Number(data.dashboardData.totalPenalties) || 0,
                 totalOrders: Number(data.dashboardData.totalOrders) || 0, 
                 ordersDelivered: Number(data.dashboardData.ordersDelivered) || 0,
@@ -136,11 +142,10 @@ export default function Dashboard() {
         
         doc.setFontSize(14);
         doc.setTextColor(...brandColor);
-        doc.text("1. Performance Overview", 14, yPos);
+        doc.text("1. Financial Overview", 14, yPos);
         
-        // ✅ UPDATED: Grid Layout for 6 PDF Cards
-        const usableWidth = pageWidth - 28; // 14mm margins on each side
-        const cols = 3; // 3 cards per row
+        const usableWidth = pageWidth - 28; 
+        const cols = 3; 
         const gapX = 5;
         const gapY = 5;
         const cardWidth = (usableWidth - (gapX * (cols - 1))) / cols;
@@ -148,12 +153,11 @@ export default function Dashboard() {
         
         yPos += 5;
 
-        // Ensure all 6 stats match the UI
         const stats = [
-            { label: "Net Earnings", value: `${currency}${dashboardData.totalEarnings.toLocaleString()}` },
+            { label: "Available Balance", value: `${currency}${dashboardData.availableBalance.toLocaleString()}` },
+            { label: "Total Withdrawn", value: `${currency}${dashboardData.totalWithdrawn.toLocaleString()}` },
+            { label: "Lifetime Earnings", value: `${currency}${dashboardData.totalEarnings.toLocaleString()}` },
             { label: "Dispute Penalties", value: `${currency}${dashboardData.totalPenalties.toLocaleString()}` },
-            { label: "Total Products", value: dashboardData.totalProducts.toString() },
-            { label: "Total Orders", value: dashboardData.totalOrders.toString() },
             { label: "Delivered", value: dashboardData.ordersDelivered.toString() },
             { label: "Pending", value: dashboardData.pendingDeliveries.toString() }
         ];
@@ -164,58 +168,45 @@ export default function Dashboard() {
             const x = 14 + (col * (cardWidth + gapX)); 
             const y = yPos + (row * (cardHeight + gapY));
 
-            // Default card styles
             doc.setFillColor(248, 250, 252); 
             doc.setDrawColor(226, 232, 240); 
 
-            // Color coding for Earnings & Penalties
             if (stat.label === "Dispute Penalties") {
-                doc.setFillColor(254, 242, 242); // Red tint
+                doc.setFillColor(254, 242, 242); 
                 doc.setDrawColor(254, 226, 226); 
-            } else if (stat.label === "Net Earnings") {
-                doc.setFillColor(236, 253, 245); // Green tint
+            } else if (stat.label === "Available Balance" || stat.label === "Lifetime Earnings") {
+                doc.setFillColor(236, 253, 245); 
                 doc.setDrawColor(167, 243, 208); 
+            } else if (stat.label === "Total Withdrawn") {
+                doc.setFillColor(239, 246, 255); 
+                doc.setDrawColor(191, 219, 254); 
             }
 
             doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3, 'FD'); 
 
-            // Text Label
             doc.setFontSize(9);
             if (stat.label === "Dispute Penalties") doc.setTextColor(220, 38, 38);
-            else if (stat.label === "Net Earnings") doc.setTextColor(5, 150, 105);
+            else if (stat.label === "Available Balance" || stat.label === "Lifetime Earnings") doc.setTextColor(5, 150, 105);
+            else if (stat.label === "Total Withdrawn") doc.setTextColor(37, 99, 235);
             else doc.setTextColor(100, 116, 139);
             
             doc.text(stat.label, x + 5, y + 8); 
 
-            // Value
             doc.setFontSize(14);
             if (stat.label === "Dispute Penalties") doc.setTextColor(220, 38, 38);
-            else if (stat.label === "Net Earnings") doc.setTextColor(5, 150, 105);
+            else if (stat.label === "Available Balance" || stat.label === "Lifetime Earnings") doc.setTextColor(5, 150, 105);
+            else if (stat.label === "Total Withdrawn") doc.setTextColor(37, 99, 235);
             else doc.setTextColor(...brandColor);
             
             doc.setFont("helvetica", "bold");
             doc.text(stat.value, x + 5, y + 18); 
         });
 
-        // Advance the Y position below the grid (2 rows)
         yPos += (2 * cardHeight) + gapY + 15;
 
         doc.setFontSize(14);
         doc.setTextColor(...brandColor);
-        doc.text("2. Operational Metrics", 14, yPos);
-
-        yPos += 5;
-        doc.setFontSize(10);
-        doc.setTextColor(50);
-        // Cleaned up the health text since Pending and Penalties are now distinct cards
-        const healthText = `Delivery Completion Rate: ${dashboardData.ordersDelivered > 0 ? ((dashboardData.ordersDelivered / (dashboardData.ordersDelivered + dashboardData.pendingDeliveries)) * 100).toFixed(1) + '%' : 'N/A'}`;
-        doc.text(healthText, 14, yPos + 5);
-
-        yPos += 15;
-        doc.setFontSize(14);
-        doc.setTextColor(...brandColor);
-        doc.setFont("helvetica", "bold");
-        doc.text("3. Daily Revenue Breakdown (Last 7 Days)", 14, yPos);
+        doc.text("2. Daily Revenue Breakdown (Last 7 Days)", 14, yPos);
 
         const auditRows = chartData.length > 0 ? chartData.map(day => [
             day.name,
@@ -269,7 +260,23 @@ export default function Dashboard() {
 
     const dashboardCardsData = [
         { 
-            title: 'Net Earnings', 
+            title: 'Available Balance', 
+            value: currency + dashboardData.availableBalance.toLocaleString(), 
+            icon: Wallet,
+            gradient: 'from-blue-500 to-blue-600',
+            bgLight: 'bg-blue-50',
+            textColor: 'text-blue-600'
+        },
+        { 
+            title: 'Total Withdrawn', 
+            value: currency + dashboardData.totalWithdrawn.toLocaleString(), 
+            icon: CreditCard,
+            gradient: 'from-indigo-500 to-indigo-600',
+            bgLight: 'bg-indigo-50',
+            textColor: 'text-indigo-600'
+        },
+        { 
+            title: 'Lifetime Earnings', 
             value: currency + dashboardData.totalEarnings.toLocaleString(), 
             icon: CircleDollarSignIcon,
             gradient: 'from-emerald-500 to-green-600',
@@ -283,14 +290,6 @@ export default function Dashboard() {
             gradient: 'from-red-500 to-rose-600',
             bgLight: 'bg-red-50',
             textColor: 'text-red-600'
-        },
-        { 
-            title: 'Total Products', 
-            value: dashboardData.totalProducts, 
-            icon: ShoppingBasketIcon,
-            gradient: 'from-blue-500 to-indigo-600',
-            bgLight: 'bg-blue-50',
-            textColor: 'text-blue-600'
         },
         { 
             title: 'Total Orders', 
@@ -307,15 +306,7 @@ export default function Dashboard() {
             gradient: 'from-cyan-500 to-teal-600',
             bgLight: 'bg-cyan-50',
             textColor: 'text-cyan-600'
-        },
-        { 
-            title: 'Pending Deliveries', 
-            value: dashboardData.pendingDeliveries, 
-            icon: ClockIcon,
-            gradient: 'from-amber-400 to-orange-500',
-            bgLight: 'bg-amber-50',
-            textColor: 'text-amber-600'
-        },
+        }
     ]
 
     if (loading) return (

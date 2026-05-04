@@ -68,7 +68,7 @@ export default function ActiveDeliveryPage() {
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
   if (!delivery) return null;
 
   const isDelivered = delivery.status === "DELIVERED";
@@ -77,8 +77,7 @@ export default function ActiveDeliveryPage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       
-      {/* HEADER */}
-      <div className={`text-white p-6 pt-10 rounded-b-3xl shadow-md ${isDelivered ? 'bg-green-600' : isFailed ? 'bg-red-600' : 'bg-slate-900'}`}>
+      <div className={`text-white p-6 pt-10 rounded-b-3xl shadow-md ${isDelivered ? 'bg-blue-600' : isFailed ? 'bg-red-600' : 'bg-slate-900'}`}>
         <button onClick={() => router.push("/rider/dashboard")} className="flex items-center gap-2 text-white/80 hover:text-white mb-4 text-sm font-bold transition">
           <ArrowLeft size={18} /> Back to Dashboard
         </button>
@@ -92,12 +91,11 @@ export default function ActiveDeliveryPage() {
 
       <div className="max-w-xl mx-auto p-4 space-y-4 -mt-4">
         
-        {/* PRODUCT & EARNINGS INFO */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative z-10">
           <h2 className="font-bold text-lg text-slate-800 line-clamp-1">{delivery.goal.product?.name}</h2>
           <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estimated Payout</span>
-            <span className="font-extrabold text-green-600 text-lg">
+            <span className="font-extrabold text-blue-600 text-lg">
               Rs. {parseFloat(delivery.goal?.targetAmount || delivery.goal?.product?.price || 0) >= 5000 ? "400" : "200"}
             </span>
           </div>
@@ -113,7 +111,6 @@ export default function ActiveDeliveryPage() {
           )}
         </div>
 
-        {/* LOGISTICS CARD */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-6">
           <div className={`flex gap-4 ${delivery.status !== 'ACCEPTED' && 'opacity-50'}`}>
             <div className="flex flex-col items-center">
@@ -134,7 +131,7 @@ export default function ActiveDeliveryPage() {
 
           <div className="flex gap-4">
             <div className="flex flex-col items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${(delivery.status === 'PICKED_UP' || delivery.status === 'IN_TRANSIT') ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${(delivery.status === 'PICKED_UP' || delivery.status === 'IN_TRANSIT') ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
                 <MapPin size={16} />
               </div>
             </div>
@@ -146,7 +143,6 @@ export default function ActiveDeliveryPage() {
           </div>
         </div>
 
-        {/* ACTION AREA */}
         {!isDelivered && !isFailed && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
@@ -171,8 +167,7 @@ export default function ActiveDeliveryPage() {
             {(delivery.status === 'PICKED_UP' || delivery.status === 'IN_TRANSIT') && (
               <div className="space-y-5">
                 
-                {/* Optional Image Upload */}
-                <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${proofFile ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${proofFile ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
                   <input 
                     type="file" id="proofUpload" accept="image/*" capture="environment"
                     onChange={(e) => setProofFile(e.target.files[0])} className="hidden" 
@@ -180,22 +175,21 @@ export default function ActiveDeliveryPage() {
                   <label htmlFor="proofUpload" className="cursor-pointer flex flex-col items-center justify-center">
                     {proofFile ? (
                       <>
-                        <CheckCircle className="text-green-500 mb-1" size={24} />
-                        <span className="font-bold text-sm text-green-700">Photo Ready</span>
+                        <CheckCircle className="text-blue-500 mb-1" size={24} />
+                        <span className="font-bold text-sm text-blue-700">Photo Ready</span>
                       </>
                     ) : (
                       <>
                         <Upload className="text-slate-400 mb-1" size={24} />
-                        <span className="font-bold text-sm text-green-600">Take Delivery Photo (Optional)</span>
+                        <span className="font-bold text-sm text-blue-600">Take Delivery Photo (Optional)</span>
                       </>
                     )}
                   </label>
                 </div>
 
-                {/* Confirm Button - Unlocked automatically */}
                 <button 
                   onClick={() => handleSubmit('DELIVER')} disabled={processing}
-                  className="w-full py-4 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition flex justify-center items-center gap-2 disabled:opacity-50 shadow-md shadow-green-200"
+                  className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition flex justify-center items-center gap-2 disabled:opacity-50 shadow-md shadow-blue-200"
                 >
                   {processing ? <Loader2 size={20} className="animate-spin" /> : "Complete Delivery"}
                 </button>
@@ -204,7 +198,6 @@ export default function ActiveDeliveryPage() {
           </div>
         )}
 
-        {/* Report Issue / Fail Delivery Button */}
         {!isDelivered && !isFailed && (
           <div className="pt-4 text-center">
             <button 
@@ -218,7 +211,6 @@ export default function ActiveDeliveryPage() {
 
       </div>
 
-      {/* Failure Reporting Modal */}
       {showFailModal && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-in zoom-in-95">

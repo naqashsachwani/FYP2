@@ -210,12 +210,23 @@ model Store {
   storeApplication StoreApplication? @relation("Store_Application")
   priceLocks       PriceLock[]
   refunds          Refund[]
-
+  payouts          StorePayout[]
   filedComplaints    Complaint[]       @relation("ComplaintsFiledByStore")
   targetedComplaints Complaint[]       @relation("ComplaintsAgainstStore")
 
   @@index([status])
   @@index([isActive])
+}
+
+model StorePayout {
+  id              String   @id @default(cuid())
+  storeId         String
+  amount          Float
+  status          String   @default("COMPLETED")
+  description     String?
+  createdAt       DateTime @default(now())
+
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 }
 
 model Product {

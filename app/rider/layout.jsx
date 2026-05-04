@@ -29,11 +29,14 @@ export default function RiderLayout({ children }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <RiderSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="flex flex-col flex-1 w-full overflow-hidden">
-        <RiderNavbar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isSidebarOpen={isSidebarOpen} />
-        <main className="flex-1 overflow-y-auto">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50">
+      {/* Top Global Navbar */}
+      <RiderNavbar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isSidebarOpen={isSidebarOpen} />
+      
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden relative">
+        <RiderSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        <main className="flex-1 overflow-y-auto bg-slate-50">
           {children}
         </main>
       </div>

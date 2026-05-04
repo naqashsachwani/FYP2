@@ -52,7 +52,7 @@ export default function RiderRequestsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentItems = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -63,7 +63,7 @@ export default function RiderRequestsPage() {
         </div>
         <div className="relative w-full md:w-72">
            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-           <input type="text" placeholder="Search product, store, area..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-green-500 outline-none" />
+           <input type="text" placeholder="Search product, store, area..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
         </div>
       </div>
 
@@ -82,17 +82,17 @@ export default function RiderRequestsPage() {
               </div>
               <div className="p-5 space-y-5 flex-1">
                 <div className="flex gap-4">
-                  <div className="mt-1 flex flex-col items-center"><Store size={20} className="text-blue-500" /><div className="w-0.5 h-8 bg-slate-200 my-1.5"></div></div>
+                  <div className="mt-1 flex flex-col items-center"><Store size={20} className="text-indigo-500" /><div className="w-0.5 h-8 bg-slate-200 my-1.5"></div></div>
                   <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pickup</p><p className="text-sm font-semibold text-slate-800 mt-0.5">{task.delivery.goal.product?.store?.name}</p><p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{task.delivery.goal.product?.store?.address}</p></div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="mt-1"><MapPin size={20} className="text-green-500" /></div>
+                  <div className="mt-1"><MapPin size={20} className="text-blue-500" /></div>
                   <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dropoff</p><p className="text-sm font-semibold text-slate-800 mt-0.5">{task.delivery.goal.user?.name}</p><p className="text-xs text-slate-500 line-clamp-2 mt-0.5 leading-relaxed">{task.delivery.shippingAddress}</p></div>
                 </div>
               </div>
               <div className="p-4 bg-slate-50 flex gap-3 border-t border-slate-100 shrink-0">
                 <button onClick={() => handleAction(task.id, task.deliveryId, 'REJECT')} disabled={processingId === task.id} className="flex-1 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 flex justify-center items-center gap-2 shadow-sm">{processingId === task.id ? <Loader2 size={18} className="animate-spin" /> : <X size={18} />} Reject</button>
-                <button onClick={() => handleAction(task.id, task.deliveryId, 'ACCEPT')} disabled={processingId === task.id} className="flex-1 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 shadow-md shadow-green-200 flex justify-center items-center gap-2">{processingId === task.id ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Accept</button>
+                <button onClick={() => handleAction(task.id, task.deliveryId, 'ACCEPT')} disabled={processingId === task.id} className="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 flex justify-center items-center gap-2">{processingId === task.id ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />} Accept</button>
               </div>
             </div>
           ))

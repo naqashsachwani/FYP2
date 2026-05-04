@@ -2,128 +2,95 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic"; 
+
 export async function GET(req) {
   const { userId } = getAuth(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    // 1. Get Store ID
+    // ✅ FETCH STORE ALONG WITH ITS DEDICATED PAYOUTS
     const store = await prisma.store.findUnique({
       where: { userId: userId },
-      select: { id: true }
+      select: { id: true, payouts: true } 
     });
 
     if (!store) {
       return NextResponse.json({
         dashboardData: {
-          totalProducts: 0,
-          totalEarnings: 0,
-          totalPenalties: 0,
-          totalOrders: 0,
-          ordersDelivered: 0,
-          pendingDeliveries: 0,
-          allOrders: []
+          totalProducts: 0, totalEarnings: 0, availableBalance: 0, totalWithdrawn: 0,
+          totalPenalties: 0, totalOrders: 0, ordersDelivered: 0, pendingDeliveries: 0, allOrders: []
         }
       });
     }
 
-    // 2. Run Parallel Queries
     const [totalProducts, financialRecords, deliveryStats, penaltyRecords] = await prisma.$transaction([
-      // A. Count Products
       prisma.product.count({ where: { storeId: store.id } }),
 
-      // B. Fetch Escrow Records (For Earnings Calculation Only)
       prisma.escrow.findMany({
-        where: {
-          goal: { product: { storeId: store.id } }
-        },
-        select: {
-          status: true,      // HELD, RELEASED, REFUNDED
-          amount: true,      // Total amount
-          netAmount: true,   // Amount after fees
-          releasedAt: true,  
-          createdAt: true    
-        }
+        where: { goal: { product: { storeId: store.id } } },
+        select: { status: true, amount: true, netAmount: true, releasedAt: true, createdAt: true }
       }),
 
-      // C. Fetch Delivery Records (For Order Counts Only - Matches Order Page)
       prisma.delivery.findMany({
-        where: {
-          goal: { product: { storeId: store.id } }
-        },
-        select: {
-          status: true // Pending, Dispatched, In_Transit, Delivered
-        }
+        where: { goal: { product: { storeId: store.id } } },
+        select: { status: true }
       }),
 
-      // D. Fetch Penalties (Deductions from Store Revenue)
       prisma.refund.findMany({
         where: { storeId: store.id, status: "COMPLETED" },
         select: { amount: true, createdAt: true }
       })
     ]);
 
-    // 3. Process Financial Data (Earnings & Penalties)
     let totalEarnings = 0;
     let totalPenalties = 0;
     const allOrders = [];
 
-    // Process Income
     financialRecords.forEach(record => {
       const gross = Number(record.amount);
       const net = Number(record.netAmount);
 
       if (record.status === "RELEASED") {
-        totalEarnings += net; // Store gets ~95%
-        allOrders.push({
-          createdAt: record.releasedAt || record.createdAt,
-          total: net
-        });
+        totalEarnings += net; 
+        allOrders.push({ createdAt: record.releasedAt || record.createdAt, total: net });
       } 
       else if (record.status === "REFUNDED") {
         const compensation = gross * 0.10;
         totalEarnings += compensation;
-        allOrders.push({
-          createdAt: record.releasedAt || record.createdAt,
-          total: compensation
-        });
+        allOrders.push({ createdAt: record.releasedAt || record.createdAt, total: compensation });
       }
     });
 
-    // Process Deductions
     penaltyRecords.forEach(record => {
       const penaltyAmount = Number(record.amount);
       totalPenalties += penaltyAmount;
-      allOrders.push({
-        createdAt: record.createdAt,
-        total: -penaltyAmount // Negative impact on daily chart
-      });
+      allOrders.push({ createdAt: record.createdAt, total: -penaltyAmount });
     });
 
-    // Apply Penalties to Total Net Earnings
-    totalEarnings -= totalPenalties;
+    // ✅ ISOLATED WITHDRAWAL MATH
+    const totalWithdrawn = store.payouts.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
-    // 4. Process Delivery Data (Order Counts)
+    totalEarnings -= totalPenalties; 
+    const availableBalance = totalEarnings - totalWithdrawn; 
+
     let ordersDelivered = 0;
     let pendingDeliveries = 0;
 
     deliveryStats.forEach(d => {
         const status = d.status?.toUpperCase();
-        if (status === 'DELIVERED') {
-            ordersDelivered++;
-        } else if (['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'IN TRANSIT'].includes(status)) {
-            pendingDeliveries++;
-        }
+        if (status === 'DELIVERED') ordersDelivered++;
+        else if (['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'IN TRANSIT'].includes(status)) pendingDeliveries++;
     });
-
-    const totalOrders = ordersDelivered + pendingDeliveries;
 
     return NextResponse.json({
       dashboardData: {
         totalProducts,
         totalEarnings: Math.round(totalEarnings),
+        availableBalance: Math.round(availableBalance), 
+        totalWithdrawn: Math.round(totalWithdrawn), 
         totalPenalties: Math.round(totalPenalties),
-        totalOrders, 
+        totalOrders: ordersDelivered + pendingDeliveries, 
         ordersDelivered,
         pendingDeliveries,
         allOrders

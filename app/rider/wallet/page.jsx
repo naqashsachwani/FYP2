@@ -20,7 +20,7 @@ export default function RiderWalletPage() {
 
   const fetchWallet = async () => {
     try {
-      const res = await fetch("/api/rider/wallet"); // ✅ Calling Rider specific API
+      const res = await fetch("/api/rider/wallet"); 
       if (!res.ok) throw new Error("Failed to fetch wallet");
       setWalletData(await res.json());
     } catch (error) { toast.error("Could not load wallet data"); } 
@@ -39,7 +39,6 @@ export default function RiderWalletPage() {
     const toastId = toast.loading("Submitting withdrawal request...");
 
     try {
-      // ✅ Posts to Rider specific API
       const res = await fetch("/api/rider/wallet", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: amountNum, payoutMethod, accountName, accountNumber })
@@ -58,27 +57,28 @@ export default function RiderWalletPage() {
   const totalPages = Math.ceil(walletData.transactions.length / TRANSACTIONS_PER_PAGE);
   const currentTransactions = walletData.transactions.slice((currentPage - 1) * TRANSACTIONS_PER_PAGE, currentPage * TRANSACTIONS_PER_PAGE);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 lg:p-8 max-w-4xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-3">
-            <Wallet className="text-green-600 w-8 h-8" /> My Earnings Wallet
+            <Wallet className="text-blue-600 w-8 h-8" /> My Earnings Wallet
           </h1>
           <p className="text-slate-500 mt-1">Manage your delivery payouts and withdraw to your bank.</p>
         </div>
 
-        <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-10"><Wallet size={120} /></div>
+        {/* ✅ COMPLETELY NEW LIGHT BLUE WALLET THEME */}
+        <div className="bg-blue-50 text-blue-900 p-8 rounded-3xl shadow-sm border border-blue-200 relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 right-0 p-8 opacity-20"><Wallet size={120} className="text-blue-400" /></div>
           <div className="relative z-10">
-            <p className="text-slate-400 font-medium uppercase tracking-wider text-sm mb-2">Available Balance</p>
-            <h2 className="text-5xl md:text-6xl font-black font-mono tracking-tight">Rs {Number(walletData.balance).toLocaleString()}</h2>
+            <p className="text-blue-500 font-bold uppercase tracking-wider text-sm mb-2">Available Balance</p>
+            <h2 className="text-5xl md:text-6xl font-black font-mono tracking-tight text-blue-900">Rs {Number(walletData.balance).toLocaleString()}</h2>
             <div className="mt-8 flex gap-3">
               <button 
                 onClick={() => setIsWithdrawModalOpen(true)}
                 disabled={Number(walletData.balance) <= 0}
-                className="bg-green-500 text-white hover:bg-green-400 transition px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 text-white hover:bg-blue-700 transition px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Building size={18} /> Withdraw Funds
               </button>
@@ -101,8 +101,7 @@ export default function RiderWalletPage() {
                 {currentTransactions.map((tx) => (
                   <div key={tx.id} className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition border border-transparent hover:border-slate-100">
                     <div className="flex items-center gap-4">
-                      {/* ✅ Checks specifically for EARNING vs WITHDRAWAL */}
-                      <div className={`p-3 rounded-xl ${tx.type === 'EARNING' ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                      <div className={`p-3 rounded-xl ${tx.type === 'EARNING' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
                         {tx.type === 'EARNING' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
                       </div>
                       <div>
@@ -110,7 +109,7 @@ export default function RiderWalletPage() {
                         <p className="text-xs text-slate-500 font-medium mt-0.5">{new Date(tx.createdAt).toLocaleDateString()} - {new Date(tx.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                       </div>
                     </div>
-                    <div className={`text-lg font-black font-mono ${tx.type === 'EARNING' ? 'text-green-600' : 'text-slate-900'}`}>
+                    <div className={`text-lg font-black font-mono ${tx.type === 'EARNING' ? 'text-blue-600' : 'text-slate-900'}`}>
                       {tx.type === 'EARNING' ? '+' : '-'}Rs {Number(tx.amount).toLocaleString()}
                     </div>
                   </div>
@@ -129,37 +128,37 @@ export default function RiderWalletPage() {
 
       {isWithdrawModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
-            <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
-              <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2"><Building className="text-green-600 w-5 h-5" /> Withdrawal</h3>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[95vh] flex flex-col border border-white/20">
+            <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0 bg-blue-50/50">
+              <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2"><Building className="text-blue-600 w-5 h-5" /> Withdrawal</h3>
               <button onClick={() => setIsWithdrawModalOpen(false)} className="text-slate-400 hover:text-slate-700 hover:bg-slate-100 p-1.5 rounded-full transition"><X size={18} /></button>
             </div>
             
             <div className="overflow-y-auto p-5 shrink">
               <form onSubmit={handleWithdraw} className="space-y-4">
-                <div className="bg-green-50 text-green-800 p-3 rounded-xl text-sm border border-green-100 flex items-center justify-between font-medium">
-                  <span>Available Balance:</span><span className="font-mono font-bold">Rs {Number(walletData.balance).toLocaleString()}</span>
+                <div className="bg-blue-50 text-blue-900 p-4 rounded-xl text-sm border border-blue-200 flex items-center justify-between font-medium shadow-inner">
+                  <span className="font-bold">Available Balance:</span><span className="font-mono font-black text-lg">Rs {Number(walletData.balance).toLocaleString()}</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Amount to Withdraw (Rs)</label>
-                  <input type="number" required min="500" max={Number(walletData.balance)} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="e.g. 1500" className="w-full border border-slate-300 p-2.5 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amount to Withdraw (Rs)</label>
+                  <input type="number" required min="500" max={Number(walletData.balance)} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="e.g. 1500" className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm shadow-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Transfer Method</label>
-                  <div className="w-full border border-slate-200 bg-slate-50 text-slate-500 p-2.5 rounded-xl text-sm font-medium cursor-not-allowed">Bank Transfer</div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Transfer Method</label>
+                  <div className="w-full border border-slate-200 bg-slate-50 text-slate-500 p-3 rounded-xl text-sm font-bold cursor-not-allowed">Bank Transfer</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Account Title / Name</label>
-                  <input type="text" required value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="e.g. John Doe" className="w-full border border-slate-300 p-2.5 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Account Title / Name</label>
+                  <input type="text" required value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="e.g. John Doe" className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Account Number / IBAN</label>
-                  <input type="text" required value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. PK32 HABB 0000 1234 5678 90" className="w-full border border-slate-300 p-2.5 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-mono text-sm" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Account Number / IBAN</label>
+                  <input type="text" required value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. PK32 HABB 0000 1234 5678 90" className="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm shadow-sm" />
                 </div>
                 <div className="pt-2 flex gap-3">
-                  <button type="button" onClick={() => setIsWithdrawModalOpen(false)} className="flex-1 py-2.5 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition">Cancel</button>
-                  <button type="submit" disabled={isProcessing} className="flex-1 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition flex justify-center items-center gap-2 disabled:opacity-50">
-                    {isProcessing ? <Loader2 size={16} className="animate-spin" /> : "Withdraw"}
+                  <button type="button" onClick={() => setIsWithdrawModalOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition shadow-sm">Cancel</button>
+                  <button type="submit" disabled={isProcessing} className="flex-1 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition flex justify-center items-center gap-2 disabled:opacity-50 shadow-md shadow-blue-500/20">
+                    {isProcessing ? <Loader2 size={16} className="animate-spin" /> : "Withdraw Funds"}
                   </button>
                 </div>
               </form>
