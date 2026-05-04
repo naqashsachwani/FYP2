@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import authRider from '@/middlewares/authRider';
+import { sendNotification } from "@/lib/sendNotification"; // ✅ Added Notification System
 
 export async function GET(req) {
   try {
@@ -10,13 +11,11 @@ export async function GET(req) {
     
     if (!riderId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    // Fetch ONLY Rider-specific payouts and withdrawals
     const payouts = await prisma.riderPayout.findMany({
         where: { riderId: riderId },
         orderBy: { createdAt: 'desc' }
     });
 
-    // ✅ DYNAMIC LEDGER CALCULATION: Ensures balance is always 100% accurate
     const earnings = payouts.filter(p => p.type === 'EARNING').reduce((acc, curr) => acc + curr.amount, 0);
     const withdrawals = payouts.filter(p => p.type === 'WITHDRAWAL').reduce((acc, curr) => acc + curr.amount, 0);
     const dynamicBalance = earnings - withdrawals;
@@ -38,10 +37,11 @@ export async function POST(req) {
     
     if (!riderId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
+    const userRecord = await prisma.user.findUnique({ where: { id: userId } });
+
     const { amount, payoutMethod, accountName, accountNumber } = await req.json();
     const withdrawAmount = Number(amount);
 
-    // Verify balance dynamically to prevent overdrafts
     const payouts = await prisma.riderPayout.findMany({ where: { riderId: riderId } });
     const earnings = payouts.filter(p => p.type === 'EARNING').reduce((sum, p) => sum + p.amount, 0);
     const withdrawals = payouts.filter(p => p.type === 'WITHDRAWAL').reduce((sum, p) => sum + p.amount, 0);
@@ -52,7 +52,6 @@ export async function POST(req) {
     }
 
     await prisma.$transaction(async (tx) => {
-      // 1. Record withdrawal in Rider ledger
       await tx.riderPayout.create({
          data: {
            riderId: riderId,
@@ -63,12 +62,24 @@ export async function POST(req) {
          }
       });
 
-      // 2. Update cached total on profile
       await tx.riderProfile.update({
          where: { id: riderId },
          data: { walletBalance: { decrement: withdrawAmount } }
       });
     });
+
+    // ✅ NOTIFY RIDER OF WITHDRAWAL REQUEST
+    if (userRecord?.email) {
+        await sendNotification({
+            userId: userId,
+            email: userRecord.email,
+            title: "Withdrawal Requested 💸",
+            message: `Your request to withdraw Rs ${withdrawAmount.toLocaleString()} to account ending in ${accountNumber.slice(-4)} has been successfully submitted. It is currently pending processing.`,
+            type: "SYSTEM_ALERT",
+            notifyInApp: true,
+            notifyEmail: true
+        });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

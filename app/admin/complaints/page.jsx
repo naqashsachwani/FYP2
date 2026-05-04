@@ -1,7 +1,7 @@
 "use client"; 
 
 import { useEffect, useState } from "react";
-import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock, Image as ImageIcon, ChevronLeft, ChevronRight, Banknote, Truck } from "lucide-react";
+import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock, Image as ImageIcon, ChevronLeft, ChevronRight, Banknote, Truck, Hash } from "lucide-react";
 import toast from "react-hot-toast"; 
 
 const GoalDetailsModal = ({ goalId, onClose }) => {
@@ -198,7 +198,6 @@ export default function AdminComplaintsPage() {
   const filteredComplaints = complaints.filter(c => {
     let matchStatus = true;
     if (statusFilter !== "ALL") {
-      // ✅ Restored the OPEN / IN_PROGRESS grouping logic
       if (statusFilter === "IN_PROGRESS") {
         matchStatus = c.status === "OPEN" || c.status === "IN_PROGRESS";
       } else {
@@ -219,8 +218,11 @@ export default function AdminComplaintsPage() {
         matchFiler = !!c.filerRiderId; 
     }
     
+    // ✅ SEARCH LOGIC NOW SUPPORTS COMPLAINT ID SEARCH
     const term = searchTerm.toLowerCase();
     const matchSearch = term === "" || 
+      (c.complaintId || "").toLowerCase().includes(term) ||
+      (c.id || "").toLowerCase().includes(term) ||
       c.title.toLowerCase().includes(term) ||
       c.description.toLowerCase().includes(term) ||
       (c.filerUser?.name || "").toLowerCase().includes(term) ||
@@ -262,7 +264,7 @@ export default function AdminComplaintsPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
-                placeholder="Search by issue, user, store, rider, or product..." 
+                placeholder="Search by ID, issue, user, store, rider, or product..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -328,7 +330,14 @@ export default function AdminComplaintsPage() {
                            {c.filerRiderId ? <Truck size={20}/> : c.filerUserId ? <User size={20} /> : <StoreIcon size={20} />}
                          </div>
                          <div>
-                           <h3 className="font-bold text-slate-900">{c.title}</h3>
+                           {/* ✅ NEW: Displays the ID along with the Title */}
+                           <div className="flex items-center gap-2 mb-1">
+                               <h3 className="font-bold text-slate-900">{c.title}</h3>
+                               <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded flex items-center border border-slate-200">
+                                   <Hash size={10} className="mr-0.5 text-slate-400" />
+                                   {c.complaintId || c.id.slice(-6).toUpperCase()}
+                               </span>
+                           </div>
                            <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">
                              From: {c.filerRiderId ? c.filerRider?.user?.name : c.filerUserId ? c.filerUser?.name : c.filerStore?.name} • Type: {c.type.replace('_', ' ')}
                            </p>

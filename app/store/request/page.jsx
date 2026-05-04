@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, AlertCircle, PlusCircle, CheckCircle, MessageSquareWarning, X, Package, ShieldAlert, Lock, Clock, User, Truck, ChevronDown, Check } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Loader2, AlertCircle, PlusCircle, CheckCircle, MessageSquareWarning, X, Package, ShieldAlert, Lock, Clock, User, Truck, ChevronDown, Check, Hash, ChevronLeft, ChevronRight, Filter } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@clerk/nextjs";
 
@@ -12,8 +12,12 @@ export default function StoreRequestsPage() {
   const [activeGoals, setActiveGoals] = useState([]); 
   const [loading, setLoading] = useState(true); 
 
+  const [filterStatus, setFilterStatus] = useState("ALL"); // ✅ NEW: Filter State
+  const [currentPage, setCurrentPage] = useState(1);       // ✅ NEW: Pagination State
+  const ITEMS_PER_PAGE = 5;
+
   const [isModalOpen, setIsModalOpen] = useState(false); 
-  const [isOrderDropdownOpen, setIsOrderDropdownOpen] = useState(false); // ✅ NEW STATE FOR CUSTOM DROPDOWN
+  const [isOrderDropdownOpen, setIsOrderDropdownOpen] = useState(false); 
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const [formData, setFormData] = useState({
     title: "",
@@ -41,6 +45,9 @@ export default function StoreRequestsPage() {
     if (isLoaded && userId) fetchData();
   }, [isLoaded, userId]);
 
+  // Reset pagination when filter changes
+  useEffect(() => { setCurrentPage(1); }, [filterStatus]);
+
   useEffect(() => {
       if (formData.goalId) {
           const selectedGoal = activeGoals.find(g => g.id === formData.goalId);
@@ -59,6 +66,19 @@ export default function StoreRequestsPage() {
           setFormData(prev => ({ ...prev, targetUserId: "" }));
       }
   }, [formData.goalId, formData.type, activeGoals]);
+
+  // ✅ FILTER LOGIC
+  const filteredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      if (filterStatus === "ALL") return true;
+      if (filterStatus === "IN_PROGRESS") return req.status === "OPEN" || req.status === "IN_PROGRESS";
+      return req.status === filterStatus;
+    });
+  }, [requests, filterStatus]);
+
+  // ✅ PAGINATION LOGIC
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / ITEMS_PER_PAGE));
+  const currentRequests = filteredRequests.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
@@ -82,7 +102,9 @@ export default function StoreRequestsPage() {
         throw new Error(errorData.error);
       }
 
-      toast.success("Request submitted successfully to Admin.", { id: toastId });
+      const responseData = await res.json();
+      
+      toast.success(`Ticket ${responseData.request?.complaintId || responseData.request?.id.slice(-6).toUpperCase()} filed.`, { id: toastId });
       
       setIsModalOpen(false);
       setFormData({ title: "", type: "PRICE_LOCK", goalId: "", targetUserId: "", description: "" });
@@ -107,7 +129,7 @@ export default function StoreRequestsPage() {
     return <div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
   }
 
-  const selectedGoal = activeGoals.find(g => g.id === formData.goalId); // Used for dropdown display
+  const selectedGoal = activeGoals.find(g => g.id === formData.goalId); 
 
   return (
     <div className="p-6 md:p-8 text-slate-800 w-full">
@@ -129,89 +151,140 @@ export default function StoreRequestsPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* ✅ NEW: DROPDOWN FILTER BAR */}
+        {requests.length > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+            <div className="text-sm font-medium text-slate-500 w-full sm:w-auto text-center sm:text-left">
+              Showing <span className="font-bold text-slate-700">{filteredRequests.length}</span> requests
+            </div>
+            <div className="relative w-full sm:w-48">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer">
+                <option value="ALL">All Statuses</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
           {requests.length === 0 ? (
             <div className="text-center py-16 px-4">
               <CheckCircle className="w-12 h-12 text-slate-200 mx-auto mb-3" />
               <h3 className="text-lg font-bold text-slate-700">No Requests Found</h3>
               <p className="text-slate-500 mt-1 text-sm">You haven't made any requests or complaints yet.</p>
             </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {requests.map((req) => (
-                <div key={req.id} className="p-6 hover:bg-slate-50 transition flex flex-col xl:flex-row gap-8 justify-between">
-                  
-                  <div className="flex-1 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1">
-                        {req.type === "PRICE_LOCK" ? <Lock size={12} /> : req.type === "RIDER_ISSUE" ? <Truck size={12} /> : <AlertCircle size={12} />}
-                        {req.type.replace('_', ' ')}
-                      </span>
-                      <span className="text-xs text-slate-400 flex items-center gap-1">
-                        <Clock size={14} /> {new Date(req.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-900">{req.title}</h4>
-                      <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">{req.description}</p>
-                    </div>
-                    
-                    {req.goal && (
-                      <div className="inline-flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs font-medium text-slate-600 border border-slate-200">
-                        <Package size={14} className="text-indigo-500" />
-                        <span>Product: <span className="font-bold text-slate-800">{req.goal.product?.name}</span></span>
-                        <span className="text-slate-300">|</span>
-                        <span>Target: <span className="font-mono text-indigo-600 font-bold">Rs {Number(req.goal.targetAmount).toLocaleString()}</span></span>
-                        
-                        {req.targetUser && (
-                          <>
-                            <span className="text-slate-300">|</span>
-                            <span>Target: <span className="font-bold text-slate-800">{req.targetUser.name}</span></span>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="w-full xl:w-80 shrink-0 flex flex-col gap-4">
-                    
-                    <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
-                      <p className="text-xs font-bold text-slate-400 uppercase mb-4 text-center tracking-wider">Request Status</p>
-                      <div className="flex justify-between items-center relative px-2">
-                        
-                        <div className="absolute top-1/2 left-4 right-4 h-1 bg-slate-100 -z-10 -translate-y-1/2 rounded-full"></div>
-                        
-                        {getProgressSteps(req.status).map((step, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1.5 bg-white px-1 relative z-10">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
-                               step.isError && step.active ? "bg-red-50 border-red-500 text-red-600"  
-                               : step.active ? "bg-indigo-50 border-indigo-500 text-indigo-600"  
-                               : "bg-slate-50 border-slate-200 text-slate-300" 
-                            }`}>
-                              {step.isError ? <ShieldAlert size={14} /> : <CheckCircle size={14} />}
-                            </div>
-                            <span className={`text-[10px] font-bold uppercase tracking-wide ${step.active ? (step.isError ? "text-red-600" : "text-indigo-600") : "text-slate-400"}`}>
-                              {step.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {req.adminNotes && (
-                      <div className={`p-4 rounded-xl border text-sm ${req.status === 'REJECTED' ? 'bg-red-50 border-red-100 text-red-900' : 'bg-indigo-50 border-indigo-100 text-indigo-900'}`}>
-                        <p className={`text-[10px] tracking-wider font-bold uppercase mb-1.5 ${req.status === 'REJECTED' ? 'text-red-700' : 'text-indigo-700'}`}>
-                          Admin Decision
-                        </p>
-                        <p className="leading-relaxed">{req.adminNotes}</p>
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              ))}
+          ) : filteredRequests.length === 0 ? (
+            <div className="text-center py-16 px-4 bg-slate-50/50">
+              <Filter className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-slate-800">No Matches Found</h3>
+              <p className="text-sm text-slate-500 mt-1 mb-4">We couldn't find any requests matching your current filters.</p>
+              <button onClick={() => setFilterStatus("ALL")} className="text-sm font-bold text-indigo-600 hover:underline">Clear Filters</button>
             </div>
+          ) : (
+            <>
+              <div className="divide-y divide-slate-100 flex-1">
+                {currentRequests.map((req) => (
+                  <div key={req.id} className="p-6 hover:bg-slate-50 transition flex flex-col xl:flex-row gap-8 justify-between">
+                    
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-md flex items-center gap-1 border border-slate-200">
+                            <Hash size={14} className="text-slate-400" />
+                            {req.complaintId || req.id.slice(-6).toUpperCase()}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider bg-slate-100 px-3 py-1 rounded-full flex items-center gap-1">
+                          {req.type === "PRICE_LOCK" ? <Lock size={12} /> : req.type === "RIDER_ISSUE" ? <Truck size={12} /> : <AlertCircle size={12} />}
+                          {req.type.replace('_', ' ')}
+                        </span>
+                        <span className="text-xs text-slate-400 flex items-center gap-1">
+                          <Clock size={14} /> {new Date(req.createdAt).toLocaleDateString('en-GB')}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h4 className="text-lg font-bold text-slate-900">{req.title}</h4>
+                        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">{req.description}</p>
+                      </div>
+                      
+                      {req.goal && (
+                        <div className="inline-flex flex-wrap items-center gap-2 px-3 py-2 bg-slate-100 rounded-lg text-xs font-medium text-slate-600 border border-slate-200">
+                          <Package size={14} className="text-indigo-500" />
+                          <span>Product: <span className="font-bold text-slate-800">{req.goal.product?.name}</span></span>
+                          <span className="text-slate-300">|</span>
+                          <span>Target: <span className="font-mono text-indigo-600 font-bold">Rs {Number(req.goal.targetAmount).toLocaleString()}</span></span>
+                          
+                          {req.targetUser && (
+                            <>
+                              <span className="text-slate-300">|</span>
+                              <span>Target: <span className="font-bold text-slate-800">{req.targetUser.name}</span></span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="w-full xl:w-80 shrink-0 flex flex-col gap-4">
+                      
+                      <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm">
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-4 text-center tracking-wider">Request Status</p>
+                        <div className="flex justify-between items-center relative px-2">
+                          
+                          <div className="absolute top-1/2 left-4 right-4 h-1 bg-slate-100 -z-10 -translate-y-1/2 rounded-full"></div>
+                          
+                          {getProgressSteps(req.status).map((step, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1.5 bg-white px-1 relative z-10">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
+                                 step.isError && step.active ? "bg-red-50 border-red-500 text-red-600"  
+                                 : step.active ? "bg-indigo-50 border-indigo-500 text-indigo-600"  
+                                 : "bg-slate-50 border-slate-200 text-slate-300" 
+                              }`}>
+                                {step.isError ? <ShieldAlert size={14} /> : <CheckCircle size={14} />}
+                              </div>
+                              <span className={`text-[10px] font-bold uppercase tracking-wide ${step.active ? (step.isError ? "text-red-600" : "text-indigo-600") : "text-slate-400"}`}>
+                                {step.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {req.adminNotes && (
+                        <div className={`p-4 rounded-xl border text-sm ${req.status === 'REJECTED' ? 'bg-red-50 border-red-100 text-red-900' : 'bg-indigo-50 border-indigo-100 text-indigo-900'}`}>
+                          <p className={`text-[10px] tracking-wider font-bold uppercase mb-1.5 ${req.status === 'REJECTED' ? 'text-red-700' : 'text-indigo-700'}`}>
+                            Admin Decision
+                          </p>
+                          <p className="leading-relaxed">{req.adminNotes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+
+              {/* ✅ NEW: PAGINATION FOOTER */}
+              {totalPages > 1 && (
+                <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 rounded-b-2xl">
+                    <span className="text-sm text-slate-500 font-medium">
+                        Showing <span className="font-bold text-slate-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * ITEMS_PER_PAGE, filteredRequests.length)}</span> of <span className="font-bold text-slate-900">{filteredRequests.length}</span> requests
+                    </span>
+                    <div className="flex gap-2">
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition text-sm font-bold">
+                            <ChevronLeft size={16} /> Prev
+                        </button>
+                        <div className="flex items-center justify-center px-4 font-bold text-sm text-slate-700 bg-slate-50 rounded-lg border border-slate-100">
+                            {currentPage} / {totalPages}
+                        </div>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition text-sm font-bold">
+                            Next <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -244,7 +317,6 @@ export default function StoreRequestsPage() {
                   </select>
                 </div>
 
-                {/* ✅ REPLACED: Custom Dropdown with Image and Delivery Date Support */}
                 <div className="relative">
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">Related Active Goal</label>
                   <button 
@@ -270,7 +342,7 @@ export default function StoreRequestsPage() {
                              tag = `Buyer: ${g.user?.name}`;
                          }
                          
-                         const delDate = g.delivery?.deliveryDate ? new Date(g.delivery.deliveryDate).toLocaleDateString() : 'Not Delivered';
+                         const delDate = g.delivery?.deliveryDate ? new Date(g.delivery.deliveryDate).toLocaleDateString('en-GB') : 'Not Delivered';
                          
                          return (
                            <button 

@@ -26,14 +26,13 @@ export async function GET(req) {
       orderBy: { createdAt: 'desc' }
     });
 
-    // ✅ FETCH IMAGES: Ensure product images are fetched for the dropdown
     const activeGoals = await prisma.goal.findMany({
       where: { 
         product: { storeId: store.id },
         status: { in: ["ACTIVE", "COMPLETED"] } 
       },
       include: { 
-        product: { select: { name: true, images: true } }, // Images added here
+        product: { select: { name: true, images: true } },
         user: { select: { id: true, name: true } },
         delivery: {
            include: { rider: { include: { user: { select: { id: true, name: true } } } } }
@@ -63,8 +62,12 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // ✅ GENERATE CLEAN COMPLAINT ID
+    const generatedComplaintId = `CMP-${Math.floor(100000 + Math.random() * 900000)}`;
+
     const newRequest = await prisma.complaint.create({
       data: {
+        complaintId: generatedComplaintId, // ✅ Save ID
         title,
         description,
         type,
@@ -80,11 +83,11 @@ export async function POST(req) {
         await sendNotification({
             userId: user.id,
             email: user.email,
-            title: "Request Submitted 📝",
-            message: `Your request regarding "${title}" has been successfully submitted to the admin team for review.`,
+            title: "Support Ticket Opened 🎫",
+            message: `Your request (ID: ${generatedComplaintId}) regarding "${title}" has been successfully submitted to the admin team for review.`,
             type: "COMPLAINT_POSTED",
             notifyInApp: true,
-            notifyEmail: true
+            notifyEmail: true // ✅ Send actual email
         });
     }
 

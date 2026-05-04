@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 
 export default function RiderComplaintsPage() {
   const [complaints, setComplaints] = useState([]);
-  const [deliveries, setDeliveries] = useState([]); // ✅ NEW: Fetches Rider Deliveries
+  const [deliveries, setDeliveries] = useState([]); 
 
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("ALL");
@@ -28,7 +28,6 @@ export default function RiderComplaintsPage() {
 
   const fetchData = async () => {
     try {
-      // ✅ POINTING TO NEW ISOLATED API
       const res = await fetch("/api/rider/complaints");
       if (!res.ok) throw new Error("Failed to load data");
       const data = await res.json();
@@ -39,9 +38,9 @@ export default function RiderComplaintsPage() {
   };
 
   useEffect(() => { fetchData(); }, []);
+  
   useEffect(() => { setCurrentPage(1); }, [filterStatus]);
 
-  // ✅ Auto-assign target user or store based on the selected delivery
   useEffect(() => {
     if (formData.goalId) {
         const selectedDel = deliveries.find(d => d.goalId === formData.goalId);
@@ -55,7 +54,7 @@ export default function RiderComplaintsPage() {
     }
   }, [formData.goalId, formData.type, deliveries]);
 
-  const filteredComplaints = useMemo(() => {
+  const filteredItems = useMemo(() => {
     return complaints.filter((comp) => {
       if (filterStatus === "ALL") return true;
       if (filterStatus === "IN_PROGRESS") return comp.status === "OPEN" || comp.status === "IN_PROGRESS";
@@ -63,8 +62,8 @@ export default function RiderComplaintsPage() {
     });
   }, [complaints, filterStatus]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredComplaints.length / ITEMS_PER_PAGE));
-  const currentComplaints = filteredComplaints.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const currentItems = filteredItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleSubmit = async (e) => {
     e.preventDefault(); 
@@ -84,7 +83,8 @@ export default function RiderComplaintsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success(`Ticket ${data.complaint.id.slice(-6)} filed.`, { id: toastId });
+      // ✅ SUCCESS TOAST NOW SHOWS THE PROPER CMP- ID
+      toast.success(`Ticket ${data.complaint.complaintId || data.complaint.id.slice(-6)} filed.`, { id: toastId });
       setIsModalOpen(false);
       setFormData({ title: "", type: "USER_BEHAVIOR", description: "", goalId: "", targetUserId: "", targetStoreId: "" });
       fetchData(); 
@@ -116,37 +116,39 @@ export default function RiderComplaintsPage() {
           </button>
         </div>
 
-        {complaints.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-            <div className="text-sm font-medium text-slate-500 w-full sm:w-auto text-center sm:text-left">
-              Showing <span className="font-bold text-slate-700">{filteredComplaints.length}</span> tickets
-            </div>
-            <div className="relative w-full sm:w-48">
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer">
-                <option value="ALL">All Statuses</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="RESOLVED">Resolved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
-            </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+          <div className="text-sm font-medium text-slate-500 w-full sm:w-auto text-center sm:text-left">
+            Showing <span className="font-bold text-slate-700">{filteredItems.length}</span> tickets
           </div>
-        )}
+          <div className="relative w-full sm:w-48">
+            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-4 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer">
+              <option value="ALL">All Statuses</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+          </div>
+        </div>
 
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          {filteredComplaints.length === 0 ? (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 flex flex-col">
+          {filteredItems.length === 0 ? (
             <div className="text-center py-16 px-4">
               <CheckCircle className="w-16 h-16 text-slate-200 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-slate-700">No Tickets Found</h3>
             </div>
           ) : (
             <>
-              <div className="divide-y divide-slate-100">
-                {currentComplaints.map((comp) => (
+              <div className="divide-y divide-slate-100 flex-1">
+                {currentItems.map((comp) => (
                   <div key={comp.id} className="p-6 hover:bg-slate-50 transition flex flex-col md:flex-row gap-6 justify-between">
                     <div className="flex-1 space-y-4">
                       <div className="flex flex-wrap items-center gap-3">
-                        <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-md flex items-center gap-1 border border-slate-200"><Hash size={14} className="text-slate-400" />{comp.id.slice(-6).toUpperCase()}</span>
+                        {/* ✅ PROPERLY RENDERS THE CMP- ID */}
+                        <span className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1 rounded-md flex items-center gap-1 border border-slate-200">
+                            <Hash size={14} className="text-slate-400" />
+                            {comp.complaintId || comp.id.slice(-6).toUpperCase()}
+                        </span>
                         <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest bg-slate-100 px-3 py-1 rounded-full">{comp.type.replace('_', ' ')}</span>
                         <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={14} /> {new Date(comp.createdAt).toLocaleDateString('en-GB')}</span>
                       </div>
@@ -187,15 +189,22 @@ export default function RiderComplaintsPage() {
                 ))}
               </div>
               
-              {totalPages > 1 && (
-                <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
-                  <span className="text-sm text-slate-500 font-medium">Page {currentPage} of {totalPages}</span>
+              <div className="p-4 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 rounded-b-3xl">
+                  <span className="text-sm text-slate-500 font-medium">
+                      Showing <span className="font-bold text-slate-900">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to <span className="font-bold text-slate-900">{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</span> of <span className="font-bold text-slate-900">{filteredItems.length}</span> entries
+                  </span>
                   <div className="flex gap-2">
-                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-100 text-slate-600 disabled:opacity-50"><ChevronLeft size={18} /></button>
-                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 border border-slate-200 rounded-lg bg-white hover:bg-slate-100 text-slate-600 disabled:opacity-50"><ChevronRight size={18} /></button>
+                      <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition text-sm font-bold">
+                          <ChevronLeft size={16} /> Prev
+                      </button>
+                      <div className="flex items-center justify-center px-4 font-bold text-sm text-slate-700 bg-slate-50 rounded-lg border border-slate-100">
+                          {currentPage} / {totalPages}
+                      </div>
+                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="flex items-center gap-1 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition text-sm font-bold">
+                          Next <ChevronRight size={16} />
+                      </button>
                   </div>
-                </div>
-              )}
+              </div>
             </>
           )}
         </div>
