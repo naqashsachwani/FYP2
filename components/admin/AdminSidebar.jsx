@@ -10,7 +10,8 @@ import {
   LogOut,
   Users,
   MessageSquareWarning,
-  Bike // ✅ Added Icon for Riders
+  Bike,
+  Coins // ✅ Added Coins icon for Extra Payments
 } from "lucide-react"
 
 import Image from "next/image"
@@ -25,11 +26,12 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Dashboard', href: '/admin', icon: LayoutGrid },
     { name: 'Users', href: '/admin/users', icon: Users }, 
     { name: 'Stores', href: '/admin/stores', icon: StoreIcon },
-    // ✅ ADDED: Riders Management page link
     { name: 'Riders', href: '/admin/riders', icon: Bike }, 
     { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
     { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
     { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, 
+    // ✅ ADDED: Extra Payments page link
+    { name: 'Extra Payments', href: '/admin/extra-payments', icon: Coins }, 
     { name: 'Requests & Complaints', href: '/admin/complaints', icon: MessageSquareWarning }, 
   ]
 
@@ -97,7 +99,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
           </p>
 
           {sidebarLinks.map((link, i) => {
-            const isActive = pathname === link.href
+            const isActive = pathname === link.href || (pathname.startsWith(link.href) && link.href !== '/admin');
             return (
               <Link
                 key={i}

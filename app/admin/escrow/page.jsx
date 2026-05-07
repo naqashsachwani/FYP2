@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { 
   Loader2, DollarSign, ArrowDownLeft, AlertCircle, RefreshCw, 
   Search, Copy, CheckCircle, ChevronLeft, ChevronRight, X, 
-  Store, CreditCard, ShieldAlert, Download, Car 
+  Store, CreditCard, ShieldAlert, Download, Car, ListFilter, ArrowUpDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -96,6 +96,7 @@ export default function AdminEscrowPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1); 
   const [filter, setFilter] = useState("ALL"); 
+  const [sortOrder, setSortOrder] = useState("NEWEST"); // ✅ New Sorting State
   
   const [selectedGoalId, setSelectedGoalId] = useState(null); 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); 
@@ -151,21 +152,42 @@ export default function AdminEscrowPage() {
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
 
+  // ✅ ENHANCED SEARCH FUNCTION (Works across all columns, dates, amounts, status, and IDs)
   const matchesSearch = (item) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    return (
-        (item.goalId && item.goalId.toLowerCase().includes(term)) ||
-        (item.customerName && item.customerName.toLowerCase().includes(term)) ||
-        (item.productName && item.productName.toLowerCase().includes(term)) ||
-        (item.storeName && item.storeName.toLowerCase().includes(term))
-    );
+    
+    const idMatch = item.goalId?.toLowerCase().includes(term) || item.id?.toLowerCase().includes(term) || item.deliveryId?.toLowerCase().includes(term);
+    const nameMatch = item.customerName?.toLowerCase().includes(term) || item.storeName?.toLowerCase().includes(term) || item.productName?.toLowerCase().includes(term);
+    const statusMatch = item.status?.toLowerCase().includes(term) || item.type?.toLowerCase().includes(term);
+    const amountMatch = item.amount?.toString().includes(term) || item.platformFee?.toString().includes(term) || item.netAmount?.toString().includes(term);
+    
+    let dateMatch = false;
+    if (item.date || item.createdAt) {
+      const dateStr = new Date(item.date || item.createdAt).toLocaleDateString().toLowerCase();
+      dateMatch = dateStr.includes(term);
+    }
+
+    return idMatch || nameMatch || statusMatch || amountMatch || dateMatch;
   };
 
   const pendingReleases = data?.actionable?.filter(i => i.type === "RELEASE" && matchesSearch(i)) || [];
   const pendingRefunds = data?.actionable?.filter(i => i.type === "REFUND" && matchesSearch(i)) || [];
   const pendingRiderPayouts = data?.actionable?.filter(i => i.type === "RIDER_PAYOUT" && matchesSearch(i)) || [];
-  const historyData = data?.history?.data?.filter(matchesSearch) || [];
+  
+  // ✅ ENHANCED SORTING & FILTERING
+  let historyData = data?.history?.data?.filter(matchesSearch) || [];
+  
+  if (sortOrder === "NEWEST") {
+      historyData.sort((a, b) => new Date(b.date) - new Date(a.date));
+  } else if (sortOrder === "OLDEST") {
+      historyData.sort((a, b) => new Date(a.date) - new Date(b.date));
+  } else if (sortOrder === "HIGH_AMOUNT") {
+      historyData.sort((a, b) => b.amount - a.amount);
+  } else if (sortOrder === "LOW_AMOUNT") {
+      historyData.sort((a, b) => a.amount - b.amount);
+  }
+
   const totalPages = data?.history?.totalPages || 1;
 
   const generatePDF = async () => {
@@ -304,9 +326,9 @@ export default function AdminEscrowPage() {
           <div className="flex gap-2 w-full md:w-auto">
              <div className="relative flex-1 md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input type="text" placeholder="Search ID, Product..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input type="text" placeholder="Search ID, Amount, Status..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm" />
              </div>
-             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50" title="Refresh Data"><RefreshCw size={20} className={loading ? "animate-spin" : ""} /></button>
+             <button onClick={fetchData} className="p-2 bg-white border rounded-lg hover:bg-gray-50 shadow-sm" title="Refresh Data"><RefreshCw size={20} className={loading ? "animate-spin" : ""} /></button>
              
              <button 
                 onClick={generatePDF} 
@@ -321,7 +343,6 @@ export default function AdminEscrowPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex justify-between">
-             {/* ✅ REMOVED the red subtext below the Earnings */}
              <div>
                 <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Net Platform Earnings</p>
                 <h3 className="text-3xl font-bold text-green-600 mt-1">Rs {data?.stats?.totalEarnings?.toLocaleString()}</h3>
@@ -347,14 +368,14 @@ export default function AdminEscrowPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 uppercase font-medium"><tr><th className="px-6 py-4">Goal ID</th><th className="px-6 py-4">Product</th><th className="px-6 py-4">Amount</th><th className="px-6 py-4">Fee (5%)</th><th className="px-6 py-4">Net</th><th className="px-6 py-4 text-right">Action</th></tr></thead>
                         <tbody>
-                            {pendingReleases.length === 0 ? <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">No pending payouts.</td></tr> : pendingReleases.map((item) => (
+                            {pendingReleases.length === 0 ? <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">No pending payouts matching search.</td></tr> : pendingReleases.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 border-b">
-                                    <td className="px-6 py-4 font-mono text-xs text-blue-600 cursor-pointer" onClick={() => setSelectedGoalId(item.goalId)}>{item.goalId.slice(0, 8)}...</td>
+                                    <td className="px-6 py-4 font-mono text-xs text-blue-600 cursor-pointer hover:underline" onClick={() => setSelectedGoalId(item.goalId)}>{item.goalId.slice(0, 8)}...</td>
                                     <td className="px-6 py-4 font-bold">{item.productName}</td>
                                     <td className="px-6 py-4 font-mono">Rs {item.amount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-red-500">- Rs {(item.amount * 0.05).toLocaleString()}</td>
-                                    <td className="px-6 py-4 font-bold text-green-600">Rs {(item.amount * 0.95).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE", "ESCROW")} disabled={processingId === item.id} className="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50">Release</button></td>
+                                    <td className="px-6 py-4 text-red-500 font-mono">- Rs {(item.amount * 0.05).toLocaleString()}</td>
+                                    <td className="px-6 py-4 font-bold text-green-600 font-mono">Rs {(item.amount * 0.95).toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE", "ESCROW")} disabled={processingId === item.id} className="px-3 py-1 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 disabled:opacity-50 shadow-sm">Release</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -369,13 +390,13 @@ export default function AdminEscrowPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 uppercase font-medium"><tr><th className="px-6 py-4">Delivery ID</th><th className="px-6 py-4">Rider Name</th><th className="px-6 py-4">Delivered Product</th><th className="px-6 py-4">Amount</th><th className="px-6 py-4 text-right">Action</th></tr></thead>
                         <tbody>
-                            {pendingRiderPayouts.length === 0 ? <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">No pending rider payouts.</td></tr> : pendingRiderPayouts.map((item) => (
+                            {pendingRiderPayouts.length === 0 ? <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">No pending rider payouts matching search.</td></tr> : pendingRiderPayouts.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 border-b">
                                     <td className="px-6 py-4 font-mono text-xs text-gray-500">{item.deliveryId?.slice(0, 8)}...</td>
                                     <td className="px-6 py-4 font-bold text-blue-700">{item.customerName}</td>
                                     <td className="px-6 py-4 text-gray-600">{item.productName}</td>
-                                    <td className="px-6 py-4 font-bold text-green-600">Rs {item.amount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE_RIDER", "RIDER_PAYOUT")} disabled={processingId === item.id} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 disabled:opacity-50">Pay Rider</button></td>
+                                    <td className="px-6 py-4 font-bold text-green-600 font-mono">Rs {item.amount.toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "RELEASE_RIDER", "RIDER_PAYOUT")} disabled={processingId === item.id} className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm">Pay Rider</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -390,14 +411,14 @@ export default function AdminEscrowPage() {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-500 uppercase font-medium"><tr><th className="px-6 py-4">Goal ID</th><th className="px-6 py-4">Product</th><th className="px-6 py-4">Amount</th><th className="px-6 py-4">Penalty (20%)</th><th className="px-6 py-4">Refund User</th><th className="px-6 py-4 text-right">Action</th></tr></thead>
                         <tbody>
-                            {pendingRefunds.length === 0 ? <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">No pending refunds.</td></tr> : pendingRefunds.map((item) => (
+                            {pendingRefunds.length === 0 ? <tr><td colSpan="6" className="px-6 py-8 text-center text-gray-400">No pending refunds matching search.</td></tr> : pendingRefunds.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 border-b">
-                                    <td className="px-6 py-4 font-mono text-xs text-blue-600 cursor-pointer" onClick={() => setSelectedGoalId(item.goalId)}>{item.goalId.slice(0, 8)}...</td>
+                                    <td className="px-6 py-4 font-mono text-xs text-blue-600 cursor-pointer hover:underline" onClick={() => setSelectedGoalId(item.goalId)}>{item.goalId.slice(0, 8)}...</td>
                                     <td className="px-6 py-4 font-bold">{item.productName}</td>
                                     <td className="px-6 py-4 font-mono">Rs {item.amount.toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-red-500">- Rs {(item.amount * 0.20).toLocaleString()}</td>
-                                    <td className="px-6 py-4 font-bold text-gray-800">Rs {(item.amount * 0.80).toLocaleString()}</td>
-                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "REFUND", "REFUND_REQUEST")} disabled={processingId === item.id} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 disabled:opacity-50">Process</button></td>
+                                    <td className="px-6 py-4 text-red-500 font-mono">- Rs {(item.amount * 0.20).toLocaleString()}</td>
+                                    <td className="px-6 py-4 font-bold text-gray-800 font-mono">Rs {(item.amount * 0.80).toLocaleString()}</td>
+                                    <td className="px-6 py-4 text-right"><button onClick={() => handleProcess(item.id, "REFUND", "REFUND_REQUEST")} disabled={processingId === item.id} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-bold hover:bg-red-700 disabled:opacity-50 shadow-sm">Process</button></td>
                                 </tr>
                             ))}
                         </tbody>
@@ -409,15 +430,37 @@ export default function AdminEscrowPage() {
         {/* --- ALL TRANSACTIONS HISTORY TABLE --- */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           
-          <div className="p-6 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="p-6 border-b flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50/50">
              <h2 className="text-lg font-bold text-gray-800">All Transactions</h2>
-             <div className="flex bg-gray-100 p-1 rounded-lg">
-                {['ALL', 'ACTIVE', 'HISTORY'].map(f => (
-                    <button key={f} onClick={() => { setFilter(f); setPage(1); }} 
-                        className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${filter === f ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                        {f === 'ACTIVE' ? 'Active' : f === 'HISTORY' ? 'History' : 'All Data'}
-                    </button>
-                ))}
+             
+             {/* ✅ NEW: ENHANCED DROPDOWN FILTERS */}
+             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                 <div className="relative">
+                     <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16}/>
+                     <select 
+                        value={filter} 
+                        onChange={(e) => { setFilter(e.target.value); setPage(1); }} 
+                        className="pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 cursor-pointer shadow-sm w-full appearance-none"
+                     >
+                        <option value="ALL">All Statuses</option>
+                        <option value="ACTIVE">Pending (Escrow)</option>
+                        <option value="HISTORY">Completed / Refunded</option>
+                     </select>
+                 </div>
+                 
+                 <div className="relative">
+                     <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16}/>
+                     <select 
+                        value={sortOrder} 
+                        onChange={(e) => setSortOrder(e.target.value)} 
+                        className="pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 cursor-pointer shadow-sm w-full appearance-none"
+                     >
+                        <option value="NEWEST">Date: Newest First</option>
+                        <option value="OLDEST">Date: Oldest First</option>
+                        <option value="HIGH_AMOUNT">Amount: High to Low</option>
+                        <option value="LOW_AMOUNT">Amount: Low to High</option>
+                     </select>
+                 </div>
              </div>
           </div>
 
@@ -444,44 +487,48 @@ export default function AdminEscrowPage() {
                                 <button onClick={(e) => { e.stopPropagation(); copyToClipboard(h.goalId); }} className="p-1 hover:bg-blue-100 rounded"><Copy size={12} /></button>
                             </div>
                         </td>
-                        <td className="px-6 py-4 text-gray-500">{new Date(h.date).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 text-gray-500 font-medium">
+                          {new Date(h.date).toLocaleDateString('en-GB')}
+                        </td>
                         
                         <td className="px-6 py-4">
-                            {h.status === 'RELEASED' && <span className="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700 flex items-center gap-1 w-fit"><CheckCircle size={12}/> Delivered</span>}
-                            {h.status === 'REFUNDED' && <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1 w-fit"><ShieldAlert size={12}/> Cancelled</span>}
-                            {h.status === 'HELD' && <span className="px-2 py-1 rounded text-xs font-bold bg-yellow-100 text-yellow-700">Pending</span>}
+                            {h.status === 'RELEASED' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-green-100 text-green-700 flex items-center gap-1 w-fit"><CheckCircle size={12}/> Delivered</span>}
+                            {h.status === 'REFUNDED' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-red-100 text-red-700 flex items-center gap-1 w-fit"><ShieldAlert size={12}/> Cancelled</span>}
+                            {h.status === 'HELD' && <span className="px-2 py-1 rounded text-[10px] uppercase font-bold bg-yellow-100 text-yellow-700">Pending</span>}
                         </td>
 
                         <td className="px-6 py-4 font-bold">{h.productName}</td>
 
-                        <td className="px-6 py-4 font-mono">Rs {h.amount.toLocaleString()}</td>
+                        <td className="px-6 py-4 font-mono font-bold text-gray-800">Rs {h.amount.toLocaleString()}</td>
                         
-                        <td className="px-6 py-4 text-gray-600">
+                        <td className="px-6 py-4 text-gray-600 font-mono">
                             {h.status === 'HELD' ? '-' : <span className="font-bold text-green-600">+ Rs {h.platformFee.toLocaleString()}</span>}
-                            {h.status === 'REFUNDED' && <span className="text-[10px] text-gray-400 block">(10% Fee)</span>}
-                            {h.status === 'RELEASED' && <span className="text-[10px] text-gray-400 block">(5% Fee)</span>}
+                            {h.status === 'REFUNDED' && <span className="text-[10px] text-gray-400 block font-sans">(10% Fee)</span>}
+                            {h.status === 'RELEASED' && <span className="text-[10px] text-gray-400 block font-sans">(5% Fee)</span>}
                         </td>
 
                         <td className="px-6 py-4 font-mono font-medium">
-                            {h.status === 'HELD' ? <span className="text-yellow-600 italic">Pending</span> : `Rs ${h.netAmount.toLocaleString()}`}
-                            {h.status === 'REFUNDED' && <span className="text-[10px] text-gray-400 block">(80% User Refund)</span>}
-                            {h.status === 'RELEASED' && <span className="text-[10px] text-gray-400 block">(95% Store)</span>}
+                            {h.status === 'HELD' ? <span className="text-yellow-600 italic font-sans">Pending</span> : <span className="font-bold">Rs {h.netAmount.toLocaleString()}</span>}
+                            {h.status === 'REFUNDED' && <span className="text-[10px] text-gray-400 block font-sans">(80% User Refund)</span>}
+                            {h.status === 'RELEASED' && <span className="text-[10px] text-gray-400 block font-sans">(95% Store)</span>}
                         </td>
                       </tr>
                     ))}
-                    {historyData.length === 0 && <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-400">No records found.</td></tr>}
+                    {historyData.length === 0 && <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-400">No records found matching your criteria.</td></tr>}
                   </tbody>
                 </table>
              )}
           </div>
           
-          <div className="p-4 border-t flex justify-between items-center bg-gray-50 rounded-b-xl">
-             <span className="text-xs text-gray-500">Page {page} of {totalPages} (Total: {data?.history?.totalRecords || 0})</span>
-             <div className="flex gap-2">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50"><ChevronLeft size={16}/></button>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 border rounded bg-white hover:bg-gray-100 disabled:opacity-50"><ChevronRight size={16}/></button>
+          {historyData.length > 0 && (
+             <div className="p-4 border-t flex justify-between items-center bg-gray-50 rounded-b-xl">
+               <span className="text-xs text-gray-500 font-bold">Page {page} of {totalPages} (Total: {data?.history?.totalRecords || 0})</span>
+               <div className="flex gap-2">
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 border rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 shadow-sm transition-colors text-slate-600"><ChevronLeft size={16}/></button>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 border rounded-lg bg-white hover:bg-gray-100 disabled:opacity-50 shadow-sm transition-colors text-slate-600"><ChevronRight size={16}/></button>
+               </div>
              </div>
-          </div>
+          )}
         </div>
 
       </div>

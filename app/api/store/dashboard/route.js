@@ -2,44 +2,68 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic"; 
+export const dynamic = "force-dynamic";
 
 export async function GET(req) {
   const { userId } = getAuth(req);
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
-    // ✅ FETCH STORE ALONG WITH ITS DEDICATED PAYOUTS
+    // 1. Fetch Store without the fragile 'include' relation
     const store = await prisma.store.findUnique({
       where: { userId: userId },
-      select: { id: true, payouts: true } 
     });
 
     if (!store) {
       return NextResponse.json({
         dashboardData: {
-          totalProducts: 0, totalEarnings: 0, availableBalance: 0, totalWithdrawn: 0,
-          totalPenalties: 0, totalOrders: 0, ordersDelivered: 0, pendingDeliveries: 0, allOrders: []
-        }
+          totalProducts: 0,
+          totalEarnings: 0,
+          availableBalance: 0,
+          totalWithdrawn: 0,
+          totalPenalties: 0,
+          totalOrders: 0,
+          ordersDelivered: 0,
+          pendingDeliveries: 0,
+          allOrders: [],
+        },
       });
     }
 
-    const [totalProducts, financialRecords, deliveryStats, penaltyRecords] = await prisma.$transaction([
-      prisma.product.count({ where: { storeId: store.id } }),
-
+    // 2. Fetch all related data safely using direct queries
+    const [
+      totalProducts,
+      financialRecords,
+      deliveryStats,
+      penaltyRecords,
+      storePayouts // ✅ Fetched directly to bypass schema errors
+    ] = await prisma.$transaction([
+      prisma.product.count({
+        where: { storeId: store.id },
+      }),
       prisma.escrow.findMany({
         where: { goal: { product: { storeId: store.id } } },
-        select: { status: true, amount: true, netAmount: true, releasedAt: true, createdAt: true }
+        select: {
+          status: true,
+          amount: true,
+          netAmount: true,
+          releasedAt: true,
+          createdAt: true,
+        },
       }),
-
       prisma.delivery.findMany({
         where: { goal: { product: { storeId: store.id } } },
-        select: { status: true }
+        select: { status: true },
       }),
-
       prisma.refund.findMany({
         where: { storeId: store.id, status: "COMPLETED" },
-        select: { amount: true, createdAt: true }
+        select: { amount: true, createdAt: true },
+      }),
+      prisma.storePayout.findMany({
+        where: { storeId: store.id }
       })
     ]);
 
@@ -47,56 +71,72 @@ export async function GET(req) {
     let totalPenalties = 0;
     const allOrders = [];
 
-    financialRecords.forEach(record => {
-      const gross = Number(record.amount);
-      const net = Number(record.netAmount);
-
+    financialRecords.forEach((record) => {
       if (record.status === "RELEASED") {
-        totalEarnings += net; 
-        allOrders.push({ createdAt: record.releasedAt || record.createdAt, total: net });
-      } 
-      else if (record.status === "REFUNDED") {
-        const compensation = gross * 0.10;
-        totalEarnings += compensation;
-        allOrders.push({ createdAt: record.releasedAt || record.createdAt, total: compensation });
+        totalEarnings += Number(record.netAmount);
+        allOrders.push({
+          createdAt: record.releasedAt || record.createdAt,
+          total: Number(record.netAmount),
+        });
+      } else if (record.status === "REFUNDED") {
+        totalEarnings += Number(record.amount) * 0.10;
+        allOrders.push({
+          createdAt: record.releasedAt || record.createdAt,
+          total: Number(record.amount) * 0.10,
+        });
       }
     });
 
-    penaltyRecords.forEach(record => {
-      const penaltyAmount = Number(record.amount);
-      totalPenalties += penaltyAmount;
-      allOrders.push({ createdAt: record.createdAt, total: -penaltyAmount });
+    penaltyRecords.forEach((record) => {
+      totalPenalties += Number(record.amount);
+      allOrders.push({
+        createdAt: record.createdAt,
+        total: -Number(record.amount),
+      });
     });
 
-    // ✅ ISOLATED WITHDRAWAL MATH
-    const totalWithdrawn = store.payouts.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+    // Extract bonuses safely from the new direct query
+    const bonuses = storePayouts.filter((p) => p.type === "BONUS");
+    bonuses.forEach((b) => {
+      totalEarnings += Number(b.amount);
+      allOrders.push({
+        createdAt: b.createdAt,
+        total: Number(b.amount),
+      });
+    });
 
-    totalEarnings -= totalPenalties; 
-    const availableBalance = totalEarnings - totalWithdrawn; 
+    const totalWithdrawn = storePayouts
+      .filter((p) => p.type === "WITHDRAWAL")
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+    totalEarnings -= totalPenalties;
+    const availableBalance = totalEarnings - totalWithdrawn;
 
     let ordersDelivered = 0;
     let pendingDeliveries = 0;
 
-    deliveryStats.forEach(d => {
-        const status = d.status?.toUpperCase();
-        if (status === 'DELIVERED') ordersDelivered++;
-        else if (['PENDING', 'DISPATCHED', 'IN_TRANSIT', 'IN TRANSIT'].includes(status)) pendingDeliveries++;
+    deliveryStats.forEach((d) => {
+      const status = d.status?.toUpperCase();
+      if (status === "DELIVERED") {
+        ordersDelivered++;
+      } else if (["PENDING", "DISPATCHED", "IN_TRANSIT", "IN TRANSIT"].includes(status)) {
+        pendingDeliveries++;
+      }
     });
 
     return NextResponse.json({
       dashboardData: {
         totalProducts,
         totalEarnings: Math.round(totalEarnings),
-        availableBalance: Math.round(availableBalance), 
-        totalWithdrawn: Math.round(totalWithdrawn), 
+        availableBalance: Math.round(availableBalance),
+        totalWithdrawn: Math.round(totalWithdrawn),
         totalPenalties: Math.round(totalPenalties),
-        totalOrders: ordersDelivered + pendingDeliveries, 
+        totalOrders: ordersDelivered + pendingDeliveries,
         ordersDelivered,
         pendingDeliveries,
-        allOrders
-      }
+        allOrders,
+      },
     });
-
   } catch (error) {
     console.error("Dashboard API Error:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });

@@ -225,8 +225,19 @@ model StorePayout {
   status          String   @default("COMPLETED")
   description     String?
   createdAt       DateTime @default(now())
-
+  type            String   @default("WITHDRAWAL") // ✅ ADD THIS: "WITHDRAWAL" or "BONUS"
   store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model ManualPayout {
+  id              String   @id @default(cuid())
+  adminId         String
+  recipientType   String   // "STORE" or "RIDER"
+  recipientId     String
+  recipientName   String
+  amount          Float
+  reason          String
+  createdAt       DateTime @default(now())
 }
 
 model Product {
