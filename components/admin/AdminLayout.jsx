@@ -95,13 +95,13 @@ export default function AdminLayout({ children }) {
   // Display spinner while verifying admin privileges
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
         <div className="text-center">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Shield className="w-10 h-10 text-white" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+            <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
           </div>
           <Loading />
-          <p className="mt-4 text-slate-600 font-medium">
+          <p className="mt-4 text-slate-600 font-medium text-sm sm:text-base">
             Checking admin privileges...
           </p>
         </div>
@@ -114,40 +114,40 @@ export default function AdminLayout({ children }) {
   // Rendered when backend confirms user is NOT an admin
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center text-center px-4 sm:px-6 bg-gradient-to-br from-blue-50 via-white to-purple-50 relative overflow-hidden">
 
         {/* Decorative background blobs */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
 
         {/* Access denied card */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-8 max-w-md w-full border border-white/60 relative z-10">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md border border-white/60 relative z-10 mx-auto">
 
           {/* Icon */}
-          <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center shadow-lg">
-            <CrownIcon className="w-12 h-12 text-white" />
+          <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-2xl bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center shadow-lg">
+            <CrownIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
           </div>
 
           {/* Message */}
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-4">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent mb-2 sm:mb-4">
             Access Restricted
           </h1>
 
-          <p className="text-slate-700 mb-3 text-lg font-medium">
+          <p className="text-slate-700 mb-2 sm:mb-3 text-base sm:text-lg font-medium">
             Administrator Access Required
           </p>
 
-          <p className="text-slate-500 mb-8 leading-relaxed">
+          <p className="text-slate-500 mb-6 sm:mb-8 text-sm sm:text-base leading-relaxed">
             This area is reserved for authorized administrators only.
           </p>
 
           {/* Redirect CTA */}
           <Link
             href="/"
-            className="group bg-gradient-to-r from-slate-800 to-slate-700 text-white flex items-center justify-center gap-3 p-4 px-8 rounded-2xl transition-all duration-300 shadow-lg hover:scale-105"
+            className="group bg-gradient-to-r from-slate-800 to-slate-700 text-white flex items-center justify-center gap-3 p-3 sm:p-4 px-6 sm:px-8 rounded-2xl transition-all duration-300 shadow-lg hover:scale-105 w-full"
           >
-            <span className="font-semibold">Return to Home</span>
-            <ArrowRightIcon size={18} className="group-hover:translate-x-1 transition-transform" />
+            <span className="font-semibold text-sm sm:text-base">Return to Home</span>
+            <ArrowRightIcon size={18} className="group-hover:translate-x-1 transition-transform shrink-0" />
           </Link>
         </div>
       </div>
@@ -158,11 +158,11 @@ export default function AdminLayout({ children }) {
 
   // If execution reaches here → user is VERIFIED admin
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
 
       {/* Decorative background */}
-      <div className="fixed top-0 right-0 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-20 -z-0"></div>
-      <div className="fixed bottom-0 left-0 w-96 h-96 bg-purple-100 rounded-full blur-3xl opacity-20 -z-0"></div>
+      <div className="fixed top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-blue-100 rounded-full blur-3xl opacity-20 -z-0"></div>
+      <div className="fixed bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-purple-100 rounded-full blur-3xl opacity-20 -z-0"></div>
 
       {/* Top Navigation Bar */}
       <AdminNavbar
@@ -180,8 +180,8 @@ export default function AdminLayout({ children }) {
         />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/60 min-h-full p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 w-full">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-lg border border-white/60 min-h-full p-4 sm:p-6 lg:p-8">
             
             {/* Injected Admin Pages */}
             {children}

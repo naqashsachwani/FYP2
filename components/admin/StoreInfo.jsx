@@ -11,6 +11,7 @@ import {
   CreditCard, 
   Hash
 } from "lucide-react" 
+
 const StoreInfo = ({ store }) => {
   //  DESTRUCTURING: We extract storeApplication immediately.
   // INTERVIEW TIP: This makes the code cleaner. Instead of typing 'store.storeApplication.cnic', we can just type 'storeApplication.cnic'.
@@ -29,11 +30,11 @@ const StoreInfo = ({ store }) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200">
+    <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 md:p-6 shadow-sm hover:shadow-md transition-all duration-200">
       
       {/* --- Header Section (Logo, Name, Status) --- */}
       {/* Flexbox is used here to align the Logo next to the Text. 'flex-col sm:flex-row' makes it responsive (stack on mobile, row on desktop). */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-8">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 md:gap-8 text-center sm:text-left">
         
         {/*  SHRINK-0: Prevents the image from getting squashed if the text content is too long. */}
         <div className="relative shrink-0">
@@ -51,15 +52,15 @@ const StoreInfo = ({ store }) => {
           </div>
         </div>
 
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-2xl font-bold text-slate-800">{store.name}</h3>
-            <span className="text-slate-500 text-sm bg-slate-100 px-3 py-1 rounded-full">@{store.username}</span>
+        <div className="flex-1 space-y-3 w-full">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center sm:items-center gap-2 sm:gap-3">
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-800 break-words">{store.name}</h3>
+            <span className="text-slate-500 text-xs sm:text-sm bg-slate-100 px-3 py-1 rounded-full break-all">@{store.username}</span>
 
             {/* DYNAMIC CLASS INJECTION: We call the helper function here to apply colors based on data. */}
-            <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold border ${getStatusColor(store.status)}`}>
+            <span className={`inline-flex items-center px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold border ${getStatusColor(store.status)}`}>
               {/* Conditional dot color */}
-              <div className={`w-2 h-2 rounded-full mr-2 ${
+              <div className={`w-2 h-2 rounded-full mr-2 shrink-0 ${
                 store.status === 'pending' ? 'bg-yellow-500' :
                 store.status === 'rejected' ? 'bg-red-500' : 'bg-green-500'
               }`} />
@@ -76,14 +77,14 @@ const StoreInfo = ({ store }) => {
 
       {/* --- Details Grid --- */}
       {/* CSS GRID: We use a 1-column grid on mobile and 2-column grid on desktop (md:grid-cols-2). */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mt-8">
         
         {/* Left Col: Contact & Legal Info */}
         <div className="space-y-6">
           {/* Contact Group */}
           <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <MapPin size={18} className="text-blue-500" />
+            <h4 className="text-base sm:text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <MapPin size={18} className="text-blue-500 shrink-0" />
               Contact Information
             </h4>
             
@@ -92,15 +93,15 @@ const StoreInfo = ({ store }) => {
                   Instead of hardcoding 3 separate divs, we create an array of data and map over it.
                   This makes the code cleaner, easier to maintain, and scalable if we want to add more fields later. */}
               {[
-                { icon: <MapPin size={16} className="text-slate-400" />, label: store.address },
-                { icon: <Phone size={16} className="text-slate-400" />, label: store.contact },
-                { icon: <Mail size={16} className="text-slate-400" />, label: store.email }
+                { icon: <MapPin size={16} className="text-slate-400 shrink-0" />, label: store.address },
+                { icon: <Phone size={16} className="text-slate-400 shrink-0" />, label: store.contact },
+                { icon: <Mail size={16} className="text-slate-400 shrink-0" />, label: store.email }
               ].map((item, i) => (
                 // 'key' prop is essential for React's reconciliation algorithm to track list items efficiently.
-                <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  {item.icon}
-                  {/* 'break-all' ensures long emails don't overflow the container on small screens. */}
-                  <span className="text-slate-700 text-sm sm:text-base break-all">{item.label}</span>
+                <div key={i} className="flex items-start sm:items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="mt-0.5 sm:mt-0">{item.icon}</div>
+                  {/* 'break-all' or 'break-words' ensures long emails don't overflow the container on small screens. */}
+                  <span className="text-slate-700 text-sm sm:text-base break-words w-full">{item.label}</span>
                 </div>
               ))}
             </div>
@@ -113,35 +114,35 @@ const StoreInfo = ({ store }) => {
               This prevents "Cannot read property of undefined" runtime errors. */}
           {storeApplication && (
             <div className="space-y-4 pt-2 border-t border-slate-100">
-              <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <CreditCard size={18} className="text-emerald-500" />
+              <h4 className="text-base sm:text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <CreditCard size={18} className="text-emerald-500 shrink-0" />
                 Legal & Financial
               </h4>
               
               <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
                  {/* CNIC Row */}
-                 <div className="flex justify-between items-center p-3 border-b border-slate-100">
-                    <span className="text-slate-500 text-sm flex items-center gap-2">
+                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 border-b border-slate-100 gap-1 sm:gap-0">
+                    <span className="text-slate-500 text-sm flex items-center gap-2 shrink-0">
                         <FileText size={14}/> CNIC
                     </span>
                     {/* Fallback for missing data using logical OR (||) */}
-                    <span className="font-mono text-slate-700 font-medium">{storeApplication.cnic || "N/A"}</span>
+                    <span className="font-mono text-slate-700 font-medium text-sm sm:text-base break-all">{storeApplication.cnic || "N/A"}</span>
                  </div>
                  
                  {/* Tax ID Row */}
-                 <div className="flex justify-between items-center p-3 border-b border-slate-100">
-                    <span className="text-slate-500 text-sm flex items-center gap-2">
+                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 border-b border-slate-100 gap-1 sm:gap-0">
+                    <span className="text-slate-500 text-sm flex items-center gap-2 shrink-0">
                         <Hash size={14}/> Tax ID (NTN)
                     </span>
-                    <span className="font-mono text-slate-700 font-medium">{storeApplication.taxId || "N/A"}</span>
+                    <span className="font-mono text-slate-700 font-medium text-sm sm:text-base break-all">{storeApplication.taxId || "N/A"}</span>
                  </div>
 
                  {/* Bank Details */}
                  <div className="p-3 bg-slate-100/50">
                     <p className="text-xs text-slate-500 uppercase font-semibold mb-1">Bank Account</p>
-                    <div className="flex justify-between items-end">
-                        <span className="text-slate-800 font-medium">{storeApplication.bankName || "Unknown Bank"}</span>
-                        <span className="text-slate-600 font-mono text-sm">{storeApplication.accountNumber || "No Account Info"}</span>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-1 sm:gap-0">
+                        <span className="text-slate-800 font-medium text-sm sm:text-base">{storeApplication.bankName || "Unknown Bank"}</span>
+                        <span className="text-slate-600 font-mono text-xs sm:text-sm break-all">{storeApplication.accountNumber || "No Account Info"}</span>
                     </div>
                  </div>
               </div>
@@ -152,16 +153,16 @@ const StoreInfo = ({ store }) => {
         {/* Right Col: Application Metadata */}
         <div className="space-y-6">
           <div className="space-y-4">
-            <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <Calendar size={18} className="text-purple-500" />
+            <h4 className="text-base sm:text-lg font-semibold text-slate-800 flex items-center gap-2">
+              <Calendar size={18} className="text-purple-500 shrink-0" />
               Application Details
             </h4>
 
             <div className="space-y-4">
               {/* Applied On */}
               <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
-                <p className="text-slate-600 text-sm mb-1">Applied On</p>
-                <p className="text-slate-800 font-semibold">
+                <p className="text-slate-600 text-xs sm:text-sm mb-1">Applied On</p>
+                <p className="text-slate-800 font-semibold text-sm sm:text-base">
                   {/* DATE FORMATTING:
                       convert the raw ISO string  into a  human-readable format using the native JavaScript Intl API (.toLocaleDateString). */}
                   {new Date(store.createdAt).toLocaleDateString('en-US', {
@@ -174,21 +175,21 @@ const StoreInfo = ({ store }) => {
 
               {/* Applied By */}
               <div className="p-4 bg-white border border-slate-200 rounded-2xl">
-                <p className="text-slate-600 text-sm mb-3 flex items-center gap-2">
-                  <User size={14} />
+                <p className="text-slate-600 text-xs sm:text-sm mb-3 flex items-center gap-2">
+                  <User size={14} className="shrink-0" />
                   Applied By
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 w-full">
                   <Image
                     width={40}
                     height={40}
                     src={store.user.image}
                     alt={store.user.name}
-                    className="w-10 h-10 rounded-xl border border-slate-200 shadow-sm"
+                    className="w-10 h-10 rounded-xl border border-slate-200 shadow-sm shrink-0"
                   />
-                  <div>
-                    <p className="text-slate-800 font-semibold">{store.user.name}</p>
-                    <p className="text-slate-500 text-sm">{store.user.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-slate-800 font-semibold text-sm sm:text-base truncate">{store.user.name}</p>
+                    <p className="text-slate-500 text-xs sm:text-sm truncate">{store.user.email}</p>
                   </div>
                 </div>
               </div>

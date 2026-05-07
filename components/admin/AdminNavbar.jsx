@@ -112,19 +112,19 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
 
   return (
     <>
-      <header className="flex items-center justify-between px-4 lg:px-8 py-4 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm sticky top-0 z-50">
+      <header className="flex items-center justify-between px-3 sm:px-4 lg:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm sticky top-0 z-40">
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+            className="lg:hidden p-1.5 sm:p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0"
             aria-label="Toggle Sidebar" 
           >
             {isSidebarOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <span className="text-2xl lg:text-3xl font-bold text-slate-800 group-hover:scale-105 transition-transform duration-200 ease-in-out inline-block">
+          <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
+            <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800 group-hover:scale-105 transition-transform duration-200 ease-in-out inline-block">
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Dream</span>Saver
             </span>
             <span className="hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold text-white bg-gradient-to-r from-blue-500 to-purple-500 shadow-md group-hover:scale-105 transition-transform duration-200 ease-in-out">
@@ -136,16 +136,16 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
         <div className="flex items-center gap-2 sm:gap-4">
           
           {!mounted ? (
-            <div className="w-32 h-10 bg-slate-100 animate-pulse rounded-full hidden sm:block"></div>
+            <div className="w-24 sm:w-32 h-10 bg-slate-100 animate-pulse rounded-full hidden sm:block"></div>
           ) : (
             <>
               {user && (
                 <div className="relative">
                   <button
                     onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
-                    className="relative p-2 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
+                    className="relative p-1.5 sm:p-2 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
                   >
-                    <Bell size={22} />
+                    <Bell className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px]" />
                     {unreadCount > 0 && (
                       <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -156,7 +156,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                   {isBellOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                      <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
+                      <div className="absolute right-[-20px] sm:right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                           <p className="text-sm font-bold text-slate-800">Notifications</p>
                           <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
@@ -172,13 +172,13 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                                 onClick={() => openNotification(notif)}
                                 className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
                               >
-                                <div className="flex justify-between items-start mb-1">
-                                  <p className={`text-sm pr-2 line-clamp-1 ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
+                                <div className="flex justify-between items-start mb-1 gap-2">
+                                  <p className={`text-sm pr-2 line-clamp-1 w-full break-words ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
                                       {notif.title}
                                   </p>
                                   <div className="flex items-center gap-2 shrink-0">
                                       {!notif.isRead && (
-                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-blue-600 font-bold hover:underline bg-blue-100 px-1.5 py-0.5 rounded">
+                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-blue-600 font-bold hover:underline bg-blue-100 px-1.5 py-0.5 rounded whitespace-nowrap">
                                           Mark Read
                                         </button>
                                       )}
@@ -187,7 +187,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                                       </button>
                                   </div>
                                 </div>
-                                <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
+                                <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
                                 <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
                                   {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </span>
@@ -214,21 +214,21 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
               <div className="relative">
                 <button 
                   onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
-                  className="flex items-center gap-3 bg-slate-50 rounded-full pl-2 pr-4 py-1.5 shadow-sm hover:shadow-md hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                  className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm hover:shadow-md hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-200">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-slate-200 shrink-0">
                     <img src={user?.imageUrl} alt={user?.fullName || "Admin"} className="w-full h-full object-cover" />
                   </div>
-                  <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-slate-700 leading-tight">Hi, {user?.firstName || 'Admin'}</p>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Administrator</p>
+                  <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
+                    <p className="text-sm font-medium text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Administrator</p>
                   </div>
                 </button>
 
                 {isProfileOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                    <div className="absolute right-0 top-full mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
+                    <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
                       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 sm:hidden">
                         <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                         <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -236,28 +236,28 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
 
                       <div className="px-2 space-y-1">
                         <button onClick={() => { openUserProfile(); setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                          <Settings size={16} className="text-slate-500" /> Manage Account
+                          <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
                         </button>
 
                         <Link href="/" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                          <Home size={16} className="text-slate-500" /> Go to Homepage
+                          <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                         </Link>
 
                         {showSellerBtn && (
                           <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Store size={16} className="text-slate-500" /> Store Dashboard
+                            <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
                           </Link>
                         )}
 
                         {/* ✅ NEW: Rider Dashboard Link. (Included in AdminNavbar because they are Admin, or Rider fallback) */}
                         <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                           <Truck size={16} className="text-slate-500" /> Rider Dashboard
+                           <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
                         </Link>
                       </div>
 
                       <div className="border-t border-slate-100 mt-2 pt-2 px-2">
                         <button onClick={() => signOut({ redirectUrl: '/' })} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
-                          <LogOut size={16} className="text-red-500" /> Sign Out
+                          <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
                         </button>
                       </div>
                     </div>
@@ -270,36 +270,36 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
       </header>
 
       {selectedNotif && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 shrink-0">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100 bg-gray-50 shrink-0">
               <div className="flex items-center gap-2 text-slate-800">
-                  <Bell className="text-blue-600" size={20} />
+                  <Bell className="text-blue-600 shrink-0" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
               <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><XIcon size={20} /></button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
-              <h4 className="font-bold text-xl text-gray-900 mb-2">{selectedNotif.title}</h4>
-              <p className="text-sm font-medium text-gray-400 mb-6 border-b border-gray-100 pb-4">
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-2 break-words">{selectedNotif.title}</h4>
+              <p className="text-xs sm:text-sm font-medium text-gray-400 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
                   {new Date(selectedNotif.createdAt).toLocaleDateString('en-GB')} at {new Date(selectedNotif.createdAt).toLocaleTimeString()}
               </p>
               
-              <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
+              <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50 flex gap-2 sm:gap-3 shrink-0">
               <button 
                 onClick={() => { deleteNotification(selectedNotif.id, { stopPropagation: () => {} }); setSelectedNotif(null); }} 
-                className="flex-1 py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2"
+                className="flex-1 py-2 sm:py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2 text-sm sm:text-base"
               >
-                <Trash2 size={18} /> Delete
+                <Trash2 size={16} className="shrink-0" /> Delete
               </button>
               <button 
                 onClick={() => setSelectedNotif(null)} 
-                className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition"
+                className="flex-[2] py-2 sm:py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition text-sm sm:text-base"
               >
                 Close
               </button>

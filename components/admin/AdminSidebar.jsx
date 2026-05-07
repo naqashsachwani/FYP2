@@ -7,7 +7,6 @@ import {
   TicketPercentIcon, 
   LayoutGrid, 
   Wallet, 
-  LogOut,
   Users,
   MessageSquareWarning,
   Bike,
@@ -16,7 +15,7 @@ import {
 
 import Image from "next/image"
 import Link from "next/link"
-import { useUser, SignOutButton } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
 
 export default function AdminSidebar({ isOpen, onClose }) {
   const { user } = useUser()
@@ -42,7 +41,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
       ======================================================= */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       />
@@ -51,8 +50,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
           SIDEBAR CONTAINER
       ======================================================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-[280px] 
-        bg-white border-r border-slate-100 shadow-xl lg:shadow-none 
+        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[280px] 
+        bg-white border-r border-slate-100 shadow-2xl lg:shadow-none 
         transform transition-transform duration-300 ease-in-out 
         flex flex-col 
         ${isOpen ? "translate-x-0" : "-translate-x-full"} 
@@ -62,7 +61,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
         {/* ======================================================
             1. FIXED HEADER (User Profile)
         ======================================================= */}
-        <div className="relative pt-8 pb-6 px-6 flex flex-col items-center border-b border-slate-50 shrink-0">
+        <div className="relative pt-8 pb-6 px-4 sm:px-6 flex flex-col items-center border-b border-slate-50 shrink-0">
           {/* Background Gradient */}
           <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-blue-50/50 to-transparent -z-10" />
           
@@ -80,8 +79,8 @@ export default function AdminSidebar({ isOpen, onClose }) {
           </div>
 
           {/* Name & Role */}
-          <div className="mt-4 text-center">
-            <h3 className="text-slate-900 font-bold text-lg tracking-tight">
+          <div className="mt-4 text-center w-full">
+            <h3 className="text-slate-900 font-bold text-lg tracking-tight truncate px-2">
               {user?.fullName || "Administrator"}
             </h3>
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 mt-1">
@@ -113,9 +112,9 @@ export default function AdminSidebar({ isOpen, onClose }) {
               >
                 <link.icon
                   size={20}
-                  className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}
+                  className={`shrink-0 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`}
                 />
-                <span>{link.name}</span>
+                <span className="truncate">{link.name}</span>
                 
                 {/* Active Indicator Dot */}
                 {isActive && (
@@ -125,18 +124,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
             )
           })}
         </nav>
-
-        {/* ======================================================
-            3. FIXED FOOTER (Sign Out)
-        ======================================================= */}
-        <div className="p-4 border-t border-slate-50 shrink-0 bg-white">
-            <SignOutButton>
-                <button className="flex items-center justify-center gap-3 px-4 py-3 w-full rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200 font-medium group">
-                    <LogOut size={20} className="group-hover:stroke-red-600" />
-                    <span>Sign Out</span>
-                </button>
-            </SignOutButton>
-        </div>
 
       </aside>
     </>
