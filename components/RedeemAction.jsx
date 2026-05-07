@@ -211,43 +211,43 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
 
   return (
     <>
-      <button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-white shadow-md bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2">
-        <Gift className="w-5 h-5" /> Redeem Product
+      <button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto px-6 py-3 rounded-lg font-bold text-white shadow-md bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2 text-sm sm:text-base transition-colors">
+        <Gift className="w-5 h-5 shrink-0" /> Redeem Product
       </button>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-             <div className="p-5 border-b flex justify-between items-center bg-gray-50 shrink-0">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+             <div className="p-4 sm:p-5 border-b flex justify-between items-center bg-gray-50 shrink-0">
               {isAddingNew ? (
-                 <button onClick={() => setIsAddingNew(false)} className="flex items-center text-sm text-gray-500 hover:text-indigo-600"><ChevronLeft size={16} /> Back</button>
+                 <button onClick={() => setIsAddingNew(false)} className="flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"><ChevronLeft size={16} /> Back</button>
               ) : (
-                 <h3 className="font-bold text-lg text-gray-800">Confirm Redemption Details</h3>
+                 <h3 className="font-bold text-base sm:text-lg text-gray-800">Confirm Redemption</h3>
               )}
-              <button onClick={() => setIsModalOpen(false)}><X size={20} className="text-gray-400 hover:text-red-500" /></button>
+              <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-gray-200 rounded-full transition-colors"><X size={20} className="text-gray-400 hover:text-red-500" /></button>
             </div>
 
-            <div className="p-5 overflow-y-auto">
+            <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar">
               {isAddingNew ? (
-                <form id="address-form" onSubmit={handleSaveAddress} className="space-y-3">
-                  <button type="button" onClick={handleUseGPS} disabled={loadingLocation} className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-sm font-bold hover:bg-blue-100 mb-2">
-                    {loadingLocation ? <Loader2 className="animate-spin w-4 h-4"/> : <Crosshair className="w-4 h-4" />} {loadingLocation ? "Locating..." : "Use Current Location"}
+                <form id="address-form" onSubmit={handleSaveAddress} className="space-y-3 sm:space-y-4">
+                  <button type="button" onClick={handleUseGPS} disabled={loadingLocation} className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-sm font-bold hover:bg-blue-100 mb-2 transition-colors disabled:opacity-70">
+                    {loadingLocation ? <Loader2 className="animate-spin w-4 h-4 shrink-0"/> : <Crosshair className="w-4 h-4 shrink-0" />} {loadingLocation ? "Locating..." : "Use Current Location"}
                   </button>
-                  <input required name="name" value={formData.name} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Full Name" />
-                  <input required name="street" value={formData.street} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Street Address" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input required name="city" value={formData.city} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="City" />
-                    <input required name="state" value={formData.state} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="State" />
+                  <input required name="name" value={formData.name} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Full Name" />
+                  <input required name="street" value={formData.street} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Street Address" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <input required name="city" value={formData.city} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="City" />
+                    <input required name="state" value={formData.state} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="State" />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input required name="zip" value={formData.zip} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Zip Code" />
-                    <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2 border rounded" placeholder="Phone" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <input required name="zip" value={formData.zip} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Zip Code" />
+                    <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Phone" />
                   </div>
                 </form>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-5 sm:space-y-6">
                   <div>
-                    <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2"><Calendar size={16} className="text-indigo-600"/> Preferred Delivery Date</h4>
+                    <h4 className="font-bold text-gray-700 text-sm sm:text-base mb-2 flex items-center gap-2"><Calendar size={16} className="text-indigo-600 shrink-0"/> Preferred Delivery Date</h4>
                     
                     {/* The "Invisible Input" Trick */}
                     <div className="relative w-full">
@@ -256,7 +256,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             readOnly 
                             placeholder="DD-MM-YYYY" 
                             value={formatDateForDisplay(selectedDate)} 
-                            className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-indigo-600 outline-none text-gray-700 font-medium" 
+                            className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-indigo-600 outline-none text-gray-700 font-medium text-sm sm:text-base transition-colors" 
                         />
                         <input 
                             type="date" 
@@ -269,45 +269,45 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             onChange={(e) => setSelectedDate(e.target.value)} 
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                         />
-                        <div className="absolute right-3 top-3.5 pointer-events-none text-gray-500">
-                            <Calendar size={20} />
+                        <div className="absolute right-3 top-3 sm:top-3.5 pointer-events-none text-gray-400">
+                            <Calendar size={20} className="w-5 h-5" />
                         </div>
                     </div>
                   </div>
                   
                   <div>
-                    <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2"><MapPin size={16} className="text-indigo-600"/> Shipping Address</h4>
-                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                    <h4 className="font-bold text-gray-700 text-sm sm:text-base mb-2 flex items-center gap-2"><MapPin size={16} className="text-indigo-600 shrink-0"/> Shipping Address</h4>
+                    <div className="space-y-2.5 sm:space-y-3 max-h-[250px] sm:max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                         {addresses?.length > 0 ? addresses.map((addr) => (
-                        <div key={addr.id} onClick={() => setSelectedAddress(addr.id)} className={`group cursor-pointer border-2 rounded-lg p-3 flex gap-3 items-start transition-all ${selectedAddress === addr.id ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
-                            <div className={`mt-1 p-1 rounded-full shrink-0 ${selectedAddress === addr.id ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"}`}><MapPin size={14} /></div>
+                        <div key={addr.id} onClick={() => setSelectedAddress(addr.id)} className={`group cursor-pointer border-2 rounded-lg p-3 flex gap-2.5 sm:gap-3 items-start transition-all ${selectedAddress === addr.id ? "border-indigo-600 bg-indigo-50" : "border-gray-200 hover:border-gray-300"}`}>
+                            <div className={`mt-0.5 p-1 rounded-full shrink-0 ${selectedAddress === addr.id ? "bg-indigo-600 text-white" : "bg-gray-200 text-gray-500"}`}><MapPin size={14} className="w-3.5 h-3.5 sm:w-4 sm:h-4" /></div>
                             <div className="flex-1">
-                                <p className="font-bold text-gray-900 text-sm">{addr.name}</p>
-                                <p className="text-xs text-gray-500">{addr.street}, {addr.city} - {addr.zip}</p>
+                                <p className="font-bold text-gray-900 text-xs sm:text-sm">{addr.name}</p>
+                                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-relaxed">{addr.street}, {addr.city} - {addr.zip}</p>
                             </div>
-                            <button onClick={(e) => handleDeleteAddress(e, addr.id)} disabled={deletingId === addr.id} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full">{deletingId === addr.id ? <Loader2 size={16} className="animate-spin text-red-600"/> : <Trash2 size={16} />}</button>
+                            <button onClick={(e) => handleDeleteAddress(e, addr.id)} disabled={deletingId === addr.id} className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity p-1.5 sm:p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full shrink-0">{deletingId === addr.id ? <Loader2 size={16} className="animate-spin text-red-600 w-4 h-4"/> : <Trash2 size={16} className="w-4 h-4" />}</button>
                         </div>
-                        )) : <div className="text-center py-6 text-gray-400 border-2 border-dashed rounded-xl bg-gray-50">No addresses found</div>}
+                        )) : <div className="text-center py-5 text-gray-400 text-sm border-2 border-dashed rounded-xl bg-gray-50">No addresses found</div>}
                     </div>
-                    <button onClick={() => setIsAddingNew(true)} className="mt-3 w-full py-2 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg font-bold hover:bg-indigo-50 flex items-center justify-center gap-2"><Plus size={16} /> Add New Address</button>
+                    <button onClick={() => setIsAddingNew(true)} className="mt-3 w-full py-2.5 border-2 border-dashed border-indigo-300 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50 flex items-center justify-center gap-2 transition-colors"><Plus size={16} className="shrink-0" /> Add New Address</button>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="p-5 border-t bg-gray-50 flex gap-3 shrink-0">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 rounded-lg font-semibold text-gray-700 hover:bg-gray-200">Cancel</button>
+            <div className="p-4 sm:p-5 border-t bg-gray-50 flex gap-2 sm:gap-3 shrink-0">
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 rounded-lg text-sm sm:text-base font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-100 transition-colors">Cancel</button>
               {isAddingNew ? (
                  <button 
                   type="submit" 
                   form="address-form" 
                   disabled={loading} 
-                  className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 flex justify-center items-center gap-2 disabled:opacity-75"
+                  className="flex-[2] py-2.5 rounded-lg text-sm sm:text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 flex justify-center items-center gap-2 disabled:opacity-75 transition-colors"
                  >
-                   {loading ? <><Loader2 className="animate-spin w-4 h-4" /> Saving...</> : "Save Address"}
+                   {loading ? <><Loader2 className="animate-spin w-4 h-4 shrink-0" /> Saving...</> : "Save Address"}
                  </button>
               ) : (
-                 <button onClick={handleRedeem} disabled={loading || !addresses?.length || !selectedDate} className="flex-[2] py-2.5 rounded-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 flex justify-center items-center gap-2">{loading ? <Loader2 className="animate-spin w-4 h-4" /> : "Confirm Redemption"}</button>
+                 <button onClick={handleRedeem} disabled={loading || !addresses?.length || !selectedDate} className="flex-[2] py-2.5 rounded-lg text-sm sm:text-base font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:bg-gray-400 flex justify-center items-center gap-2 transition-colors">{loading ? <Loader2 className="animate-spin w-4 h-4 shrink-0" /> : "Confirm Redemption"}</button>
               )}
             </div>
           </div>

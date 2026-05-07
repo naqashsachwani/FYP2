@@ -29,27 +29,28 @@ const BestSelling = () => {
     .slice(0, displayQuantity)
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 my-24 max-w-7xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 my-16 sm:my-20 lg:my-24 max-w-7xl mx-auto">
 
       {/* Section title & description */}
       <Title
         title="Best Selling"
         description={`Showing ${
           products?.length < displayQuantity
-            ? products.length
+            ? products.length || 0
             : displayQuantity
         } of ${products?.length || 0} products`}
         href="/shop" // Redirect to full shop page
       />
 
       {/* ================= PRODUCT GRID ================= */}
-      <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 xl:gap-10">
+      {/* Adjusted for mobile: grid-cols-2 is maintained on small screens for better e-commerce layout */}
+      <div className="mt-8 sm:mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 xl:gap-10">
         {sortedProducts?.map((product, index) => (
           <div
             key={index}
-            className="bg-white rounded-2xl p-2 sm:p-4 shadow-md
-                       hover:shadow-2xl hover:scale-105
-                       transition-transform duration-300 ease-in-out"
+            className="bg-white rounded-xl sm:rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-50 sm:border-none sm:shadow-md
+                       hover:shadow-2xl hover:-translate-y-1 sm:hover:scale-105
+                       transition-all duration-300 ease-in-out"
           >
             {/* Product Card */}
             <ProductCard product={product} />
@@ -58,7 +59,7 @@ const BestSelling = () => {
       </div>
 
       {/* Decorative gradient divider */}
-      <div className="mt-12 h-1 w-full max-w-3xl mx-auto rounded-full
+      <div className="mt-10 sm:mt-12 h-1 w-full max-w-[150px] sm:max-w-3xl mx-auto rounded-full
                       bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500
                       opacity-30" />
     </div>

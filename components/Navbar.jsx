@@ -24,7 +24,7 @@ const Navbar = () => {
   // Role & Notification States
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [showSellerBtn, setShowSellerBtn] = useState(false);
-  const [showRiderBtn, setShowRiderBtn] = useState(false); // ✅ NEW: Rider State
+  const [showRiderBtn, setShowRiderBtn] = useState(false); 
   
   // Notification Management
   const [notifications, setNotifications] = useState([]);
@@ -46,7 +46,7 @@ const Navbar = () => {
         // Fetch all roles concurrently, catching errors so one failure doesn't break the others
         const adminRes = await fetch('/api/admin/is-admin').catch(() => null);
         const sellerRes = await fetch('/api/store/is-seller').catch(() => null);
-        const riderRes = await fetch('/api/rider/is-rider').catch(() => null); // ✅ NEW: Check Rider status
+        const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
 
         if (adminRes && adminRes.ok) {
            const adminData = await adminRes.json();
@@ -168,16 +168,16 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm relative">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
 
             {/* Logo Section */}
-            <Link href="/" className="flex items-center gap-1 relative group">
-              <h1 className="text-3xl lg:text-4xl font-bold text-slate-800 group-hover:text-green-600 transition-colors">
+            <Link href="/" className="flex items-center gap-1 relative group shrink-0">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 group-hover:text-green-600 transition-colors">
                 <span className="text-green-600">Dream</span>Saver
               </h1>
-              <span className="text-green-600 text-4xl lg:text-5xl absolute -top-1 -right-3">.</span>
+              <span className="text-green-600 text-3xl sm:text-4xl lg:text-5xl absolute -top-1 -right-2 sm:-right-3">.</span>
             </Link>
 
             {/* Desktop Nav */}
@@ -210,23 +210,23 @@ const Navbar = () => {
             </form>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 lg:gap-4 relative">
+            <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-4 relative shrink-0">
               
               <Link
                 href="/cart"
-                className="relative flex items-center gap-2 text-slate-600 hover:text-green-600 transition p-2 rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
+                className="relative flex items-center gap-2 text-slate-600 hover:text-green-600 transition p-1.5 sm:p-2 rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
               >
-                <ShoppingCart size={20} />
+                <ShoppingCart size={20} className="sm:w-[22px] sm:h-[22px]" />
                 <span className="hidden sm:block text-sm font-medium">My Goals</span>
               </Link>
 
               {mounted && user && (
                 <div className="relative">
                   <button
-                    onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
-                    className="relative p-2 text-slate-600 hover:text-green-600 transition rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
+                    onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); setIsMobileMenuOpen(false); }}
+                    className="relative p-1.5 sm:p-2 text-slate-600 hover:text-green-600 transition rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
                   >
-                    <Bell size={20} />
+                    <Bell size={20} className="sm:w-[22px] sm:h-[22px]" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
                         {unreadCount > 99 ? '99+' : unreadCount}
@@ -237,7 +237,7 @@ const Navbar = () => {
                   {isBellOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                      <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
+                      <div className="absolute right-[-40px] sm:right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
                         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                           <p className="text-sm font-bold text-slate-800">Notifications</p>
                           <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
@@ -253,13 +253,13 @@ const Navbar = () => {
                                 onClick={() => openNotification(notif)}
                                 className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-green-50/30' : ''}`}
                               >
-                                <div className="flex justify-between items-start mb-1">
-                                  <p className={`text-sm pr-2 line-clamp-1 ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
+                                <div className="flex justify-between items-start mb-1 gap-2">
+                                  <p className={`text-sm pr-2 line-clamp-1 break-words w-full ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
                                       {notif.title}
                                   </p>
                                   <div className="flex items-center gap-2 shrink-0">
                                       {!notif.isRead && (
-                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-green-600 font-bold hover:underline bg-green-100 px-1.5 py-0.5 rounded">
+                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-green-600 font-bold hover:underline bg-green-100 px-1.5 py-0.5 rounded whitespace-nowrap">
                                           Mark Read
                                         </button>
                                       )}
@@ -268,7 +268,7 @@ const Navbar = () => {
                                       </button>
                                   </div>
                                 </div>
-                                <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
+                                <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
                                 <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
                                   {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                 </span>
@@ -292,30 +292,37 @@ const Navbar = () => {
                 </div>
               )}
 
-              {/* Authentication & Profile Dropdown */}
+              {/* Authentication & Profile Dropdown (Matches Admin/Store Pill Style) */}
               {!mounted ? (
-                <div className="hidden sm:block w-9 h-9 bg-slate-200 rounded-full animate-pulse ml-2"></div>
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-200 rounded-full animate-pulse ml-1 sm:ml-2"></div>
               ) : !user ? (
                 <button
                   onClick={openSignIn}
-                  className="hidden sm:flex items-center px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200 active:scale-95 ml-2"
+                  className="hidden sm:flex items-center px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200 active:scale-95 ml-1 sm:ml-2"
                 >
                   Sign In
                 </button>
               ) : (
-                <div className="relative hidden sm:block ml-2 mt-1.5">
+                <div className="relative ml-1 sm:ml-2">
                   <button
-                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
-                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-200 hover:border-green-500 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); setIsMobileMenuOpen(false); }}
+                    className="flex items-center gap-2 sm:gap-3 bg-white rounded-full pl-1.5 sm:pl-2 pr-1.5 sm:pr-4 py-1.5 shadow-sm border border-slate-200 hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
                   >
-                    <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-slate-100 bg-slate-50 shrink-0">
+                      <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
+                    </div>
+                    {/* Text hidden on small mobiles to save space, visible on large screens */}
+                    <div className="hidden lg:block text-left truncate max-w-[120px]">
+                      <p className="text-sm font-bold text-slate-800 leading-tight truncate">Hi, {user?.firstName}</p>
+                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider truncate">Shopper</p>
+                    </div>
                   </button>
 
                   {isProfileOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                      <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1">
+                      <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 lg:hidden">
                           <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                           <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
                         </div>
@@ -325,38 +332,37 @@ const Navbar = () => {
                             onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
                           >
-                            <Settings size={16} className="text-slate-500" /> Manage Account
+                            <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
                           </button>
 
                           {showAdminBtn && (
                             <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <ShieldCheck size={16} className="text-slate-500" /> Admin Dashboard
+                              <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
                             </Link>
                           )}
 
                           {showSellerBtn && (
                             <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <Store size={16} className="text-slate-500" /> Store Dashboard
+                              <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
                             </Link>
                           )}
 
-                          {/* ✅ NEW: Rider Dashboard Link */}
                           {(showAdminBtn || showRiderBtn) && (
                             <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <Truck size={16} className="text-slate-500" /> Rider Dashboard
+                              <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
                             </Link>
                           )}
 
                           <Link href="/wallet" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Wallet size={16} className="text-slate-500" /> My Wallet
+                            <Wallet size={16} className="text-slate-500 shrink-0" /> My Wallet
                           </Link>
 
                           <Link href="/my-coupons" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Ticket size={16} className="text-slate-500" /> My Coupons
+                            <Ticket size={16} className="text-slate-500 shrink-0" /> My Coupons
                           </Link>
 
                           <Link href="/goal-history" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <History size={16} className="text-slate-500" /> Goal History
+                            <History size={16} className="text-slate-500 shrink-0" /> Goal History
                           </Link>
                         </div>
 
@@ -365,7 +371,7 @@ const Navbar = () => {
                             onClick={() => signOut({ redirectUrl: '/' })}
                             className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
                           >
-                            <LogOut size={16} className="text-red-500" /> Sign Out
+                            <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
                           </button>
                         </div>
                       </div>
@@ -376,8 +382,8 @@ const Navbar = () => {
 
               {/* Mobile Toggle */}
               <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md ml-1"
+                onClick={() => { setIsMobileMenuOpen(!isMobileMenuOpen); setIsProfileOpen(false); setIsBellOpen(false); }}
+                className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md ml-0.5 sm:ml-1"
               >
                 {isMobileMenuOpen ? <X size={24} className="text-slate-600" /> : <Menu size={24} className="text-slate-600" />}
               </button>
@@ -385,121 +391,71 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* ✅ FIXED: Mobile Menu - Now floats absolutely over content instead of pushing it down */}
         <div
-          className={`lg:hidden bg-white border-t border-slate-200 shadow-md transition-all duration-300 overflow-hidden ${
-            isMobileMenuOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+          className={`lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl transition-all duration-300 overflow-y-auto z-40 ${
+            isMobileMenuOpen ? "max-h-[50vh] opacity-100" : "max-h-0 opacity-0 border-none"
           }`}
         >
-          <div className="px-5 py-4 space-y-3">
+          <div className="px-4 sm:px-5 py-4 space-y-2">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="block px-3 py-2 rounded-lg text-slate-700 hover:bg-green-50 hover:text-green-600 transition font-medium"
+                className="block px-3 py-2.5 rounded-lg text-slate-700 hover:bg-green-50 hover:text-green-600 transition font-medium"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
 
-            <div className="pt-4 border-t border-slate-200">
-              {!mounted ? (
-                <div className="w-full h-12 bg-slate-200 rounded-xl animate-pulse"></div>
-              ) : !user ? (
-                <button
-                  onClick={() => { openSignIn(); setIsMobileMenuOpen(false); }}
-                  className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold shadow-md hover:scale-105 transition"
-                >
-                  Sign In
-                </button>
-              ) : (
-                <div className="flex flex-col space-y-1">
-                  <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-slate-50 rounded-xl border border-slate-100">
-                    <img src={user?.imageUrl} alt="User" className="w-10 h-10 rounded-full border border-slate-200" />
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
-                      <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-                    </div>
-                  </div>
-
-                  <button onClick={() => { openUserProfile(); setIsMobileMenuOpen(false); }} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                    <Settings size={18} className="text-slate-500" /> Manage Account
+            {/* Mobile Sign In button (if not logged in) */}
+            {mounted && !user && (
+               <div className="pt-2 border-t border-slate-100 mt-2">
+                  <button
+                    onClick={() => { openSignIn(); setIsMobileMenuOpen(false); }}
+                    className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold shadow-md hover:scale-105 transition"
+                  >
+                    Sign In
                   </button>
-
-                  {showAdminBtn && (
-                    <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                      <ShieldCheck size={18} className="text-slate-500" /> Admin Dashboard
-                    </Link>
-                  )}
-
-                  {showSellerBtn && (
-                    <Link href="/store" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                      <Store size={18} className="text-slate-500" /> Store Dashboard
-                    </Link>
-                  )}
-
-                  {/* ✅ NEW: Rider Dashboard Link (Mobile) */}
-                  {(showAdminBtn || showRiderBtn) && (
-                    <Link href="/rider/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                      <Truck size={18} className="text-slate-500" /> Rider Dashboard
-                    </Link>
-                  )}
-
-                  <Link href="/wallet" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                    <Wallet size={18} className="text-slate-500" /> My Wallet
-                  </Link>
-
-                  <Link href="/my-coupons" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                    <Ticket size={18} className="text-slate-500" /> My Coupons
-                  </Link>
-
-                  <Link href="/goal-history" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                    <History size={18} className="text-slate-500" /> Goal History
-                  </Link>
-
-                  <button onClick={() => signOut({ redirectUrl: '/' })} className="flex items-center gap-3 px-3 py-2.5 mt-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
-                    <LogOut size={18} className="text-red-500" /> Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+               </div>
+            )}
           </div>
         </div>
       </nav>
 
       {/* ✅ NOTIFICATION VIEW MODAL */}
       {selectedNotif && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gray-50 shrink-0">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100 bg-gray-50 shrink-0">
               <div className="flex items-center gap-2 text-slate-800">
-                  <Bell className="text-blue-600" size={20} />
+                  <Bell className="text-blue-600 shrink-0" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
               <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
-              <h4 className="font-bold text-xl text-gray-900 mb-2">{selectedNotif.title}</h4>
-              <p className="text-sm font-medium text-gray-400 mb-6 border-b border-gray-100 pb-4">
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-2 break-words">{selectedNotif.title}</h4>
+              <p className="text-xs sm:text-sm font-medium text-gray-400 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
                   {new Date(selectedNotif.createdAt).toLocaleDateString('en-GB')} at {new Date(selectedNotif.createdAt).toLocaleTimeString()}
               </p>
               
-              <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
+              <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50 flex gap-2 sm:gap-3 shrink-0">
               <button 
                 onClick={() => { deleteNotification(selectedNotif.id, { stopPropagation: () => {} }); setSelectedNotif(null); }} 
-                className="flex-1 py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2"
+                className="flex-1 py-2 sm:py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2 text-sm sm:text-base"
               >
-                <Trash2 size={18} /> Delete
+                <Trash2 size={16} className="shrink-0" /> Delete
               </button>
               <button 
                 onClick={() => setSelectedNotif(null)} 
-                className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition"
+                className="flex-[2] py-2 sm:py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition text-sm sm:text-base"
               >
                 Close
               </button>

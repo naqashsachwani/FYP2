@@ -7,10 +7,10 @@ export default function GoalCard({ goal }) {
   const percent = Math.min(rawPercent, 100);
 
   return (
-    <div className="border border-slate-200 p-4 rounded-xl shadow-sm bg-white flex flex-col h-full hover:shadow-md transition-shadow">
+    <div className="border border-slate-200 p-3 sm:p-4 rounded-xl shadow-sm bg-white flex flex-col h-full hover:shadow-md transition-shadow">
       
       {/* ================= Product Image ================= */}
-      <div className="relative w-full h-48 bg-slate-50 rounded-lg mb-4 overflow-hidden flex items-center justify-center border border-slate-100 p-2">
+      <div className="relative w-full h-40 sm:h-48 bg-slate-50 rounded-lg mb-3 sm:mb-4 overflow-hidden flex items-center justify-center border border-slate-100 p-2 shrink-0">
         <img
           // Use product image if available, otherwise fallback to placeholder
           src={goal.product?.images?.[0] || "/placeholder.png"}
@@ -21,17 +21,17 @@ export default function GoalCard({ goal }) {
       </div>
 
       {/* ================= Product Name ================= */}
-      <h2 className="font-bold text-lg text-slate-800 line-clamp-1">
+      <h2 className="font-bold text-base sm:text-lg text-slate-800 line-clamp-1 break-words">
         {goal.product?.name || "No Product"}
       </h2>
 
       {/* ================= Savings Info ================= */}
-      <p className="text-sm text-slate-600 mt-1 font-medium">
+      <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium truncate">
         Saved: {goal.saved} / {goal.targetAmount}
       </p>
 
       {/* ================= Progress Bar ================= */}
-      <div className="bg-slate-200 rounded-full h-3 mt-3 overflow-hidden">
+      <div className="bg-slate-200 rounded-full h-2 sm:h-3 mt-3 overflow-hidden shrink-0">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             // Darker green when goal is fully completed
@@ -43,16 +43,16 @@ export default function GoalCard({ goal }) {
       </div>
 
       {/* ================= Progress Footer ================= */}
-      <div className="flex justify-between items-center mt-2 pt-1">
+      <div className="flex justify-between items-center mt-2 pt-1 gap-2">
         
         {/* Display capped progress percentage */}
-        <span className="text-sm font-bold text-green-700">
+        <span className="text-xs sm:text-sm font-bold text-green-700 shrink-0">
           {percent}%
         </span>
 
         {/* Goal end date (formatted) */}
         {/* Safely accepts formattedEndDate from parent, or natively enforces DD/MM/YYYY using 'en-GB' */}
-        <span className="text-xs font-medium text-slate-500">
+        <span className="text-[10px] sm:text-xs font-medium text-slate-500 truncate text-right">
           Ends: {goal.formattedEndDate || (goal.endDate ? new Date(goal.endDate).toLocaleDateString('en-GB') : "--")}
         </span>
       </div>

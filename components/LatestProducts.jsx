@@ -24,7 +24,7 @@ const LatestProducts = () => {
     .slice(0, displayQuantity)
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 my-24 max-w-7xl mx-auto">
+    <div className="px-4 sm:px-6 lg:px-8 my-16 sm:my-20 lg:my-24 max-w-7xl mx-auto">
       
       {/* Section Title */}
       <Title
@@ -34,12 +34,13 @@ const LatestProducts = () => {
       />
 
       {/* Products Grid */}
-      <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 xl:gap-10">
+      {/* Adjusted gap on mobile to gap-3/gap-4 to fit products nicely without squashing */}
+      <div className="mt-8 sm:mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8 xl:gap-10">
         {latestProducts.map((product, index) => (
           <div
             key={index}
-            className="rounded-2xl overflow-hidden transform transition-all duration-300 
-                       hover:scale-105 hover:-translate-y-1 hover:shadow-2xl"
+            className="rounded-xl sm:rounded-2xl overflow-hidden transform transition-all duration-300 
+                       hover:scale-105 hover:-translate-y-1 hover:shadow-2xl bg-white p-2 sm:p-0"
           >
             {/* Individual Product Card */}
             <ProductCard product={product} />

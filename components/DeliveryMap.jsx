@@ -19,7 +19,8 @@ function BoundsController({ points }) {
         map.setView([validPoints[0].lat, validPoints[0].lng], 14, { animate: false });
       } else {
         const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]));
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15, animate: true });
+        // Adjusted padding for smaller mobile screens
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15, animate: true });
       }
       hasFitted.current = true;
     }
@@ -29,6 +30,8 @@ function BoundsController({ points }) {
 }
 
 // --- 2. Custom Icons ---
+// Slightly smaller sizes configured directly via CSS for mobile friendliness if necessary, 
+// but retaining original logic.
 const createCustomIcon = (iconHtml, color, isPulse = false) => {
   return L.divIcon({
     html: `<div class="flex items-center justify-center w-10 h-10 bg-${color}-600 text-white rounded-full border-2 border-white shadow-md relative ${isPulse ? 'animate-pulse ring-4 ring-blue-300' : ''}">
@@ -92,11 +95,12 @@ export default function DeliveryMap({ delivery }) {
 
   // ✅ Show a loader until the unique key is generated safely on the client
   if (!mapKey) {
-    return <div className="w-full h-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400 font-medium rounded-xl">Initializing Map...</div>;
+    return <div className="w-full h-[300px] sm:h-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400 text-sm font-medium rounded-xl">Initializing Map...</div>;
   }
 
   return (
-    <div className="w-full h-full relative z-0">
+    // Responsive min-height ensures map always renders on mobile devices
+    <div className="w-full h-full min-h-[300px] sm:min-h-[400px] relative z-0 rounded-xl overflow-hidden border border-slate-200">
       <MapContainer 
         key={mapKey} // ✅ This completely prevents Leaflet from crashing
         center={[24.8607, 67.0011]} 

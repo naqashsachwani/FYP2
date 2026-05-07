@@ -40,7 +40,8 @@ export default function LocationPicker({ position, setPosition }) {
     const center = position ? [position.lat, position.lng] : defaultCenter;
 
     return (
-        <div className="h-56 w-full rounded-xl overflow-hidden border-2 border-slate-200 relative z-0 mb-2 shadow-inner">
+        // Adjusted height so it doesn't take up the whole screen on small mobiles
+        <div className="h-48 sm:h-56 w-full rounded-xl overflow-hidden border-2 border-slate-200 relative z-0 mb-2 shadow-inner">
             <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <MapEvents setPosition={setPosition} />
@@ -48,7 +49,8 @@ export default function LocationPicker({ position, setPosition }) {
                 {position && <Marker position={[position.lat, position.lng]} icon={customIcon} />}
             </MapContainer>
             
-            <div className="absolute top-3 right-3 bg-white/95 backdrop-blur px-3 py-1.5 text-xs font-bold text-blue-700 rounded-lg shadow-md z-[1000] pointer-events-none border border-blue-100">
+            {/* Kept tooltip inside but ensured it stays hidden from touch events so it doesn't block map interaction */}
+            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-white/95 backdrop-blur px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold text-blue-700 rounded-lg shadow-md z-[1000] pointer-events-none border border-blue-100">
                 📍 Click map to place exact pin
             </div>
         </div>

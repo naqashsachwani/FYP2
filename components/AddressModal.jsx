@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic'
 // Dynamically import the map to prevent Server-Side Rendering crashes
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { 
     ssr: false, 
-    loading: () => <div className="h-56 bg-slate-100 rounded-xl animate-pulse mb-2 flex flex-col items-center justify-center text-slate-400 border-2 border-slate-200 border-dashed"><MapPin size={24} className="mb-2 opacity-50"/> Loading Map...</div> 
+    loading: () => <div className="h-48 sm:h-56 bg-slate-100 rounded-xl animate-pulse mb-2 flex flex-col items-center justify-center text-slate-400 border-2 border-slate-200 border-dashed"><MapPin size={24} className="mb-2 opacity-50"/> Loading Map...</div> 
 })
 
 const AddressModal = ({ setShowAddressModal }) => {
@@ -122,27 +122,27 @@ const AddressModal = ({ setShowAddressModal }) => {
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center px-4 sm:px-0">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
             <form
                 onSubmit={(e) => toast.promise(handleSubmit(e), { loading: 'Saving Address...' })}
-                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl p-6 sm:p-8 animate-fadeIn max-h-[95vh] overflow-y-auto custom-scrollbar"
+                className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl p-5 sm:p-8 animate-fadeIn max-h-[90dvh] overflow-y-auto custom-scrollbar"
             >
                 <button
                     type="button"
                     onClick={() => setShowAddressModal(false)}
-                    className="absolute top-4 right-4 text-slate-500 hover:text-red-500 hover:rotate-90 transition-all z-10"
+                    className="absolute top-3 sm:top-4 right-3 sm:right-4 p-1 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-full hover:rotate-90 transition-all z-10"
                 >
-                    <XIcon size={28} />
+                    <XIcon size={24} className="sm:w-7 sm:h-7" />
                 </button>
 
-                <h2 className="text-2xl sm:text-3xl font-bold text-center text-blue-700 mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center text-blue-700 mb-5 sm:mb-6 pr-6">
                     Add New <span className="text-slate-800">Address</span>
                 </h2>
 
-                {/* --- NEW: Interactive Map Area --- */}
-                <div className="mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                    <p className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
-                        <MapPin size={16} className="text-blue-600"/> Pinpoint your exact location
+                {/* --- Interactive Map Area --- */}
+                <div className="mb-5 sm:mb-6 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
+                    <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                        <MapPin size={16} className="text-blue-600 shrink-0"/> Pinpoint your exact location
                     </p>
                     
                     <LocationPicker position={pinPosition} setPosition={setPinPosition} />
@@ -151,35 +151,35 @@ const AddressModal = ({ setShowAddressModal }) => {
                         type="button"
                         onClick={handleUseGPS}
                         disabled={loadingLocation}
-                        className="w-full mt-2 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 text-sm"
+                        className="w-full mt-2 py-2.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-70 text-xs sm:text-sm"
                     >
-                        {loadingLocation ? <Loader2 className="animate-spin" size={16}/> : <Crosshair size={16} />}
+                        {loadingLocation ? <Loader2 className="animate-spin shrink-0" size={16}/> : <Crosshair className="shrink-0" size={16} />}
                         {loadingLocation ? "Locating..." : "Find my location automatically"}
                     </button>
                 </div>
 
                 {/* Text Inputs */}
-                <div className="flex flex-col gap-4">
-                    <input name="name" value={address.name} onChange={handleAddressChange} type="text" placeholder="Enter your full name" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                    <input name="email" value={address.email} onChange={handleAddressChange} type="email" placeholder="Email address" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                    <input name="street" value={address.street} onChange={handleAddressChange} type="text" placeholder="House / Apartment / Building No." required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                <div className="flex flex-col gap-3 sm:gap-4">
+                    <input name="name" value={address.name} onChange={handleAddressChange} type="text" placeholder="Enter your full name" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    <input name="email" value={address.email} onChange={handleAddressChange} type="email" placeholder="Email address" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    <input name="street" value={address.street} onChange={handleAddressChange} type="text" placeholder="House / Apartment / Building No." required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition" />
                     
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <input name="city" value={address.city} onChange={handleAddressChange} type="text" placeholder="City" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                        <input name="state" value={address.state} onChange={handleAddressChange} type="text" placeholder="State / Province" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <input name="city" value={address.city} onChange={handleAddressChange} type="text" placeholder="City" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition w-full" />
+                        <input name="state" value={address.state} onChange={handleAddressChange} type="text" placeholder="State / Province" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition w-full" />
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <input name="zip" value={address.zip} onChange={handleAddressChange} type="number" placeholder="Zip Code" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
-                        <input name="country" value={address.country} onChange={handleAddressChange} type="text" placeholder="Country" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                        <input name="zip" value={address.zip} onChange={handleAddressChange} type="number" placeholder="Zip Code" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition w-full" />
+                        <input name="country" value={address.country} onChange={handleAddressChange} type="text" placeholder="Country" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition w-full" />
                     </div>
 
-                    <input name="phone" value={address.phone} onChange={handleAddressChange} type="text" placeholder="Phone Number" required className="p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" />
+                    <input name="phone" value={address.phone} onChange={handleAddressChange} type="text" placeholder="Phone Number" required className="p-2.5 sm:p-3 border border-slate-200 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 outline-none transition" />
                 </div>
 
                 <button
                     type="submit"
-                    className="mt-6 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3.5 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] shadow-lg transition-all"
+                    className="mt-5 sm:mt-6 w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 sm:py-3.5 rounded-xl font-bold text-base sm:text-lg hover:from-blue-700 hover:to-indigo-700 active:scale-[0.98] shadow-lg transition-all"
                 >
                     SAVE ADDRESS
                 </button>

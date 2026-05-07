@@ -6,25 +6,25 @@ import { useState, useEffect } from "react"
 
 /* ===================== STATIC ASSETS (Moved Outside Component) ===================== */
 const FacebookIcon = () => (
-  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 shrink-0">
     <path d="M22 12a10 10 0 1 0-11.5 9.9v-7H8v-3h2.5V9.5a3.5 3.5 0 0 1 3.8-3.9h2.7v3h-1.8a1.1 1.1 0 0 0-1.2 1.2V12H17l-.5 3h-2.7v7A10 10 0 0 0 22 12z" />
   </svg>
 )
 
 const InstagramIcon = () => (
-  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 shrink-0">
     <path d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7zm10 2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10zm-5 3.5A4.5 4.5 0 1 0 16.5 12 4.5 4.5 0 0 0 12 7.5z" />
   </svg>
 )
 
 const TwitterIcon = () => (
-  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 fill-current border-none">
+  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 fill-current border-none shrink-0">
     <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" />
   </svg>
 )
 
 const LinkedinIcon = () => (
-  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200">
+  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:scale-110 transition-transform duration-200 shrink-0">
     <path d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14z" />
   </svg>
 )
@@ -65,55 +65,55 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="bg-gradient-to-b from-slate-50 to-white border-t border-slate-200 mt-20">
-      <div className="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-green-500 w-full" />
+    <footer className="bg-gradient-to-b from-slate-50 to-white border-t border-slate-200 mt-16 sm:mt-20">
+      <div className="h-1 sm:h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-green-500 w-full" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-12 lg:py-16 flex flex-col lg:flex-row gap-10 lg:gap-16">
+        <div className="py-10 sm:py-12 lg:py-16 flex flex-col lg:flex-row gap-10 lg:gap-16">
           
-          <div className="flex-1 max-w-md">
-            <Link href="/" className="inline-flex text-3xl lg:text-4xl font-bold text-slate-800 hover:scale-105 transition">
+          <div className="flex-1 w-full lg:max-w-md">
+            <Link href="/" className="inline-flex text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 hover:scale-105 transition origin-left">
               <span className="text-green-600">Dream</span>Saver
-              <span className="text-green-600 text-4xl lg:text-5xl">.</span>
+              <span className="text-green-600 text-3xl sm:text-4xl lg:text-5xl">.</span>
             </Link>
 
-            <p className="mt-4 text-slate-600 text-sm lg:text-base">
+            <p className="mt-3 sm:mt-4 text-slate-600 text-sm lg:text-base leading-relaxed max-w-sm">
               Welcome to DreamSaver, where your goals become reality.
             </p>
 
-            <div className="mt-6 p-4 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-3 transition-all hover:shadow-md">
+            <div className="mt-5 sm:mt-6 p-3 sm:p-4 bg-green-50 rounded-xl sm:rounded-2xl border border-green-100 flex items-start gap-3 transition-all hover:shadow-md">
               <div className="p-2 bg-green-100 rounded-lg shrink-0">
-                <ShieldCheck className="text-green-600" size={24} />
+                <ShieldCheck className="text-green-600 w-5 h-5 sm:w-6 sm:h-6" />
               </div>
               <div>
                 <p className="text-sm font-bold text-slate-800">Secure Layaway Guarantee</p>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-[11px] sm:text-xs text-slate-600 mt-1 leading-relaxed">
                   Your payments are safely held in escrow and only released to the store once your item is delivered.
                 </p>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-wrap gap-3 mt-6">
               {socialIcons.map((item, i) => (
-                <Link key={i} href={item.link} target="_blank" aria-label={item.name} className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-md border hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
+                <Link key={i} href={item.link} target="_blank" aria-label={item.name} className="group w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-slate-200 bg-white hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors">
                   <item.icon />
                 </Link>
               ))}
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 w-full lg:w-auto">
             {linkSections.map((section, index) => (
               <div key={index}>
-                <h3 className="font-bold mb-4 border-b-2 border-green-500/30 inline-block text-slate-800">
+                <h3 className="font-bold text-sm sm:text-base mb-4 border-b-2 border-green-500/30 inline-block text-slate-800 tracking-wider">
                   {section.title}
                 </h3>
                 <ul className="space-y-3">
                   {section.links.map((link, i) => (
                     <li key={i}>
-                      <Link href={link.path} className="flex items-center gap-2 text-slate-600 hover:text-green-600 hover:translate-x-1 transition font-medium text-sm group">
-                        {link.icon && <link.icon size={16} className="text-green-500" />}
-                        {link.text}
-                        <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-green-500" />
+                      <Link href={link.path} className="flex items-center gap-2.5 text-slate-600 hover:text-green-600 hover:translate-x-1 transition font-medium text-sm group">
+                        {link.icon && <link.icon size={16} className="text-green-500 shrink-0" />}
+                        <span className="break-words">{link.text}</span>
+                        <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-green-500 shrink-0" />
                       </Link>
                     </li>
                   ))}
@@ -123,10 +123,10 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t py-6 flex flex-col sm:flex-row justify-between gap-4 text-sm text-slate-600">
+        <div className="border-t border-slate-200 py-6 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-3 text-xs sm:text-sm text-slate-500 text-center sm:text-left">
           <span>© {mounted ? new Date().getFullYear() : "2026"} DreamSaver. All rights reserved.</span>
-          <span className="flex items-center gap-1">
-            Made with <Heart size={14} className="text-red-500 fill-red-500" /> for amazing shoppers
+          <span className="flex items-center justify-center sm:justify-start gap-1">
+            Made with <Heart size={14} className="text-red-500 fill-red-500 shrink-0" /> for amazing shoppers
           </span>
         </div>
       </div>
