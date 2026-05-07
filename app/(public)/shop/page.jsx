@@ -3,11 +3,10 @@
 import { Suspense, useState, useMemo, useEffect } from "react"
 import { useSelector } from "react-redux" 
 import { useSearchParams } from "next/navigation" 
-import { ChevronDown, PackageX, SlidersHorizontal } from "lucide-react" 
+import { ChevronDown, PackageX, SlidersHorizontal, ChevronLeft, ChevronRight } from "lucide-react" 
 import ProductCard from "@/components/ProductCard" 
 
 function ShopContent() {
-    // ✅ FIX: Track when the component has mounted on the client
     const [isMounted, setIsMounted] = useState(false)
 
     const products = useSelector(state => state.product.list)
@@ -20,11 +19,19 @@ function ShopContent() {
     const [maxPrice, setMaxPrice] = useState("")
     
     const [showMobileFilters, setShowMobileFilters] = useState(false)
+    
+    // ✅ Pagination State
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 12
 
-    // ✅ FIX: Set mounted to true after first client-side render
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // ✅ Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1)
+    }, [searchQuery, selectedCategory, sortOrder, minPrice, maxPrice])
 
     const predefinedCategories = [
         "Electronics", "Men's Fashion", "Women's Fashion", "Home & Kitchen",
@@ -70,9 +77,13 @@ function ShopContent() {
         setSortOrder("default");
         setMinPrice("");
         setMaxPrice("");
+        setCurrentPage(1);
     };
 
-    // ✅ FIX: Show a loading state during SSR to prevent Hydration mismatches
+    // ✅ Pagination Logic
+    const totalPages = Math.max(1, Math.ceil(processedProducts.length / ITEMS_PER_PAGE));
+    const currentProducts = processedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     if (!isMounted) {
         return (
             <div className="min-h-[70vh] flex items-center justify-center">
@@ -85,10 +96,10 @@ function ShopContent() {
     }
 
     return (
-        <div className="min-h-[70vh] mx-4 sm:mx-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="min-h-[70vh] mx-4 sm:mx-6 flex flex-col">
+            <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between mt-8 mb-8 gap-6">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between mt-8 mb-8 gap-6 shrink-0">
                     
                     {/* Title & Mobile Filter Toggle Button */}
                     <div className="flex items-center justify-between">
@@ -167,7 +178,7 @@ function ShopContent() {
                     </div>
                 </div>
                 
-                {processedProducts.length === 0 ? (
+                {currentProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-3xl border border-slate-100 shadow-sm mb-32">
                         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                             <PackageX className="text-slate-300 w-10 h-10" />
@@ -179,10 +190,37 @@ function ShopContent() {
                         </button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 xl:gap-8 mx-auto mb-32">
-                        {processedProducts.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
+                    <div className="flex-1 flex flex-col">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 xl:gap-8 mx-auto mb-10 w-full">
+                            {currentProducts.map((product) => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
+
+                        {/* ✅ Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="mt-auto mb-16 pt-8 border-t border-slate-200 flex justify-between items-center">
+                                <span className="text-sm font-medium text-slate-500">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                        disabled={currentPage === 1} 
+                                        className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                    >
+                                        <ChevronLeft size={20}/>
+                                    </button>
+                                    <button 
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                        disabled={currentPage === totalPages} 
+                                        className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                    >
+                                        <ChevronRight size={20}/>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
