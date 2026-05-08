@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -35,14 +35,35 @@ function MapUpdater({ position }) {
 }
 
 export default function LocationPicker({ position, setPosition }) {
+    // ✅ THE ULTIMATE FIX: Create a guaranteed unique key for every mount
+    const [mapKey, setMapKey] = useState(null);
+
+    useEffect(() => {
+      // By combining Date and Math.random, React is forced to destroy the old map <div> 
+      // and create a fresh one every time this component mounts or hot-reloads.
+      setMapKey(`location-picker-${Date.now()}-${Math.random()}`);
+      
+      return () => setMapKey(null); // Cleanup on unmount
+    }, []);
+
     // Default fallback center (Karachi)
     const defaultCenter = [24.8607, 67.0011]; 
     const center = position ? [position.lat, position.lng] : defaultCenter;
 
+    // ✅ Show a loader until the unique key is generated safely on the client
+    if (!mapKey) {
+      return <div className="h-48 sm:h-56 w-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400 text-xs font-medium rounded-xl mb-2">Initializing Map...</div>;
+    }
+
     return (
         // Adjusted height so it doesn't take up the whole screen on small mobiles
         <div className="h-48 sm:h-56 w-full rounded-xl overflow-hidden border-2 border-slate-200 relative z-0 mb-2 shadow-inner">
-            <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
+            <MapContainer 
+                key={mapKey} // ✅ This completely prevents Leaflet from crashing
+                center={center} 
+                zoom={12} 
+                style={{ height: '100%', width: '100%' }}
+            >
                 <TileLayer url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
                 <MapEvents setPosition={setPosition} />
                 <MapUpdater position={position} />

@@ -30,8 +30,6 @@ function BoundsController({ points }) {
 }
 
 // --- 2. Custom Icons ---
-// Slightly smaller sizes configured directly via CSS for mobile friendliness if necessary, 
-// but retaining original logic.
 const createCustomIcon = (iconHtml, color, isPulse = false) => {
   return L.divIcon({
     html: `<div class="flex items-center justify-center w-10 h-10 bg-${color}-600 text-white rounded-full border-2 border-white shadow-md relative ${isPulse ? 'animate-pulse ring-4 ring-blue-300' : ''}">
@@ -51,7 +49,7 @@ export default function DeliveryMap({ delivery }) {
   useEffect(() => {
     // By combining Date and Math.random, React is forced to destroy the old map <div> 
     // and create a fresh one every time this component mounts or hot-reloads.
-    setMapKey(`map-${delivery?.id}-${Date.now()}-${Math.random()}`);
+    setMapKey(`delivery-map-${delivery?.id || 'static'}-${Date.now()}-${Math.random()}`);
     
     return () => setMapKey(null); // Cleanup on unmount
   }, [delivery?.id]);

@@ -106,10 +106,10 @@ export default function StoreAddProduct() {
 
   return (
     // Outer layout wrapper with a soft gradient background
-    <div className="flex flex-col items-center px-5 py-10 md:px-16 bg-gradient-to-b from-slate-50 to-white min-h-screen">
+    <div className="flex flex-col items-center px-4 sm:px-6 md:px-16 py-8 sm:py-10 bg-gradient-to-b from-slate-50 to-white min-h-[100dvh]">
       
       {/* Header */}
-      <h1 className="text-3xl font-semibold text-slate-800 mb-6 text-center">
+      <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 mb-5 sm:mb-6 text-center">
         DreamSaver <span className="text-blue-600">Product Upload</span>
       </h1>
 
@@ -118,12 +118,12 @@ export default function StoreAddProduct() {
         onSubmit={(e) =>
           toast.promise(onSubmitHandler(e), { loading: "Adding Product..." })
         }
-        className="bg-white w-full max-w-2xl shadow-md rounded-2xl p-6 sm:p-8 border border-slate-100"
+        className="bg-white w-full max-w-2xl shadow-sm sm:shadow-md rounded-2xl p-5 sm:p-8 border border-slate-100"
       >
         
         <div>
-          <p className="text-slate-700 font-medium mb-2">Product Images</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <p className="text-xs sm:text-sm text-slate-700 font-bold mb-2 uppercase tracking-wider">Product Images <span className="text-red-500 normal-case font-medium tracking-normal">* (At least 1 required)</span></p>
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
             {Object.keys(images).map((key) => (
               <label
                 key={key}
@@ -131,7 +131,7 @@ export default function StoreAddProduct() {
                 className="cursor-pointer hover:scale-[1.03] transition-transform block"
               >
                 
-                <div className="h-24 w-full border border-dashed border-slate-300 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
+                <div className="h-16 sm:h-24 w-full border border-dashed border-slate-300 rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
                     {/* Conditionally render: If an image file exists in state for this key, show a preview. */}
                     {images[key] ? (
                         <Image
@@ -144,8 +144,8 @@ export default function StoreAddProduct() {
                     ) : (
                         // If no image exists, show the upload icon and placeholder text
                         <div className="text-slate-400 flex flex-col items-center gap-1">
-                            <UploadCloud size={24} />
-                            <span className="text-[10px]">Upload</span>
+                            <UploadCloud className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <span className="text-[9px] sm:text-[10px] font-medium">Upload</span>
                         </div>
                     )}
                 </div>
@@ -164,59 +164,59 @@ export default function StoreAddProduct() {
         </div>
         
         {/* Product Name Input */}
-        <label className="flex flex-col gap-2 my-5">
-          <span className="font-medium text-slate-700">Product Name</span>
+        <label className="flex flex-col gap-1.5 sm:gap-2 mt-6 mb-5">
+          <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Product Name</span>
           <input
             type="text"
             name="name" // Must match the state property name exactly for onChangeHandler to work
             onChange={onChangeHandler}
             value={productInfo.name}
             placeholder="Enter product name"
-            className="p-3 outline-none border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+            className="p-2.5 sm:p-3 text-sm sm:text-base outline-none border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 transition-shadow"
             required
           />
         </label>
 
         {/* Description Textarea */}
-        <label className="flex flex-col gap-2 my-5">
-          <span className="font-medium text-slate-700">Description</span>
+        <label className="flex flex-col gap-1.5 sm:gap-2 my-5">
+          <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Description</span>
           <textarea
             name="description"
             onChange={onChangeHandler}
             value={productInfo.description}
             placeholder="Enter product description"
             rows={4}
-            className="p-3 outline-none border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400 resize-none"
+            className="p-2.5 sm:p-3 text-sm sm:text-base outline-none border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 resize-y min-h-[100px] transition-shadow custom-scrollbar"
             required
           />
         </label>
 
         {/* Pricing Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 my-5">
           {/* Actual Price (MRP) */}
-          <label className="flex flex-col gap-2">
-            <span className="font-medium text-slate-700">Actual Price (MRP)</span>
+          <label className="flex flex-col gap-1.5 sm:gap-2">
+            <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Actual Price (MRP)</span>
             <input
               type="number"
               name="mrp"
               onChange={onChangeHandler}
-              value={productInfo.mrp}
+              value={productInfo.mrp || ""} // Prevents leading 0
               placeholder="0"
-              className="p-3 outline-none border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="p-2.5 sm:p-3 text-sm sm:text-base outline-none border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 transition-shadow"
               required
             />
           </label>
 
           {/* Offer Price */}
-          <label className="flex flex-col gap-2">
-            <span className="font-medium text-slate-700">Offer Price</span>
+          <label className="flex flex-col gap-1.5 sm:gap-2">
+            <span className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider text-green-600">Offer Price</span>
             <input
               type="number"
               name="price"
               onChange={onChangeHandler}
-              value={productInfo.price}
+              value={productInfo.price || ""}
               placeholder="0"
-              className="p-3 outline-none border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="p-2.5 sm:p-3 text-sm sm:text-base outline-none border border-green-200 bg-green-50/30 rounded-xl focus:ring-2 focus:ring-green-500 transition-shadow"
               required
             />
           </label>
@@ -224,7 +224,7 @@ export default function StoreAddProduct() {
 
         {/* Category Dropdown */}
         <div className="mt-5">
-          <label className="font-medium text-slate-700 mb-2 block">
+          <label className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider mb-1.5 block">
             Category
           </label>
           <select
@@ -232,7 +232,7 @@ export default function StoreAddProduct() {
               setProductInfo({ ...productInfo, category: e.target.value })
             }
             value={productInfo.category}
-            className="p-3 w-full border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
+            className="p-2.5 sm:p-3 w-full text-sm sm:text-base border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-400 transition-shadow cursor-pointer bg-white"
             required
           >
             <option value="">Select a category</option>
@@ -246,27 +246,27 @@ export default function StoreAddProduct() {
         </div>
 
         {/* === SECTION 3: Action Buttons === */}
-        <div className="flex gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8">
             {/* Clear Form Button */}
             <button
                 type="button" // Prevents this button from attempting to submit the form
                 onClick={handleReset}
                 disabled={loading} 
-                className="w-1/3 bg-slate-100 text-slate-600 py-3 rounded-lg font-medium hover:bg-slate-200 transition-all disabled:opacity-50"
+                className="w-full sm:w-1/3 bg-slate-100 text-slate-600 py-3 sm:py-3.5 rounded-xl font-bold hover:bg-slate-200 transition-colors disabled:opacity-50 text-sm sm:text-base order-2 sm:order-1"
             >
-                Clear
+                Clear Form
             </button>
             
             {/* Submit Button */}
             <button
                 type="submit"
                 disabled={loading}
-                className={`w-2/3 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-all ${
+                className={`w-full sm:w-2/3 bg-blue-600 text-white py-3 sm:py-3.5 rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all active:scale-[0.98] text-sm sm:text-base order-1 sm:order-2 ${
                     loading ? "opacity-75 cursor-not-allowed" : ""
                 }`}
             >
                 {/* Dynamically changes text based on the loading state */}
-                {loading ? "Uploading..." : "Add Product"}
+                {loading ? "Uploading..." : "Add Product to Store"}
             </button>
         </div>
 

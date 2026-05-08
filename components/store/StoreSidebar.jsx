@@ -16,7 +16,6 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 
-// ✅ UPDATED: Accept isOpen and onClose props from StoreLayout
 const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
   const pathname = usePathname()
 
@@ -42,9 +41,9 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
 
       {/* ================= SIDEBAR CONTAINER ================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 h-[100dvh] w-[260px] sm:w-[280px] bg-white border-r border-slate-100 shadow-2xl lg:shadow-none
+        className={`fixed lg:sticky top-0 left-0 h-screen w-[260px] sm:w-[280px] bg-white border-r border-slate-100 shadow-2xl lg:shadow-none
           transform transition-transform duration-300 z-50
-          flex flex-col shrink-0
+          flex flex-col shrink-0 overflow-hidden
           ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
         `}
       >
@@ -84,7 +83,7 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
         </div>
 
         {/* ================= 2. SCROLLABLE NAVIGATION ================= */}
-        <nav className="flex-1 min-h-0 py-6 px-3 sm:px-4 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent] pr-2">
+        <nav className="flex-1 overflow-y-auto pt-6 pb-24 px-3 sm:px-4 space-y-1.5 overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 pr-2">
           
           <p className="px-3 sm:px-4 text-[10px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Store Management
@@ -97,7 +96,7 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
                 key={index}
                 href={link.href}
                 onClick={onClose}
-                className={`relative flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl transition font-medium text-sm group
+                className={`relative flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl transition font-medium text-sm group shrink-0
                   ${isActive
                     ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-md shadow-blue-500/20"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"

@@ -21,8 +21,8 @@ import toast from "react-hot-toast"
 const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineChart"), {
     ssr: false,
     loading: () => (
-        <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <div className="h-[350px] w-full animate-pulse rounded-2xl bg-slate-100" />
+        <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-6">
+            <div className="h-[250px] sm:h-[300px] lg:h-[350px] w-full animate-pulse rounded-xl sm:rounded-2xl bg-slate-100" />
         </div>
     ),
 })
@@ -313,57 +313,58 @@ export default function Dashboard() {
         <div className="min-h-[70vh] flex items-center justify-center bg-slate-50/50">
             <div className="text-center space-y-3">
                 <Loading />
-                <p className="text-slate-500 animate-pulse">Syncing store data...</p>
+                <p className="text-sm sm:text-base text-slate-500 animate-pulse">Syncing store data...</p>
             </div>
         </div>
     )
 
     return (
-        <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div className="min-h-[100dvh] bg-slate-50/30 p-2 sm:p-4 lg:p-8">
+            <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
                 
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-slate-200 pb-5 sm:pb-6">
                     <div>
-                        <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
                             Store <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-violet-600">Overview</span>
                         </h1>
-                        <p className="text-slate-500 mt-2 text-base lg:text-lg">
+                        <p className="text-slate-500 mt-1.5 sm:mt-2 text-sm sm:text-base lg:text-lg">
                             Track your performance, goals, and delivery status.
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mt-2 sm:mt-0">
                         <button 
                             onClick={GenerateReport}
                             disabled={reportLoading}
-                            className="group flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-70"
+                            className="group w-full sm:w-auto flex justify-center items-center gap-2 bg-slate-900 text-white px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-full shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-70"
                         >
-                            <DownloadIcon size={18} className="group-hover:-translate-y-0.5 transition-transform" />
+                            <DownloadIcon size={18} className="group-hover:-translate-y-0.5 transition-transform shrink-0" />
                             <span className="font-medium text-sm">Download Report</span>
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Adjusted for mobile: switches to a tighter grid layout on small screens */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {dashboardCardsData.map((card, index) => (
                         <div 
                             key={index} 
-                            className="relative overflow-hidden bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 group"
+                            className="relative overflow-hidden bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1 group"
                         >
-                            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${card.gradient} opacity-5 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-150 duration-500`}></div>
+                            <div className={`absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-gradient-to-br ${card.gradient} opacity-5 rounded-bl-full -mr-6 -mt-6 sm:-mr-8 sm:-mt-8 transition-transform group-hover:scale-150 duration-500`}></div>
 
                             <div className="relative z-10 flex items-start justify-between">
-                                <div className="space-y-4">
-                                    <div className={`w-12 h-12 rounded-2xl ${card.bgLight} ${card.textColor} flex items-center justify-center`}>
-                                        <card.icon size={24} />
+                                <div className="space-y-3 sm:space-y-4 w-full">
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${card.bgLight} ${card.textColor} flex items-center justify-center`}>
+                                        <card.icon size={20} className="sm:w-6 sm:h-6" />
                                     </div>
                                     <div>
-                                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">{card.title}</p>
-                                        <h3 className="text-3xl font-bold text-slate-900 mt-1">{card.value}</h3>
+                                        <p className="text-slate-500 text-xs sm:text-sm font-semibold uppercase tracking-wider">{card.title}</p>
+                                        <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1 break-words">{card.value}</h3>
                                     </div>
                                 </div>
                             </div>
-                            <div className={`absolute bottom-0 left-0 w-full h-1.5 bg-gradient-to-r ${card.gradient} opacity-80`}></div>
+                            <div className={`absolute bottom-0 left-0 w-full h-1 sm:h-1.5 bg-gradient-to-r ${card.gradient} opacity-80`}></div>
                         </div>
                     ))}
                 </div>
