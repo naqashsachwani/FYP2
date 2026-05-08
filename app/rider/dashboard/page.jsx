@@ -9,7 +9,7 @@ import dynamic from "next/dynamic";
 const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineChart"), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-[350px] animate-pulse rounded-2xl bg-slate-100 mt-6" />
+        <div className="w-full h-[250px] sm:h-[300px] lg:h-[350px] animate-pulse rounded-2xl bg-slate-100 mt-4 sm:mt-6" />
     ),
 });
 
@@ -68,67 +68,67 @@ export default function RiderDashboard() {
 
   useEffect(() => { fetchDashboardData(); }, []);
 
-  if (loading && !profile) return <div className="min-h-[80vh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && !profile) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
-    <div className="bg-white rounded-tl-3xl shadow-sm border-l border-t border-slate-200 min-h-[calc(100vh-80px)] p-6 lg:p-10">
-      <div className="max-w-7xl mx-auto space-y-10">
+    <div className="bg-white rounded-t-2xl sm:rounded-tl-3xl shadow-sm border-l border-t border-slate-200 min-h-[100dvh] lg:min-h-[calc(100vh-80px)] p-4 sm:p-6 lg:p-10 w-full overflow-hidden">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 lg:space-y-10">
         
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 border-b border-slate-100 sm:border-none pb-4 sm:pb-0">
             <div>
-                <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
                     Rider <span className="text-blue-600">Dashboard</span>
                 </h1>
-                <p className="text-slate-500 mt-2 text-sm lg:text-base">
+                <p className="text-slate-500 mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base">
                     Track your earnings, active deliveries, and performance.
                 </p>
             </div>
-            <button onClick={fetchDashboardData} className="p-2 border rounded-full hover:bg-slate-50 transition text-slate-500">
-                <RotateCw size={20} className={loading ? "animate-spin" : ""} />
+            <button onClick={fetchDashboardData} className="p-1.5 sm:p-2 border rounded-full hover:bg-slate-50 transition text-slate-500 shadow-sm shrink-0">
+                <RotateCw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
             </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5 lg:gap-6 w-full">
             
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-blue-300 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                    <Wallet size={24} />
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-blue-300 transition-colors h-full flex flex-col justify-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 sm:mb-4">
+                    <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Available Balance</p>
-                <h3 className="text-3xl font-bold text-slate-900">Rs {profile?.walletBalance?.toLocaleString() || 0}</h3>
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Available Balance</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">Rs {profile?.walletBalance?.toLocaleString() || 0}</h3>
+                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-blue-300 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                    <PackageCheck size={24} />
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-blue-300 transition-colors h-full flex flex-col justify-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 sm:mb-4">
+                    <PackageCheck className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Completed</p>
-                <h3 className="text-3xl font-bold text-slate-900">{stats?.completedDeliveries || 0}</h3>
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Completed</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">{stats?.completedDeliveries || 0}</h3>
+                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-purple-300 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
-                    <Truck size={24} />
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-purple-300 transition-colors h-full flex flex-col justify-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-3 sm:mb-4">
+                    <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Jobs</p>
-                <h3 className="text-3xl font-bold text-slate-900">{stats?.activeDeliveriesCount || 0}</h3>
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500 to-fuchsia-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Jobs</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">{stats?.activeDeliveriesCount || 0}</h3>
+                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-purple-500 to-fuchsia-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-orange-300 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-4">
-                    <Clock size={24} />
+            <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group hover:border-orange-300 transition-colors h-full flex flex-col justify-center">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mb-3 sm:mb-4">
+                    <Clock className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Requests</p>
-                <h3 className="text-3xl font-bold text-slate-900">{stats?.pendingDeliveries || 0}</h3>
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-400 to-red-500 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">New Requests</p>
+                <h3 className="text-2xl sm:text-3xl font-bold text-slate-900">{stats?.pendingDeliveries || 0}</h3>
+                <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-orange-400 to-red-500 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             </div>
 
         </div>
 
-        <div className="mt-8 pt-4">
+        <div className="mt-6 sm:mt-8 pt-2 sm:pt-4 w-full overflow-hidden">
             <RevenueLineChart
                 chartData={chartData}
                 currency={currency}

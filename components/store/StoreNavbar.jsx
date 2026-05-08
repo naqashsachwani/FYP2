@@ -14,8 +14,8 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   
+  // ✅ Only tracking Admin state now as requested
   const [showAdminBtn, setShowAdminBtn] = useState(false)
-  const [showRiderBtn, setShowRiderBtn] = useState(false)
 
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -31,11 +31,13 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
     const checkRoles = async () => {
       try {
         const adminRes = await fetch('/api/admin/is-admin').catch(()=>null);
-        const riderRes = await fetch('/api/rider/is-rider').catch(()=>null);
-
-        if (adminRes?.ok) setShowAdminBtn((await adminRes.json()).isAdmin === true);
-        if (riderRes?.ok) setShowRiderBtn((await riderRes.json()).isRider === true);
-      } catch (error) { console.error(error) }
+        if (adminRes?.ok) {
+            const data = await adminRes.json();
+            setShowAdminBtn(data.isAdmin === true);
+        }
+      } catch (error) { 
+        console.error("Role check failed:", error) 
+      }
     }
 
     const fetchNotifications = async () => {
@@ -46,7 +48,9 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
           setNotifications(data.notifications);
           setUnreadCount(data.notifications.filter(n => !n.isRead).length);
         }
-      } catch (error) { console.error(error); }
+      } catch (error) { 
+        console.error("Notifications fetch failed:", error); 
+      }
     };
 
     if (mounted && user) {
@@ -84,7 +88,9 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
       }
       setNotifications(prev => prev.filter(n => n.id !== id));
       toast.success("Notification deleted");
-    } catch (error) { toast.error("Failed to delete notification"); }
+    } catch (error) { 
+      toast.error("Failed to delete notification"); 
+    }
   };
 
   const openNotification = (notif) => {
@@ -186,7 +192,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
           </div>
         )}
 
-        {/* ✅ THE PILL STYLE PROFILE */}
+        {/* PROFILE PILL */}
         <div className="relative">
           <button 
             onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
@@ -211,16 +217,17 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
                     <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                   </Link>
                   
+                  {/* ✅ Admin Access - Renders Admin Dashboard & Rider Dashboard links */}
                   {showAdminBtn && (
-                    <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                      <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
-                    </Link>
-                  )}
-                  
-                  {showRiderBtn && (
-                    <Link href="/rider/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                      <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
-                    </Link>
+                    <>
+                      <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                        <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
+                      </Link>
+                      
+                      <Link href="/rider/dashboard" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                        <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
+                      </Link>
+                    </>
                   )}
 
                   <button onClick={() => openUserProfile()} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
