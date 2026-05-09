@@ -20,6 +20,7 @@
     "axios": "^1.13.2",
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",
+    "handlebars": "^4.7.9",
     "html2canvas": "^1.4.1",
     "imagekit": "^6.0.0",
     "inngest": "^3.54.0",
