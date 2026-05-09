@@ -32,11 +32,34 @@ export async function GET(request) {
       orderBy: { updatedAt: "desc" }, 
     });
 
-    const formattedGoals = goals.map(goal => ({
-      ...goal,
-      saved: Number(goal.saved),
-      targetAmount: Number(goal.targetAmount),
-    }));
+    const formattedGoals = goals.map(goal => {
+      // 1. Safely extract images
+      let rawImages = goal.product?.images || goal.product?.image || [];
+      
+      if (typeof rawImages === 'string') {
+        try {
+          rawImages = JSON.parse(rawImages);
+        } catch (e) {
+          rawImages = [rawImages];
+        }
+      }
+
+      if (!Array.isArray(rawImages)) {
+        rawImages = rawImages ? [rawImages] : [];
+      }
+
+      return {
+        ...goal,
+        // Create a formatted short ID for the frontend UI
+        shortId: goal.id ? goal.id.slice(0, 8).toUpperCase() : "UNKNOWN",
+        saved: Number(goal.saved),
+        targetAmount: Number(goal.targetAmount),
+        product: goal.product ? {
+          ...goal.product,
+          images: rawImages 
+        } : null
+      };
+    });
 
     return NextResponse.json({ goals: normalize(formattedGoals) });
   } catch (err) {

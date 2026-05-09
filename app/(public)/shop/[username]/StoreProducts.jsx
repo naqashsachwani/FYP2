@@ -59,27 +59,27 @@ export default function StoreProducts({ products }) {
 
     return (
         <>
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 mt-6">
+            <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4 mt-5 sm:mt-6">
                 
                 {/* Title Section */}
                 <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <LayoutGrid className="text-emerald-600" size={20} />
+                    <LayoutGrid className="text-emerald-600 w-5 h-5 sm:w-6 sm:h-6" />
                     Store Products 
-                    <span className="text-slate-400 text-base font-medium ml-1">
+                    <span className="text-slate-400 text-sm sm:text-base font-medium ml-1">
                         ({processedProducts.length})
                     </span>
                 </h2>
 
                 {/* Filter Controls */}
                 {products.length > 0 && (
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 w-full sm:w-auto">
                         
                         {/* Category Filter Dropdown */}
-                        <div className="relative w-full sm:w-44">
+                        <div className="relative w-full sm:w-44 shrink-0">
                             <select 
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all shadow-sm"
+                                className="w-full pl-3 sm:pl-4 pr-10 py-2 sm:py-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-shadow shadow-sm"
                             >
                                 {categories.map(cat => (
                                     <option key={cat} value={cat}>
@@ -87,15 +87,15 @@ export default function StoreProducts({ products }) {
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
 
                         {/* Sort Order Dropdown */}
-                        <div className="relative w-full sm:w-48">
+                        <div className="relative w-full sm:w-44 shrink-0">
                             <select 
                                 value={sortOrder}
                                 onChange={(e) => setSortOrder(e.target.value)}
-                                className="w-full pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-all shadow-sm"
+                                className="w-full pl-3 sm:pl-4 pr-10 py-2 sm:py-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer transition-shadow shadow-sm"
                             >
                                 <option value="default">Sort by: Default</option>
                                 <option value="price-asc">Price: Low to High</option>
@@ -104,32 +104,32 @@ export default function StoreProducts({ products }) {
                                 <option value="name-desc">Name: Z to A</option>
                             </select>
                             
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                     </div>
                 )}
             </div>
 
             {products.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-slate-300 shadow-sm">
-                    <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                        <StoreIcon size={28} className="text-slate-300" />
+                <div className="flex flex-col items-center justify-center py-12 sm:py-16 bg-white rounded-xl border border-dashed border-slate-300 shadow-sm">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 rounded-full flex items-center justify-center mb-2.5 sm:mb-3">
+                        <StoreIcon className="text-slate-300 w-6 h-6 sm:w-7 sm:h-7" />
                     </div>
-                    <h3 className="text-base font-semibold text-slate-700">No products available</h3>
-                    <p className="text-slate-500 mt-1 text-sm">This store hasn't listed any active products yet.</p>
+                    <h3 className="text-sm sm:text-base font-semibold text-slate-700">No products available</h3>
+                    <p className="text-slate-500 mt-1 text-xs sm:text-sm">This store hasn't listed any active products yet.</p>
                 </div>
             ) 
             
             : currentProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-slate-100 shadow-sm">
-                    <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                        <PackageX size={28} className="text-slate-300" />
+                <div className="flex flex-col items-center justify-center py-12 sm:py-16 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 rounded-full flex items-center justify-center mb-2.5 sm:mb-3">
+                        <PackageX className="text-slate-300 w-6 h-6 sm:w-7 sm:h-7" />
                     </div>
-                    <h3 className="text-base font-semibold text-slate-700">No matches found</h3>
-                    <p className="text-slate-500 mt-1 text-sm">We couldn't find anything matching your filters.</p>
+                    <h3 className="text-sm sm:text-base font-semibold text-slate-700">No matches found</h3>
+                    <p className="text-slate-500 mt-1 text-xs sm:text-sm">We couldn't find anything matching your filters.</p>
                     <button 
                         onClick={() => { setSelectedCategory("All"); setSortOrder("default"); }}
-                        className="mt-4 text-sm font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
+                        className="mt-3 sm:mt-4 text-xs sm:text-sm font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
                     >
                         Clear Filters
                     </button>
@@ -138,7 +138,7 @@ export default function StoreProducts({ products }) {
             
             : (
                 <div className="flex flex-col">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-10">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 pb-8 sm:pb-10">
                         {currentProducts.map(product => (
                             <ProductCard key={product.id} product={product} />
                         ))}
@@ -146,24 +146,24 @@ export default function StoreProducts({ products }) {
 
                     {/* ✅ Pagination Controls */}
                     {totalPages > 1 && (
-                        <div className="mt-4 mb-10 pt-6 border-t border-slate-200 flex justify-between items-center">
-                            <span className="text-sm font-medium text-slate-500">
+                        <div className="mt-2 sm:mt-4 mb-8 sm:mb-10 pt-5 sm:pt-6 border-t border-slate-200 flex justify-between items-center">
+                            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-500">
                                 Page {currentPage} of {totalPages}
                             </span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5 sm:gap-2">
                                 <button 
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                                     disabled={currentPage === 1} 
-                                    className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                    className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
                                 >
-                                    <ChevronLeft size={18}/>
+                                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5"/>
                                 </button>
                                 <button 
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
                                     disabled={currentPage === totalPages} 
-                                    className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                    className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
                                 >
-                                    <ChevronRight size={18}/>
+                                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5"/>
                                 </button>
                             </div>
                         </div>

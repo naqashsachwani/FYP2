@@ -3,7 +3,7 @@
 // --- Imports ---
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle, CreditCard } from "lucide-react";
 
 export default function DepositPage() {
   // Extracts the dynamic 'goalId' from the URL 
@@ -92,69 +92,76 @@ export default function DepositPage() {
 
 
   // Show full-page spinner while initially fetching goal data.
-  if (fetching) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-green-600" /></div>;
+  if (fetching) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
   
   // Show error if the goal data could not be found.
-  if (!goal) return <div className="min-h-screen flex items-center justify-center text-red-500">Goal not found</div>;
+  if (!goal) return <div className="min-h-[100dvh] flex items-center justify-center text-red-500 font-bold bg-slate-50">Goal not found</div>;
 
   return (
     // Main background container, centering the deposit card.
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="bg-white p-6 sm:p-8 lg:p-10 rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/50 w-full max-w-md border border-slate-100">
         
-        <div className="flex items-center gap-2 mb-6 text-gray-500 hover:text-gray-800 cursor-pointer w-fit" onClick={() => router.back()}>
-            <ArrowLeft size={18} />
-            <span className="text-sm font-medium">Back</span>
+        <button className="flex items-center gap-1.5 mb-5 sm:mb-6 text-slate-500 hover:text-slate-800 transition-colors w-fit border border-slate-200 bg-white px-3 py-1.5 rounded-lg shadow-sm font-bold text-xs sm:text-sm" onClick={() => router.back()}>
+            <ArrowLeft size={16} className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Back</span>
+        </button>
+
+        <div className="mb-6 sm:mb-8 text-center sm:text-left">
+           <h1 className="text-2xl sm:text-3xl font-extrabold mb-1.5 text-slate-900 flex items-center justify-center sm:justify-start gap-2.5">
+             <CreditCard className="text-emerald-600 w-6 h-6 sm:w-7 sm:h-7" /> Add Deposit
+           </h1>
+           <p className="text-xs sm:text-sm text-slate-500 truncate font-medium">Towards: <span className="font-bold text-slate-700">{goal.product?.name}</span></p>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1 text-gray-900">Add Deposit</h1>
-        <p className="text-sm text-gray-500 mb-6">Towards: {goal.product?.name}</p>
-
         {/* Displays the calculated remaining amount to guide the user's input. */}
-        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
-            <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Remaining Target</p>
-            <p className="text-2xl font-bold text-blue-900">Rs {remaining.toLocaleString()}</p>
+        <div className="bg-blue-50 border border-blue-200 p-4 sm:p-5 rounded-xl sm:rounded-2xl mb-5 sm:mb-6 flex flex-col items-center sm:items-start justify-center text-center sm:text-left shadow-inner">
+            <p className="text-[10px] sm:text-xs text-blue-600 font-bold uppercase tracking-widest mb-0.5">Remaining Target</p>
+            <p className="text-2xl sm:text-3xl font-black font-mono text-blue-900 tracking-tighter">Rs {remaining.toLocaleString()}</p>
         </div>
 
         {/* Amount Input Field */}
-        <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
-        <input
-          type="number"
-          placeholder={`Max: ${remaining}`}
-          value={amount}
-          onChange={handleAmountChange}
-          className={`border-2 p-3 w-full rounded-lg mb-2 outline-none transition-all ${error ? 'border-red-500 focus:border-red-500' : 'border-gray-200 focus:border-green-500'}`}
-        />
+        <div className="mb-5 sm:mb-6">
+           <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amount (PKR)</label>
+           <input
+             type="number"
+             placeholder={`Max: ${remaining}`}
+             value={amount}
+             onChange={handleAmountChange}
+             className={`border-2 p-3 sm:p-3.5 w-full rounded-xl outline-none font-mono text-sm sm:text-base transition-shadow bg-slate-50 focus:bg-white ${error ? 'border-red-500 focus:ring-4 focus:ring-red-500/20' : 'border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20'}`}
+           />
+        </div>
 
         {/* Conditionally renders the error alert box if the 'error' state is not null. */}
         {error && (
-          <div className="flex items-center gap-2 text-red-600 text-sm mb-4 bg-red-50 p-2 rounded">
-            <AlertCircle size={16} />
-            {error}
+          <div className="flex items-center gap-2 text-red-600 text-xs sm:text-sm mb-5 bg-red-50 p-3 sm:p-3.5 rounded-xl border border-red-200 font-bold animate-in fade-in slide-in-from-bottom-2">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+            <span className="leading-snug">{error}</span>
           </div>
         )}
 
-        <button
-          onClick={handleDeposit}
-          // The button is strictly disabled if loading, if an error exists, if amount is empty, or if amount exceeds the limit.
-          disabled={loading || !!error || !amount || Number(amount) > remaining} 
-          // Dynamic styling based on the disabled state.
-          className={`w-full py-3 rounded-lg font-bold text-white transition-all flex justify-center items-center gap-2 ${
-            loading || !!error || !amount
-              ? "bg-gray-400 cursor-not-allowed" 
-              : "bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg"
-          }`}
-        >
-          
-          {loading ? <Loader2 className="animate-spin w-5 h-5"/> : "Proceed to Payment"}
-        </button>
+        <div className="flex flex-col gap-2.5 sm:gap-3">
+           <button
+             onClick={handleDeposit}
+             // The button is strictly disabled if loading, if an error exists, if amount is empty, or if amount exceeds the limit.
+             disabled={loading || !!error || !amount || Number(amount) > remaining} 
+             // Dynamic styling based on the disabled state.
+             className={`w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-white transition-all flex justify-center items-center gap-2 text-sm sm:text-base active:scale-[0.98] disabled:active:scale-100 ${
+               loading || !!error || !amount
+                 ? "bg-slate-300 text-slate-500 cursor-not-allowed" 
+                 : "bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
+             }`}
+           >
+             {loading ? <Loader2 className="animate-spin w-5 h-5"/> : "Proceed to Payment"}
+           </button>
 
-        <button
-          onClick={() => router.back()}
-          className="w-full mt-3 py-3 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors"
-        >
-          Cancel
-        </button>
+           <button
+             onClick={() => router.back()}
+             className="w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base text-slate-600 font-bold bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
+           >
+             Cancel
+           </button>
+        </div>
       </div>
     </div>
   );

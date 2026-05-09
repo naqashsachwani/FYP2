@@ -37,11 +37,12 @@ function LoadingContent() {
     }, [router, searchParams])
 
     // Render the loading UI with the dynamic countdown.
+    // ✅ Responsive Fix: min-h-[100dvh]
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <div className="flex flex-col items-center justify-center min-h-[100dvh] gap-3 sm:gap-4 bg-slate-50 px-4 text-center">
             <Loading />
-            <p className="text-slate-600 font-medium animate-pulse">
-                Redirecting you in {count} seconds...
+            <p className="text-slate-600 font-bold text-sm sm:text-base animate-pulse mt-4">
+                Redirecting you in <span className="text-green-600">{count}</span> seconds...
             </p>
         </div>
     )
@@ -52,7 +53,7 @@ export default function LoadingPage() {
     return (
         // Suspense catches the "loading" state of useSearchParams during server-side rendering.
         <Suspense fallback={
-            <div className="flex flex-col items-center justify-center min-h-screen">
+            <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-slate-50">
                 <Loading />
             </div>
         }>

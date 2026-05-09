@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import Link from "next/link"; 
 import ProductDescription from "@/components/ProductDescription";
 import ProductDetails from "@/components/ProductDetails";
+import { Loader2 } from "lucide-react";
 
 export default function Product() {
 
@@ -67,9 +68,10 @@ export default function Product() {
     // Prevents rendering the main layout before data is available
     if (loading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="text-xl font-medium text-gray-500 animate-pulse">
-                    Loading product details...
+            <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50">
+                <div className="flex flex-col items-center gap-3 sm:gap-4 text-slate-500 animate-pulse">
+                    <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-green-600" />
+                    <span className="text-sm sm:text-base font-medium">Loading product details...</span>
                 </div>
             </div>
         );
@@ -77,9 +79,9 @@ export default function Product() {
 
     if (!product) {
         return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-                <p className="text-xl text-gray-600">Product not found.</p>
-                <Link href="/products" className="text-blue-600 hover:underline">
+            <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 sm:gap-4 bg-slate-50 px-4 text-center">
+                <p className="text-lg sm:text-xl text-slate-600 font-bold">Product not found.</p>
+                <Link href="/products" className="text-blue-600 hover:text-blue-700 font-medium hover:underline text-sm sm:text-base">
                     Back to Shop
                 </Link>
             </div>
@@ -87,32 +89,31 @@ export default function Product() {
     }
 
     return (
-        <div className="mx-6">
-            <div className="max-w-7xl mx-auto">
-
-                <div className="text-gray-500 text-sm mt-8 mb-5 flex items-center gap-2">
-                    <Link href="/" className="hover:text-black transition-colors">
-                        Home
-                    </Link>
-                    <span>/</span>
-                    <Link href="/products" className="hover:text-black transition-colors">
-                        Products
-                    </Link>
-                    <span>/</span>
-                    {/* Displays the category of the currently loaded product */}
-                    <span className="font-medium text-gray-800 cursor-default">
-                        {product.category}
-                    </span>
-                </div>
-
-                {/* Product main details component (handles price, image gallery, add to cart, etc.) */}
-                <ProductDetails product={product} />
-
-                <div className="mt-10">
-                    <ProductDescription product={product} />
-                </div>
-                
+        <div className="px-4 sm:px-6 w-full max-w-7xl mx-auto pb-16 sm:pb-24">
+            
+            {/* Breadcrumb Navigation */}
+            <div className="text-slate-500 text-xs sm:text-sm mt-6 sm:mt-8 mb-4 sm:mb-6 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <Link href="/" className="hover:text-slate-900 transition-colors font-medium">
+                    Home
+                </Link>
+                <span>/</span>
+                <Link href="/shop" className="hover:text-slate-900 transition-colors font-medium">
+                    Products
+                </Link>
+                <span>/</span>
+                {/* Displays the category of the currently loaded product */}
+                <span className="font-bold text-slate-800 cursor-default truncate max-w-[150px] sm:max-w-xs">
+                    {product.category}
+                </span>
             </div>
+
+            {/* Product main details component (handles price, image gallery, add to cart, etc.) */}
+            <ProductDetails product={product} />
+
+            <div className="mt-8 sm:mt-12">
+                <ProductDescription product={product} />
+            </div>
+            
         </div>
     );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto"; 
-import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift, Wallet } from "lucide-react";
+import { FileText, X, Download, FileBarChart, Loader2, Truck, CheckCircle, Gift, Wallet, ChevronLeft, ChevronRight } from "lucide-react"; 
 import toast from "react-hot-toast";
 import GoalCard from "@/components/GoalCard";
 import RedeemAction from "@/components/RedeemAction";
@@ -146,60 +146,59 @@ const generateReportPDF = (deposits, goalName) => {
   doc.save("DreamSaver_Detailed_Report.pdf");
 };
 
-// A UI Modal displaying specific transaction details before downloading
 const InvoiceModal = ({ transaction, product, onClose, userName }) => {
-  if (!transaction) return null; // Safety check
+  if (!transaction) return null; 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-md overflow-hidden relative">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors z-10">
-          <X className="w-5 h-5 text-slate-400" />
-        </button>
-        <div className="p-8 bg-white text-slate-800">
-          <div className="text-center border-b border-slate-200 pb-6 mb-6">
-            <h2 className="text-2xl font-bold uppercase tracking-widest text-emerald-700">INVOICE</h2>
-            <p className="text-sm text-slate-500 mt-1">DreamSaver Payment Receipt</p>
-          </div>
-          <div className="flex justify-between items-start mb-8">
-            <div className="text-sm">
-              <p className="text-slate-500 font-medium mb-1">Billed To</p>
-              <h4 className="font-bold text-slate-800 text-base">{userName}</h4>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-[95%] sm:w-full max-w-md overflow-hidden relative flex flex-col max-h-[90dvh]">
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-100 shrink-0">
+          <h2 className="text-lg sm:text-xl font-bold uppercase tracking-widest text-emerald-700">INVOICE</h2>
+          <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-full transition-colors z-10">
+            <X className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500" />
+          </button>
+        </div>
+        
+        <div className="p-5 sm:p-8 bg-white text-slate-800 overflow-y-auto custom-scrollbar shrink">
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start mb-6 sm:mb-8 gap-4 sm:gap-0">
+            <div className="text-xs sm:text-sm">
+              <p className="text-slate-500 font-medium mb-1 uppercase tracking-wider text-[10px] sm:text-xs">Billed To</p>
+              <h4 className="font-bold text-slate-800 text-sm sm:text-base leading-tight">{userName}</h4>
               <p className="text-slate-500 font-medium mt-1">User ID:</p>
-              <p className="text-slate-400 text-xs break-all max-w-[150px]">{transaction.userId}</p>
+              <p className="text-slate-400 text-[10px] sm:text-xs break-all max-w-[200px] sm:max-w-[150px]">{transaction.userId}</p>
             </div>
-            <div className="text-right text-sm">
-              <p className="text-slate-500 font-medium mb-1">Receipt #</p>
+            <div className="text-left sm:text-right text-xs sm:text-sm">
+              <p className="text-slate-500 font-medium mb-1 uppercase tracking-wider text-[10px] sm:text-xs">Receipt #</p>
               <p className="font-mono font-bold text-slate-800">{transaction.receiptNumber?.slice(0, 8) || "N/A"}</p>
-              <div className="mt-4 text-slate-500">
+              <div className="mt-3 sm:mt-4 text-slate-500">
                 <p>{new Date(transaction.createdAt).toLocaleDateString('en-GB')}</p>
                 <p>{new Date(transaction.createdAt).toLocaleTimeString()}</p>
               </div>
             </div>
           </div>
-          <div className="bg-slate-50 flex justify-between px-4 py-2 text-xs font-bold text-slate-500 uppercase mb-4 rounded-sm">
+          <div className="bg-slate-50 flex justify-between px-3 sm:px-4 py-2 text-[10px] sm:text-xs font-bold text-slate-500 uppercase mb-3 sm:mb-4 rounded-lg">
             <span>Description</span>
             <span>Amount</span>
           </div>
-          <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4 px-2">
-            <div>
-              <p className="font-bold text-base text-slate-900">{product?.name || "Deposit"}</p>
-              <p className="text-xs text-slate-500 mt-1">Method: {transaction.paymentMethod}</p>
-              <p className="text-xs text-slate-400 font-mono">ID: {transaction.id.slice(-8)}...</p>
+          <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4 px-1 sm:px-2 gap-3 sm:gap-0">
+            <div className="min-w-0 pr-2">
+              <p className="font-bold text-sm sm:text-base text-slate-900 truncate">{product?.name || "Deposit"}</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 mt-1 uppercase">Method: {transaction.paymentMethod}</p>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-mono mt-0.5">ID: {transaction.id.slice(-8)}...</p>
             </div>
-            <p className="font-bold text-base text-slate-900">Rs {transaction.amount.toLocaleString()}</p>
+            <p className="font-bold font-mono text-sm sm:text-base text-slate-900 whitespace-nowrap">Rs {transaction.amount.toLocaleString()}</p>
           </div>
-          <div className="flex justify-between items-center px-2 pt-2">
-            <span className="font-bold text-lg text-slate-900">Total Paid:</span>
-            <span className="font-bold text-lg text-emerald-600">Rs {transaction.amount.toLocaleString()}</span>
+          <div className="flex justify-between items-center px-1 sm:px-2 pt-2">
+            <span className="font-bold text-base sm:text-lg text-slate-900">Total Paid:</span>
+            <span className="font-black text-lg sm:text-xl font-mono text-emerald-600">Rs {transaction.amount.toLocaleString()}</span>
           </div>
-          <div className="text-center text-xs text-slate-400 mt-10 leading-relaxed">
+          <div className="text-center text-[10px] sm:text-xs text-slate-400 mt-8 sm:mt-10 leading-relaxed border-t border-slate-100 pt-4 sm:pt-6">
             <p>Thank you for using DreamSaver.</p>
             <p>This is a computer-generated receipt.</p>
           </div>
         </div>
-        <div className="p-4 bg-slate-50 border-t flex justify-end">
-          {/* Triggers the PDF generation function from above */}
-          <button onClick={() => generateInvoicePDF(transaction, product, userName)} className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 font-medium transition-colors shadow-sm">
+        
+        <div className="p-4 sm:p-5 bg-slate-50 border-t flex justify-end shrink-0">
+          <button onClick={() => generateInvoicePDF(transaction, product, userName)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 bg-emerald-600 text-white text-sm rounded-xl hover:bg-emerald-700 font-bold transition-colors shadow-sm active:scale-[0.98]">
             <Download className="w-4 h-4" /> Download PDF
           </button>
         </div>
@@ -209,13 +208,11 @@ const InvoiceModal = ({ transaction, product, onClose, userName }) => {
 };
 
 export default function GoalDetails() {
-  // Hooks to grab URL params, routing, query strings, and auth user context
   const { goalId } = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
 
-  // Primary State declarations
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingDeposit, setSavingDeposit] = useState(false);
@@ -223,22 +220,23 @@ export default function GoalDetails() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [addresses, setAddresses] = useState([]); 
 
-  // Wallet Deposit Modal State
+  // ✅ Pagination State
+  const [txPage, setTxPage] = useState(1);
+  const TX_PER_PAGE = 5;
+
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletAmount, setWalletAmount] = useState("");
   const [isProcessingWallet, setIsProcessingWallet] = useState(false);
 
-  // useRef to prevent double-firing of Stripe success confirmation
   const handledRef = useRef(false);
 
-  // Fetch the primary goal data
   const fetchGoal = async () => {
     try {
       const res = await fetch(`/api/goals/${goalId}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      normalizeAndSetGoal(data.goal); // Processes raw data before setting state
+      normalizeAndSetGoal(data.goal); 
     } catch (err) {
       console.error(err);
     } finally {
@@ -246,7 +244,6 @@ export default function GoalDetails() {
     }
   };
 
-  // Fetch the user's saved addresses for the redemption flow
   const fetchAddresses = async () => {
     try {
         const res = await fetch(`/api/address`); 
@@ -257,7 +254,6 @@ export default function GoalDetails() {
     } catch (error) { console.error(error); }
   };
 
-  // Fetch the user's available digital wallet balance
   const fetchWalletBalance = async () => {
     try {
         const res = await fetch(`/api/wallet`); 
@@ -275,11 +271,10 @@ export default function GoalDetails() {
         amount: Number(d.amount),
         createdAt: new Date(d.createdAt),
       }));
-      // Sum all individual deposit amounts to find total saved
       const calculatedSaved = deposits.reduce((sum, dep) => sum + dep.amount, 0);
       
-      // Preserve date from previous state if the backend accidentally drops it during a quick update
-      const dateString = goalData.endDate || goalData.targetDate || prevGoal?.endDate || prevGoal?.targetDate;
+      // ✅ STRONGER DATE FALLBACK: Ensures existing date is never overwritten by a null backend response
+      const dateString = goalData.endDate || goalData.targetDate || prevGoal?.endDate || prevGoal?.targetDate || goalData.createdAt;
       let validEndDate = null;
       let formattedEndDate = "--";
 
@@ -287,7 +282,7 @@ export default function GoalDetails() {
           const parsedDate = new Date(dateString);
           if (!isNaN(parsedDate)) {
               validEndDate = parsedDate;
-              formattedEndDate = parsedDate.toLocaleDateString('en-GB'); // Enforces DD/MM/YYYY
+              formattedEndDate = parsedDate.toLocaleDateString('en-GB'); 
           }
       }
 
@@ -302,13 +297,11 @@ export default function GoalDetails() {
         status: goalData.status
       };
       
-      // Calculate progress percentage, avoiding division by zero
       normalizedGoal.progressPercent = normalizedGoal.targetAmount > 0 ? (normalizedGoal.saved / normalizedGoal.targetAmount) * 100 : 0;
       return normalizedGoal;
     });
   };
 
-  // Initial Data Fetching Effect
   useEffect(() => {
     fetchGoal();
     if (user) {
@@ -317,7 +310,6 @@ export default function GoalDetails() {
     }
   }, [goalId, user]);
 
-  // Handle Stripe Success Return
   useEffect(() => {
     const payment = searchParams.get("payment");
     const amount = searchParams.get("amount");
@@ -333,20 +325,17 @@ export default function GoalDetails() {
           if (data.success && data.goal) {
             normalizeAndSetGoal(data.goal); 
             setSuccessMessage(data.goalCompleted ? "🎉 Goal Completed!" : "✅ Deposit Added!");
-            // Clean up the URL to remove the success query params
             router.replace(`/goals/${goalId}`);
           }
         }).finally(() => setSavingDeposit(false));
     }
   }, [searchParams, goalId, router]);
 
-  // Handle Internal Wallet Payment Processing
   const handleWalletDepositSubmit = async (e) => {
     e.preventDefault();
     const amountNum = Number(walletAmount);
     const remaining = Math.max(0, goal.targetAmount - goal.saved);
 
-    // Front-end Validation checks
     if (amountNum <= 0) return toast.error("Enter a valid amount");
     if (amountNum > walletBalance) return toast.error("Insufficient wallet balance");
     if (amountNum > remaining) return toast.error(`Maximum allowed is Rs ${remaining}`);
@@ -365,10 +354,10 @@ export default function GoalDetails() {
       if (!res.ok) throw new Error(data.error);
 
       toast.success(data.goalCompleted ? " Goal Completed!" : " Deposit Added via Wallet!", { id: toastId });
-      normalizeAndSetGoal(data.goal); // Update local state
-      setIsWalletModalOpen(false);    // Close the modal
+      normalizeAndSetGoal(data.goal); 
+      setIsWalletModalOpen(false);    
       setWalletAmount("");            
-      fetchWalletBalance();           
+      fetchWalletBalance();            
     } catch (error) {
       toast.error(error.message || "Failed to process deposit", { id: toastId });
     } finally {
@@ -376,20 +365,22 @@ export default function GoalDetails() {
     }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-emerald-600" /></div>;
-  if (!goal) return <p className="p-4 text-red-500">Goal not found</p>;
+  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-emerald-600 w-10 h-10" /></div>;
+  if (!goal) return <p className="min-h-[100dvh] flex items-center justify-center font-bold text-red-500 bg-slate-50">Goal not found</p>;
 
   // Data processing for Chart.js
   const sortedDeposits = [...goal.deposits].sort((a, b) => b.createdAt - a.createdAt);
   
+  // ✅ Pagination Logic for Transactions
+  const totalTxPages = Math.max(1, Math.ceil(sortedDeposits.length / TX_PER_PAGE));
+  const paginatedDeposits = sortedDeposits.slice((txPage - 1) * TX_PER_PAGE, txPage * TX_PER_PAGE);
+
   const chartPoints = [
       { date: new Date(goal.createdAt).toLocaleDateString('en-GB'), amount: 0 }, 
       ...sortedDeposits.map((d) => ({ date: d.createdAt.toLocaleDateString('en-GB'), amount: d.amount })).reverse()
   ];
-  // Create cumulative data array (e.g., [10, 20, 30] becomes [10, 30, 60])
   const cumulativeData = chartPoints.map((p, i, arr) => arr.slice(0, i + 1).reduce((sum, c) => sum + c.amount, 0));
   
-  // Chart.js Configuration Object
   const chartData = { 
     labels: chartPoints.map((p) => p.date), 
     datasets: [{ 
@@ -404,184 +395,202 @@ export default function GoalDetails() {
   
   const userName = user ? (user.fullName || user.firstName) : "Valued User";
   
-  // Derived state booleans for controlling UI actions
   const isGoalCompleted = goal.status === "COMPLETED" || goal.status === "REDEEMED";
   const isRedeemed = goal.status === "REDEEMED" || !!goal.delivery;
   const remainingTarget = Math.max(0, goal.targetAmount - goal.saved);
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl relative">
-      {/* Conditionally rendered Modals and Alerts */}
-      {selectedInvoice && <InvoiceModal transaction={selectedInvoice} product={goal.product} onClose={() => setSelectedInvoice(null)} userName={userName} />}
-      {successMessage && <div className="mb-4 bg-green-50 text-green-700 p-3 rounded border border-green-200">{successMessage}</div>}
+    <div className="min-h-[100dvh] bg-slate-50 py-8 sm:py-12">
+      <div className="container mx-auto px-4 sm:px-6 max-w-4xl relative">
+        {selectedInvoice && <InvoiceModal transaction={selectedInvoice} product={goal.product} onClose={() => setSelectedInvoice(null)} userName={userName} />}
+        {successMessage && <div className="mb-5 sm:mb-6 bg-green-50 text-green-700 p-3 sm:p-4 rounded-xl border border-green-200 text-sm sm:text-base font-medium shadow-sm flex items-center gap-2">{successMessage}</div>}
 
-      {/* Completion Banners */}
-      {isGoalCompleted && !isRedeemed && (
-        <div className="mb-4 bg-green-100 text-green-800 p-3 rounded font-semibold border border-green-200 flex items-center gap-2">
-          <CheckCircle className="w-5 h-5" /> 🎉 Goal completed! Please redeem your product.
-        </div>
-      )}
-      {isRedeemed && (
-         <div className="mb-4 bg-blue-50 text-blue-800 p-3 rounded font-semibold border border-blue-200 flex items-center gap-2">
-            <Truck className="w-5 h-5" /> Product Redeemed! Shipment ID: {goal.delivery?.trackingNumber || "Pending"}
-         </div>
-      )}
-
-      {/* Primary Goal Card View */}
-      <h1 className="text-2xl font-bold mb-4">{goal.product?.name || "Savings Goal"}</h1>
-      <GoalCard goal={goal} />
-
-      {/* Progress Bar View */}
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-2">Progress</h2>
-        <div className="w-full bg-slate-200 rounded-full h-6 overflow-hidden relative">
-          <div className="h-6 flex items-center justify-center text-white text-xs font-bold bg-emerald-600 transition-all duration-700" style={{ width: `${Math.min(goal.progressPercent, 100)}%` }}>
-            {goal.progressPercent > 10 && `${Math.min(Math.round(goal.progressPercent), 100)}%`}
+        {isGoalCompleted && !isRedeemed && (
+          <div className="mb-5 sm:mb-6 bg-green-100 text-green-800 p-4 rounded-xl font-bold border border-green-200 flex items-center gap-2.5 shadow-sm text-sm sm:text-base">
+            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" /> 🎉 Goal completed! Please redeem your product.
           </div>
-        </div>
-        <div className="flex justify-between mt-2 text-sm text-slate-600 font-medium">
-          <span>Saved: {goal.currency || "Rs"} {goal.saved.toLocaleString()}</span>
-          <span>Target: {goal.currency || "Rs"} {goal.targetAmount.toLocaleString()}</span>
-        </div>
-      </div>
-
-      {/* Chart.js Line Chart */}
-      <div className="mt-8 p-4 bg-white rounded-xl shadow-sm border border-slate-100">
-        <h2 className="text-lg font-semibold mb-4">Savings Growth</h2>
-        <div className="h-64 sm:h-80"><Line data={chartData} options={{ maintainAspectRatio: false }} /></div>
-      </div>
-
-      {/* ACTION BUTTONS */}
-      <div className="mt-6 flex flex-col sm:flex-row gap-4 flex-wrap">
-        
-        {/* 1. Deposit Button (Stripe Integration Route) */}
-        <button
-          disabled={savingDeposit || isGoalCompleted}
-          onClick={() => router.push(`/goals/${goalId}/deposit`)}
-          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white shadow-md transition-all flex justify-center items-center gap-2 ${savingDeposit || isGoalCompleted ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
-        >
-          {savingDeposit ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
-        </button>
-
-        {/* 2. Deposit Button (Internal Wallet Route) */}
-        <button
-          disabled={savingDeposit || isGoalCompleted}
-          onClick={() => setIsWalletModalOpen(true)}
-          className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold shadow-md transition-all flex items-center justify-center gap-2 ${savingDeposit || isGoalCompleted ? "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300" : "bg-white text-emerald-700 border-2 border-emerald-600 hover:bg-emerald-50"}`}
-        >
-          <Wallet size={18} />
-          Deposit via Wallet
-        </button>
-
-        {/* 3. Redeem Button (Shows Redeem Component if Complete, otherwise disabled status button) */}
-        {!isRedeemed && isGoalCompleted ? (
-            <div className="flex-1 sm:flex-none">
-                <RedeemAction 
-                    goal={goal} 
-                    addresses={addresses}
-                    setAddresses={setAddresses}
-                    onSuccess={fetchGoal} 
-                />
-            </div>
-        ) : isRedeemed ? (
-            <button disabled className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white bg-indigo-300 cursor-not-allowed flex items-center justify-center gap-2">
-                <Gift className="w-5 h-5" /> Product Redeemed
-            </button>
-        ) : null}
-
-        {/* 4. Track Button (Only visible if redeemed and delivery exists) */}
-        {isRedeemed && goal.delivery && (
-            <button
-                onClick={() => router.push(`/tracking/${goal.delivery.id}`)}
-                className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md transition-all flex items-center justify-center gap-2 animate-in fade-in"
-            >
-                <Truck className="w-5 h-5" />
-                Track Delivery
-            </button>
+        )}
+        {isRedeemed && (
+           <div className="mb-5 sm:mb-6 bg-blue-50 text-blue-800 p-4 rounded-xl font-bold border border-blue-200 flex items-center gap-2.5 shadow-sm text-sm sm:text-base">
+              <Truck className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" /> <span className="truncate">Product Redeemed! ID: {goal.delivery?.trackingNumber || "Pending"}</span>
+           </div>
         )}
 
-        {/* 5. Report Download Button */}
-        <button onClick={() => generateReportPDF(sortedDeposits, goal.product?.name)} className="flex-1 sm:flex-none px-6 py-3 rounded-lg font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-2">
-          <FileBarChart className="w-5 h-5" /> Monthly Report
-        </button>
-      </div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold mb-4 sm:mb-6 text-slate-900 leading-tight truncate px-1" title={goal.product?.name || "Savings Goal"}>{goal.product?.name || "Savings Goal"}</h1>
+        <GoalCard goal={goal} />
 
-      {/* Transaction History List */}
-      {goal.deposits.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4 text-slate-900">Recent Transactions</h2>
-          <ul className="space-y-3">
-            {sortedDeposits.map((d) => (
-              <li key={d.id} className="p-5 border border-slate-200 rounded-xl flex items-center justify-between bg-white shadow-sm">
-                <div>
-                  <span className="text-slate-900 font-bold block">{d.paymentMethod === "WALLET" ? "Wallet Deposit" : "Deposit"}</span>
-                  {/*  ENFORCE DD/MM/YYYY */}
-                  <span className="text-slate-500 text-sm">{new Date(d.createdAt).toLocaleDateString('en-GB')} {new Date(d.createdAt).toLocaleTimeString()}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-emerald-600 text-xl">+ {d.amount.toLocaleString()}</span>
-                  <button onClick={() => setSelectedInvoice(d)} className="px-4 py-2 border rounded-lg hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 text-sm flex items-center gap-2 transition-all">
-                    <FileText className="w-4 h-4" /> Invoice
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* WALLET DEPOSIT MODAL */}
-      {isWalletModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h3 className="font-bold text-xl text-gray-900 flex items-center gap-2">
-                <Wallet className="text-emerald-600" /> Pay with Wallet
-              </h3>
-              <button onClick={() => setIsWalletModalOpen(false)} className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition"><X size={20} /></button>
+        <div className="mt-6 sm:mt-8 bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200">
+          <h2 className="text-lg sm:text-xl font-bold mb-3 text-slate-800">Progress Tracking</h2>
+          <div className="w-full bg-slate-100 rounded-full h-6 sm:h-8 overflow-hidden relative shadow-inner border border-slate-200">
+            <div className="h-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-700 shadow-md" style={{ width: `${Math.min(goal.progressPercent, 100)}%` }}>
+              {goal.progressPercent > 10 && `${Math.min(Math.round(goal.progressPercent), 100)}%`}
             </div>
-            
-            <form onSubmit={handleWalletDepositSubmit} className="p-6 space-y-5">
-              
-              <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <span className="text-sm font-medium text-slate-600">Remaining Target:</span>
-                <span className="font-bold text-slate-900">Rs {remainingTarget.toLocaleString()}</span>
-              </div>
-
-              <div className={`p-4 rounded-xl text-sm border flex items-center justify-between font-medium ${walletBalance > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
-                <span>Available Wallet Balance:</span>
-                <span className="font-mono font-bold text-lg">Rs {walletBalance.toLocaleString()}</span>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1.5">Amount to Deposit (Rs)</label>
-                <input 
-                  type="number" 
-                  required
-                  min="1"
-                  max={Math.min(walletBalance, remainingTarget)}
-                  value={walletAmount}
-                  onChange={(e) => setWalletAmount(e.target.value)}
-                  placeholder={`Max: Rs ${Math.min(walletBalance, remainingTarget).toLocaleString()}`}
-                  className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button type="button" onClick={() => setIsWalletModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition">Cancel</button>
-                <button 
-                  type="submit" 
-                  disabled={isProcessingWallet || walletBalance <= 0 || !walletAmount || Number(walletAmount) > remainingTarget || Number(walletAmount) > walletBalance} 
-                  className="flex-1 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {isProcessingWallet ? <Loader2 size={18} className="animate-spin" /> : "Confirm Payment"}
-                </button>
-              </div>
-            </form>
+          </div>
+          <div className="flex justify-between mt-3 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider">
+            <span>Saved: {goal.currency || "Rs"} {goal.saved.toLocaleString()}</span>
+            <span>Target: {goal.currency || "Rs"} {goal.targetAmount.toLocaleString()}</span>
           </div>
         </div>
-      )}
 
+        <div className="mt-6 sm:mt-8 p-5 sm:p-6 bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <h2 className="text-lg sm:text-xl font-bold mb-4 text-slate-800">Savings Growth</h2>
+          <div className="h-64 sm:h-80 w-full"><Line data={chartData} options={{ maintainAspectRatio: false, responsive: true }} /></div>
+        </div>
+
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          
+          <button
+            disabled={savingDeposit || isGoalCompleted}
+            onClick={() => router.push(`/goals/${goalId}/deposit`)}
+            className={`w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all flex justify-center items-center gap-2 active:scale-[0.98] disabled:active:scale-100 ${savingDeposit || isGoalCompleted ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20"}`}
+          >
+            {savingDeposit ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</> : isGoalCompleted ? "Goal Completed" : "Deposit via Stripe"}
+          </button>
+
+          <button
+            disabled={savingDeposit || isGoalCompleted}
+            onClick={() => setIsWalletModalOpen(true)}
+            className={`w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all flex items-center justify-center gap-2 active:scale-[0.98] disabled:active:scale-100 ${savingDeposit || isGoalCompleted ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200" : "bg-white text-emerald-700 border-2 border-emerald-600 hover:bg-emerald-50 shadow-sm"}`}
+          >
+            <Wallet className="w-5 h-5" />
+            Pay with Wallet
+          </button>
+
+          {!isRedeemed && isGoalCompleted ? (
+              <div className="w-full">
+                  <RedeemAction 
+                      goal={goal} 
+                      addresses={addresses}
+                      setAddresses={setAddresses}
+                      onSuccess={fetchGoal} 
+                  />
+              </div>
+          ) : isRedeemed ? (
+              <button disabled className="w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-white bg-indigo-300 cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base">
+                  <Gift className="w-5 h-5" /> Product Redeemed
+              </button>
+          ) : null}
+
+          {isRedeemed && goal.delivery && (
+              <button
+                  onClick={() => router.push(`/tracking/${goal.delivery.id}`)}
+                  className="w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 animate-in fade-in active:scale-[0.98] text-sm sm:text-base"
+              >
+                  <Truck className="w-5 h-5" />
+                  Track Delivery
+              </button>
+          )}
+
+          <button onClick={() => generateReportPDF(sortedDeposits, goal.product?.name)} className="w-full py-3.5 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-2 transition-colors active:scale-[0.98] text-sm sm:text-base">
+            <FileBarChart className="w-5 h-5" /> Monthly Report
+          </button>
+        </div>
+
+        {goal.deposits.length > 0 && (
+          <div className="mt-8 sm:mt-10 bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
+            <h2 className="text-lg sm:text-2xl font-bold mb-4 sm:mb-6 text-slate-900 px-1">Recent Transactions</h2>
+            
+            <ul className="space-y-3 sm:space-y-4">
+              {/* ✅ Mapping over paginatedDeposits instead of all deposits */}
+              {paginatedDeposits.map((d) => (
+                <li key={d.id} className="p-4 sm:p-5 border border-slate-200 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between bg-white hover:bg-slate-50 transition-colors shadow-sm gap-3 sm:gap-0">
+                  <div className="min-w-0">
+                    <span className="text-slate-900 font-bold text-sm sm:text-base block truncate">{d.paymentMethod === "WALLET" ? "Wallet Deposit" : "Deposit"}</span>
+                    <span className="text-slate-500 text-xs sm:text-sm mt-1 block">{new Date(d.createdAt).toLocaleDateString('en-GB')} {new Date(d.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 border-t border-slate-100 pt-3 sm:pt-0 sm:border-t-0">
+                    <span className="font-black font-mono text-emerald-600 text-lg sm:text-xl">+ {d.amount.toLocaleString()}</span>
+                    <button onClick={() => setSelectedInvoice(d)} className="px-3 sm:px-4 py-2 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-emerald-50 text-slate-500 hover:text-emerald-700 hover:border-emerald-200 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm">
+                      <FileText className="w-4 h-4" /> <span className="hidden sm:inline">Invoice</span>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* ✅ Transaction Pagination Controls */}
+            {totalTxPages > 1 && (
+              <div className="flex items-center justify-between mt-5 sm:mt-6 pt-4 sm:pt-5 border-t border-slate-100">
+                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Page {txPage} of {totalTxPages}
+                </span>
+                <div className="flex gap-1.5 sm:gap-2">
+                  <button 
+                    onClick={() => setTxPage(p => Math.max(1, p - 1))} 
+                    disabled={txPage === 1} 
+                    className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors text-slate-600 shadow-sm"
+                  >
+                    <ChevronLeft className="w-4 h-4 sm:w-[18px] sm:h-[18px]"/>
+                  </button>
+                  <button 
+                    onClick={() => setTxPage(p => Math.min(totalTxPages, p + 1))} 
+                    disabled={txPage === totalTxPages} 
+                    className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 transition-colors text-slate-600 shadow-sm"
+                  >
+                    <ChevronRight className="w-4 h-4 sm:w-[18px] sm:h-[18px]"/>
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </div>
+        )}
+
+        {/* WALLET DEPOSIT MODAL */}
+        {isWalletModalOpen && (
+          <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl sm:rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
+              <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100 shrink-0 bg-emerald-50/50">
+                <h3 className="font-bold text-lg sm:text-xl text-gray-900 flex items-center gap-2">
+                  <Wallet className="text-emerald-600 w-5 h-5 sm:w-6 sm:h-6" /> Pay with Wallet
+                </h3>
+                <button onClick={() => setIsWalletModalOpen(false)} className="text-gray-400 hover:text-red-500 bg-white border border-gray-200 shadow-sm p-1.5 sm:p-2 rounded-full transition-colors"><X className="w-4 h-4 sm:w-[18px] sm:h-[18px]" /></button>
+              </div>
+              
+              <div className="overflow-y-auto custom-scrollbar p-4 sm:p-6 shrink">
+                <form onSubmit={handleWalletDepositSubmit} className="space-y-4 sm:space-y-5">
+                  
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200 gap-1 sm:gap-0">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Remaining Target:</span>
+                    <span className="font-black font-mono text-base sm:text-lg text-slate-900">Rs {remainingTarget.toLocaleString()}</span>
+                  </div>
+
+                  <div className={`p-3 sm:p-4 rounded-xl border flex flex-col sm:flex-row justify-between sm:items-center gap-1 sm:gap-0 ${walletBalance > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Available Wallet Balance:</span>
+                    <span className="font-black font-mono text-base sm:text-lg">Rs {walletBalance.toLocaleString()}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Amount to Deposit (Rs)</label>
+                    <input 
+                      type="number" 
+                      required
+                      min="1"
+                      max={Math.min(walletBalance, remainingTarget)}
+                      value={walletAmount}
+                      onChange={(e) => setWalletAmount(e.target.value)}
+                      placeholder={`Max: Rs ${Math.min(walletBalance, remainingTarget).toLocaleString()}`}
+                      className="w-full border border-gray-300 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-sm sm:text-base transition-shadow bg-slate-50 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row gap-2.5 sm:gap-3">
+                    <button type="button" onClick={() => setIsWalletModalOpen(false)} className="w-full sm:flex-1 py-2.5 sm:py-3 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl sm:rounded-2xl hover:bg-gray-50 transition-colors shadow-sm order-2 sm:order-1">Cancel</button>
+                    <button 
+                      type="submit" 
+                      disabled={isProcessingWallet || walletBalance <= 0 || !walletAmount || Number(walletAmount) > remainingTarget || Number(walletAmount) > walletBalance} 
+                      className="w-full sm:flex-[1.5] py-2.5 sm:py-3 bg-emerald-600 text-white font-bold text-sm rounded-xl sm:rounded-2xl hover:bg-emerald-700 transition-all flex justify-center items-center gap-2 disabled:opacity-50 shadow-md shadow-emerald-600/20 active:scale-[0.98] disabled:active:scale-100 order-1 sm:order-2"
+                    >
+                      {isProcessingWallet ? <Loader2 size={18} className="animate-spin shrink-0" /> : "Confirm Payment"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

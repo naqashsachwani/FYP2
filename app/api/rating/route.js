@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { getAuth } from "@clerk/nextjs/server";
+import { getAuth, currentUser } from "@clerk/nextjs/server"; // ✅ Added currentUser
 import { NextResponse } from "next/server";
 import imagekit from "@/configs/imageKit";
 import { revalidatePath } from "next/cache";
@@ -12,6 +12,7 @@ import { validateBase64Images } from "@/lib/security/uploadValidation";
 export async function POST(req) {
     try {
         const { userId } = getAuth(req);
+        const clerkUser = await currentUser(); // ✅ Fetch actual profile data from Clerk
         const context = getRequestContext(req, userId);
 
         if (!userId) {
@@ -114,6 +115,7 @@ export async function POST(req) {
             });
         }
 
+        // Invalidate server cache
         revalidatePath(`/product/${productId}`);
 
         await writeSecurityAuditLog({
@@ -126,7 +128,20 @@ export async function POST(req) {
             metadata: { goalId: completedGoal.id, deliveryId: completedGoal.delivery.id },
         });
 
-        return NextResponse.json({ message: "Review submitted successfully!", rating: newRating }, { status: 201 });
+        // ✅ Stitch the accurate Clerk data into the response so the frontend UI doesn't crash or show "Anonymous"
+        const enrichedRating = {
+            ...newRating,
+            user: {
+                ...newRating.user,
+                firstName: clerkUser?.firstName,
+                lastName: clerkUser?.lastName,
+                name: `${clerkUser?.firstName || ''} ${clerkUser?.lastName || ''}`.trim() || "Anonymous User",
+                fullName: `${clerkUser?.firstName || ''} ${clerkUser?.lastName || ''}`.trim() || "Anonymous User",
+                imageUrl: clerkUser?.imageUrl
+            }
+        };
+
+        return NextResponse.json({ message: "Review submitted successfully!", rating: enrichedRating }, { status: 201 });
 
     } catch (error) {
         console.error("POST /api/rating error:", error);

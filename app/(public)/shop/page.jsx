@@ -88,22 +88,22 @@ function ShopContent() {
         return (
             <div className="min-h-[70vh] flex items-center justify-center">
                 <div className="animate-pulse flex flex-col items-center">
-                    <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
-                    <p className="text-slate-500 font-medium">Loading store...</p>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-3 sm:mb-4"></div>
+                    <p className="text-slate-500 font-medium text-sm sm:text-base">Loading store...</p>
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="min-h-[70vh] mx-4 sm:mx-6 flex flex-col">
+        <div className="min-h-[70vh] mx-3 sm:mx-6 flex flex-col">
             <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
                 
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between mt-8 mb-8 gap-6 shrink-0">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between mt-6 sm:mt-8 mb-6 sm:mb-8 gap-4 sm:gap-6 shrink-0">
                     
                     {/* Title & Mobile Filter Toggle Button */}
                     <div className="flex items-center justify-between">
-                        <h1 className="text-2xl text-slate-500"> 
+                        <h1 className="text-xl sm:text-2xl text-slate-500 truncate pr-2"> 
                             {searchQuery ? (
                                 <>Results for <span className="text-slate-800 font-bold">"{searchParams.get("search")}"</span></>
                             ) : (
@@ -113,20 +113,20 @@ function ShopContent() {
                         
                         <button 
                             onClick={() => setShowMobileFilters(!showMobileFilters)}
-                            className="lg:hidden flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-medium"
+                            className="lg:hidden flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-slate-100 text-slate-700 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm shrink-0"
                         >
-                            <SlidersHorizontal size={18} /> Filters
+                            <SlidersHorizontal size={16} className="sm:w-[18px] sm:h-[18px]" /> Filters
                         </button>
                     </div>
 
-                    <div className={`flex flex-col sm:flex-row flex-wrap items-center gap-3 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
+                    <div className={`flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 ${showMobileFilters ? 'flex' : 'hidden lg:flex'}`}>
                         
                         {/* Category Dropdown */}
-                        <div className="relative w-full sm:w-48 shrink-0">
+                        <div className="relative w-full sm:w-44 lg:w-48 shrink-0">
                             <select 
                                 value={selectedCategory}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 font-medium appearance-none cursor-pointer shadow-sm"
+                                className="w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 cursor-pointer transition-all shadow-sm"
                             >
                                 {categories.map(cat => (
                                     <option key={cat} value={cat}>
@@ -134,28 +134,28 @@ function ShopContent() {
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
 
                         {/* Price Range */}
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                             <input 
                                 type="number" placeholder="Min Rs" value={minPrice} onChange={(e) => setMinPrice(e.target.value)}
-                                className="w-full sm:w-24 px-3 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 shadow-sm placeholder:text-slate-400"
+                                className="w-full sm:w-20 md:w-24 px-3 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-xs sm:text-sm text-slate-700 shadow-sm placeholder:text-slate-400 transition-shadow"
                             />
                             <span className="text-slate-400 font-medium">-</span>
                             <input 
                                 type="number" placeholder="Max Rs" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)}
-                                className="w-full sm:w-24 px-3 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 shadow-sm placeholder:text-slate-400"
+                                className="w-full sm:w-20 md:w-24 px-3 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-xs sm:text-sm text-slate-700 shadow-sm placeholder:text-slate-400 transition-shadow"
                             />
                         </div>
 
                         {/* Sort Dropdown */}
-                        <div className="relative w-full sm:w-48 shrink-0">
+                        <div className="relative w-full sm:w-44 lg:w-48 shrink-0">
                             <select 
                                 value={sortOrder}
                                 onChange={(e) => setSortOrder(e.target.value)}
-                                className="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 text-sm text-slate-700 font-medium appearance-none cursor-pointer shadow-sm"
+                                className="w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-700 appearance-none focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 cursor-pointer transition-all shadow-sm"
                             >
                                 <option value="default">Sort by: Default</option>
                                 <option value="price-asc">Price: Low to High</option>
@@ -163,14 +163,15 @@ function ShopContent() {
                                 <option value="name-asc">Name: A to Z</option>
                                 <option value="name-desc">Name: Z to A</option>
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                            
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
 
                         {/* Clear Filters */}
                         {(selectedCategory !== "All" || sortOrder !== "default" || minPrice || maxPrice) && (
                             <button 
                                 onClick={clearFilters}
-                                className="w-full sm:w-auto px-4 py-3 text-sm font-medium text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors"
+                                className="w-full sm:w-auto px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-red-500 bg-red-50 sm:bg-transparent hover:bg-red-100 sm:hover:bg-red-50 rounded-xl transition-colors"
                             >
                                 Clear
                             </button>
@@ -179,19 +180,19 @@ function ShopContent() {
                 </div>
                 
                 {currentProducts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white rounded-3xl border border-slate-100 shadow-sm mb-32">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                            <PackageX className="text-slate-300 w-10 h-10" />
+                    <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-4 text-center bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm mb-20 sm:mb-32">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-full flex items-center justify-center mb-3 sm:mb-4">
+                            <PackageX className="text-slate-300 w-8 h-8 sm:w-10 sm:h-10" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">No products found</h3>
-                        <p className="text-slate-500 max-w-md">We couldn't find any items matching your current filters and search query.</p>
-                        <button onClick={clearFilters} className="mt-6 px-6 py-2.5 bg-green-50 text-green-700 font-bold rounded-xl hover:bg-green-100 transition-colors">
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-800 mb-1.5 sm:mb-2">No products found</h3>
+                        <p className="text-slate-500 text-xs sm:text-sm max-w-md">We couldn't find any items matching your current filters and search query.</p>
+                        <button onClick={clearFilters} className="mt-5 sm:mt-6 px-5 sm:px-6 py-2.5 bg-green-50 text-green-700 font-bold rounded-xl hover:bg-green-100 transition-colors text-sm">
                             Reset Filters
                         </button>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col">
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 xl:gap-8 mx-auto mb-10 w-full">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 xl:gap-8 mx-auto mb-10 w-full">
                             {currentProducts.map((product) => (
                                 <ProductCard key={product.id} product={product} />
                             ))}
@@ -199,24 +200,24 @@ function ShopContent() {
 
                         {/* ✅ Pagination Controls */}
                         {totalPages > 1 && (
-                            <div className="mt-auto mb-16 pt-8 border-t border-slate-200 flex justify-between items-center">
-                                <span className="text-sm font-medium text-slate-500">
+                            <div className="mt-auto mb-12 sm:mb-16 pt-6 sm:pt-8 border-t border-slate-200 flex justify-between items-center">
+                                <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">
                                     Page {currentPage} of {totalPages}
                                 </span>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5 sm:gap-2">
                                     <button 
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
                                         disabled={currentPage === 1} 
-                                        className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                        className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
                                     >
-                                        <ChevronLeft size={20}/>
+                                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5"/>
                                     </button>
                                     <button 
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
                                         disabled={currentPage === totalPages} 
-                                        className="p-2 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
+                                        className="p-1.5 sm:p-2 border border-slate-200 rounded-lg sm:rounded-xl bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors shadow-sm"
                                     >
-                                        <ChevronRight size={20}/>
+                                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5"/>
                                     </button>
                                 </div>
                             </div>
@@ -233,8 +234,8 @@ export default function Shop() {
     <Suspense fallback={
         <div className="min-h-[70vh] flex items-center justify-center">
             <div className="animate-pulse flex flex-col items-center">
-                <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
-                <p className="text-slate-500 font-medium">Loading store...</p>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-3 sm:mb-4"></div>
+                <p className="text-slate-500 font-medium text-sm sm:text-base">Loading store...</p>
             </div>
         </div>
     }>

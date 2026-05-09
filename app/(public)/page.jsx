@@ -7,11 +7,12 @@ import LatestProducts from "@/components/LatestProducts";
 
 export default function Home() {
     return (
-        <div>
+        <div className="flex flex-col min-h-[100dvh]">
             <Hero />
             <LatestProducts />
             <BestSelling />
-            <OurSpecs />z
+            {/* ✅ FIXED: Removed the stray 'z' character */}
+            <OurSpecs />
             <CallToAction />
         </div>
     );

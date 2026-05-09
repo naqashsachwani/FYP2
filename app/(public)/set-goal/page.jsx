@@ -5,13 +5,11 @@ import SetGoalClient from './SetGoalClient';
 export default function SetGoalPage() {
 
   return (
-    <main>
-
+    <main className="min-h-[100dvh] bg-slate-50 sm:bg-transparent">
       <h1 className="sr-only">Set Goal</h1>
       {/* Provides context for screen readers without showing visually */}
-      <Suspense fallback={<div>Loading goal UI…</div>}>
+      <Suspense fallback={<div className="min-h-[70vh] flex items-center justify-center text-slate-400 font-medium animate-pulse">Loading goal UI…</div>}>
         <SetGoalClient />
-      
       </Suspense>
     </main>
   );

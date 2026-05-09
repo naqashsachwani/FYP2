@@ -19,7 +19,6 @@ function BoundsController({ points }) {
         map.setView([validPoints[0].lat, validPoints[0].lng], 14, { animate: false });
       } else {
         const bounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng]));
-        // Adjusted padding for smaller mobile screens
         map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15, animate: true });
       }
       hasFitted.current = true;
@@ -43,16 +42,12 @@ const createCustomIcon = (iconHtml, color, isPulse = false) => {
 
 export default function DeliveryMap({ delivery }) {
   
-  // ✅ THE ULTIMATE FIX: Create a guaranteed unique key for every mount
-  const [mapKey, setMapKey] = useState(null);
+  // ✅ STANDARD FIX: Simple mounted state
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // By combining Date and Math.random, React is forced to destroy the old map <div> 
-    // and create a fresh one every time this component mounts or hot-reloads.
-    setMapKey(`delivery-map-${delivery?.id || 'static'}-${Date.now()}-${Math.random()}`);
-    
-    return () => setMapKey(null); // Cleanup on unmount
-  }, [delivery?.id]);
+    setIsMounted(true);
+  }, []);
 
   // --- 3. Extract Locations Safely ---
   const storeLocation = useMemo(() => {
@@ -91,16 +86,15 @@ export default function DeliveryMap({ delivery }) {
   const HomeIcon = useMemo(() => createCustomIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>', "green"), []);
   const RiderIcon = useMemo(() => createCustomIcon('<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 14h.01"/><path d="M15 14h.01"/><path d="M8 10h8"/></svg>', "blue", true), []); 
 
-  // ✅ Show a loader until the unique key is generated safely on the client
-  if (!mapKey) {
+  // ✅ Wait until the component is fully mounted
+  if (!isMounted) {
     return <div className="w-full h-[300px] sm:h-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400 text-sm font-medium rounded-xl">Initializing Map...</div>;
   }
 
   return (
-    // Responsive min-height ensures map always renders on mobile devices
     <div className="w-full h-full min-h-[300px] sm:min-h-[400px] relative z-0 rounded-xl overflow-hidden border border-slate-200">
+      {/* ✅ Removed the dynamic key prop entirely */}
       <MapContainer 
-        key={mapKey} // ✅ This completely prevents Leaflet from crashing
         center={[24.8607, 67.0011]} 
         zoom={12} 
         scrollWheelZoom={true} 

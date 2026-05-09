@@ -7,11 +7,13 @@ import { useAuth } from '@clerk/nextjs';
 import { useDispatch } from 'react-redux'; 
 import axios from 'axios';
 import { addRating } from '@/lib/features/rating/ratingSlice'; 
+import { useRouter } from 'next/navigation'; // ✅ Import useRouter
 
 const RatingModal = ({ ratingModal, setRatingModal, onSuccess }) => {
 
     const { getToken } = useAuth(); 
     const dispatch = useDispatch(); 
+    const router = useRouter(); // ✅ Initialize router
 
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
@@ -61,6 +63,9 @@ const RatingModal = ({ ratingModal, setRatingModal, onSuccess }) => {
             setRatingModal(null); 
             
             if (onSuccess) onSuccess(data.rating);
+
+            // ✅ CRITICAL FIX: Tell Next.js to refresh the page cache so the review doesn't disappear on reload
+            router.refresh();
 
         } catch (error) {
             toast.error(error?.response?.data?.error || 'Failed to submit review.', { id: toastId });

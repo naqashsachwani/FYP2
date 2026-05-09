@@ -35,7 +35,7 @@ export default function PublicLayout({ children }) {
     // Runs whenever the 'user' object changes.
     useEffect(() => {
         if (user && isLoaded) {
-            dispatch(fetchCart({ getToken }));     
+            dispatch(fetchCart({ getToken }));      
             dispatch(fetchAddress({ getToken }));    
             dispatch(fetchUserRatings({ getToken }));
         }
@@ -60,7 +60,8 @@ export default function PublicLayout({ children }) {
     return (
         <>
             <Navbar />   
-            <main className="min-h-screen">
+            {/* ✅ FIXED: Used min-h-[100dvh] and flex-col so footer stays pushed down */}
+            <main className="min-h-[100dvh] flex flex-col flex-1">
                 {children}
             </main>     
             <Footer />

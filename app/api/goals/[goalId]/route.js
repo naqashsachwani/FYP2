@@ -2,8 +2,8 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { sendNotification } from "@/lib/sendNotification"; // ✅ IMPORT ENGINE
-import { depositConfirmationTemplate } from "@/lib/emailTemplates"; // ✅ IMPORT TEMPLATE
+import { sendNotification } from "@/lib/sendNotification"; 
+import { depositConfirmationTemplate } from "@/lib/emailTemplates"; 
 
 // Helper: Normalize Prisma Decimals to Numbers
 const normalize = (obj) => JSON.parse(
@@ -46,7 +46,7 @@ export async function GET(req, { params }) {
   }
 }
 
-/* ===================== ADD DEPOSIT (UPDATED) ===================== */
+/* ===================== ADD DEPOSIT ===================== */
 export async function POST(req, { params }) {
   const { goalId } = await params; 
   const { userId } = getAuth(req);
@@ -69,7 +69,6 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Goal already completed." }, { status: 400 });
     }
 
-    //  WRAPPED IN TRANSACTION & ADDED ESCROW SYNC
     const result = await prisma.$transaction(async (tx) => {
         // 1. Create deposit
         const deposit = await tx.deposit.create({
@@ -98,12 +97,12 @@ export async function POST(req, { params }) {
           data: {
             saved: totalSavedAmount,
             status: newStatus,
-            endDate: newStatus === "COMPLETED" ? new Date() : null,
+            // ✅ FIXED: Removed the ternary operator that was wiping out the endDate (deadline) with null!
           },
-          include: { deposits: true, product: true, user: true }, // ✅ INCLUDED USER
+          include: { deposits: true, product: true, user: true }, 
         });
 
-        // 4.  CRITICAL: Sync Escrow Table (So Admin sees funds immediately)
+        // 4. Sync Escrow Table
         const existingEscrow = await tx.escrow.findUnique({ where: { goalId } });
         if (existingEscrow) {
             await tx.escrow.update({
@@ -125,7 +124,7 @@ export async function POST(req, { params }) {
     });
 
     // ==========================================
-    // FIRE ENGINE: OUTSIDE TRANSACTION FOR SPEED
+    // NOTIFICATIONS
     // ==========================================
     const savedGoal = result.updatedGoal;
     
@@ -175,7 +174,7 @@ export async function POST(req, { params }) {
   }
 }
 
-/* ===================== DELETE GOAL (CANCEL & REFUND REQUEST) ===================== */
+/* ===================== DELETE GOAL ===================== */
 export async function DELETE(req, { params }) {
   const { goalId } = await params;
   const { userId } = getAuth(req);
@@ -185,14 +184,14 @@ export async function DELETE(req, { params }) {
   try {
     const goal = await prisma.goal.findUnique({ 
         where: { id: goalId },
-        include: { escrow: true, refundRequest: true, user: true, product: true } // INCUDED USER/PRODUCT
+        include: { escrow: true, refundRequest: true, user: true, product: true } 
     });
 
     if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
 
     const savedAmount = Number(goal.saved);
 
-    // 1. CLEAN DELETE (No Funds)
+    // 1. CLEAN DELETE
     if (savedAmount === 0) {
       await prisma.$transaction([
         prisma.priceLock.deleteMany({ where: { goalId } }),
@@ -204,14 +203,13 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ message: "Goal deleted successfully" });
     } 
     
-    // 2. CREATE REFUND REQUEST (Funds Exist)
+    // 2. CREATE REFUND REQUEST
     else {
       if (goal.refundRequest) {
         return NextResponse.json({ message: "Refund request already pending." });
       }
 
       await prisma.$transaction(async (tx) => {
-        // A. Create Refund Request
         await tx.refundRequest.create({
           data: {
             userId: userId,
@@ -222,13 +220,11 @@ export async function DELETE(req, { params }) {
           }
         });
 
-        // B. Mark Goal as CANCELLED
         await tx.goal.update({
           where: { id: goalId },
           data: { status: "CANCELLED" }, 
         });
 
-        // C. Ensure Escrow is HELD
         if (goal.escrow) {
             await tx.escrow.update({
                 where: { id: goal.escrow.id },
@@ -237,7 +233,6 @@ export async function DELETE(req, { params }) {
         }
       });
 
-      // FIRE ENGINE: Notify user that their cancellation/refund is processing
       if (goal.user) {
           await sendNotification({
               userId: goal.user.id,

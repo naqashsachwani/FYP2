@@ -3,6 +3,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, X, Gift, Loader2, Plus, ChevronLeft, Calendar, Crosshair, Trash2 } from "lucide-react";
 import axios from "axios"; 
+import toast from "react-hot-toast"; // ✅ Added for better UX
+import dynamic from "next/dynamic"; // ✅ Added for dynamic map loading
+
+// ✅ Dynamically import the map to prevent Server-Side Rendering crashes
+const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { 
+    ssr: false, 
+    loading: () => (
+      <div className="h-48 sm:h-56 bg-slate-100 rounded-xl animate-pulse mb-2 flex flex-col items-center justify-center text-slate-400 border-2 border-slate-200 border-dashed">
+        <MapPin size={24} className="mb-2 opacity-50"/> Loading Map...
+      </div>
+    ) 
+});
 
 export default function RedeemAction({ goal, addresses, setAddresses, onSuccess }) {
   const router = useRouter();
@@ -14,6 +26,9 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false); 
   
+  // ✅ State for Map Pin
+  const [pinPosition, setPinPosition] = useState(null);
+  
   const [formData, setFormData] = useState({
     name: "", street: "", city: "", state: "", zip: "", country: "Pakistan", phone: "",
     latitude: null, longitude: null 
@@ -23,40 +38,58 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Helper to display date as DD-MM-YYYY
   const formatDateForDisplay = (isoDate) => {
     if (!isoDate) return "";
     const [year, month, day] = isoDate.split("-");
     return `${day}-${month}-${year}`;
   };
 
-  // 1. Get Current Location (GPS)
+  // ✅ Auto-fill address details based on Map coordinates
+  const fetchAddressFromCoordinates = async (lat, lng) => {
+    try {
+        const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+        const data = res.data.address;
+        
+        setFormData(prev => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            street: data?.road || data?.suburb || data?.neighbourhood || prev.street,
+            city: data?.city || data?.town || data?.county || prev.city,
+            state: data?.state || prev.state,
+            zip: data?.postcode || prev.zip,
+            country: data?.country || prev.country
+        }));
+    } catch (error) {
+        console.warn("Auto-fill from map failed", error);
+        setFormData(prev => ({ ...prev, latitude: lat, longitude: lng }));
+    }
+  };
+
+  // ✅ Handle manual map click
+  const handleMapClick = (newPos) => {
+      setPinPosition(newPos);
+      fetchAddressFromCoordinates(newPos.lat, newPos.lng);
+  };
+
+  // ✅ 1. Get Current Location (GPS) & Auto-fill
   const handleUseGPS = () => {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
+    if (!navigator.geolocation) return toast.error("Geolocation not supported");
     setLoadingLocation(true);
+    const toastId = toast.loading("Locating...");
     
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const { latitude, longitude } = pos.coords;
-      try {
-        const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
-        const data = res.data.address;
-        setFormData(prev => ({
-          ...prev,
-          latitude,
-          longitude,
-          street: data.road || data.suburb || prev.street,
-          city: data.city || data.town || prev.city,
-          state: data.state || prev.state,
-          zip: data.postcode || "", 
-          country: data.country || prev.country
-        }));
-      } catch (e) {
-        setFormData(prev => ({ ...prev, latitude, longitude }));
-      } finally {
-        setLoadingLocation(false);
-      }
+      
+      setPinPosition({ lat: latitude, lng: longitude }); // Move Map Pin
+      
+      await fetchAddressFromCoordinates(latitude, longitude); // Auto-fill form
+      
+      toast.success("Location pinned and address auto-filled!", { id: toastId });
+      setLoadingLocation(false);
+
     }, () => {
-      alert("Location permission denied");
+      toast.error("Location permission denied", { id: toastId });
       setLoadingLocation(false);
     });
   };
@@ -123,7 +156,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     if (!finalData.zip) finalData.zip = "75000";
 
     if (!finalData.latitude || !finalData.longitude) {
-      alert("Could not locate address. Please check spelling or use 'Use Current Location'.");
+      toast.error("Could not locate address. Please check spelling or use the Map Picker.");
       setLoading(false);
       return;
     }
@@ -142,13 +175,15 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
         setAddresses(updatedList);
         setSelectedAddress(newAddr.id);
         setIsAddingNew(false);
+        setPinPosition(null); // Reset Pin
         setFormData({ name: "", street: "", city: "", state: "", zip: "", country: "Pakistan", phone: "", latitude: null, longitude: null });
+        toast.success("Address Saved Successfully!");
       } else {
-        alert(data.error || "Failed to save address");
+        toast.error(data.error || "Failed to save address");
       }
     } catch (error) {
       console.error(error);
-      alert("Failed to save address");
+      toast.error("Failed to save address");
     } finally {
       setLoading(false);
     }
@@ -156,7 +191,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
 
   const handleDeleteAddress = async (e, id) => {
     e.stopPropagation();
-    if (!confirm("Are you sure?")) return;
+    if (!confirm("Are you sure you want to delete this address?")) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/address/${id}`, { method: 'DELETE' });
@@ -165,20 +200,21 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
         const updatedList = addresses.filter(addr => addr.id !== id);
         setAddresses(updatedList);
         if (selectedAddress === id) setSelectedAddress(updatedList.length > 0 ? updatedList[0].id : "");
+        toast.success("Address deleted");
       } else {
-        alert(data.error);
+        toast.error(data.error);
       }
     } catch (error) {
       console.error(error);
-      alert("Error deleting");
+      toast.error("Error deleting address");
     } finally {
       setDeletingId(null);
     }
   };
 
   const handleRedeem = async () => {
-    if (!selectedAddress) return alert("Please select an address");
-    if (!selectedDate) return alert("Please select a date");
+    if (!selectedAddress) return toast.error("Please select a shipping address");
+    if (!selectedDate) return toast.error("Please select a preferred delivery date");
 
     setLoading(true);
 
@@ -192,15 +228,17 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
       const data = await res.json();
       
       if (data.success) {
+        toast.success("Product successfully redeemed!");
         setIsModalOpen(false); 
         if (onSuccess) onSuccess(); 
         if (data.deliveryId) router.push(`/tracking/${data.deliveryId}`);
       } else {
-        alert(data.error || "Redemption failed");
+        toast.error(data.error || "Redemption failed");
         setLoading(false);
       }
     } catch (error) {
       console.error(error);
+      toast.error("Redemption failed due to a server error.");
       setLoading(false);
     }
   };
@@ -220,7 +258,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
           <div className="bg-white rounded-xl shadow-2xl w-[95%] sm:w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
              <div className="p-4 sm:p-5 border-b flex justify-between items-center bg-gray-50 shrink-0">
               {isAddingNew ? (
-                 <button onClick={() => setIsAddingNew(false)} className="flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"><ChevronLeft size={16} /> Back</button>
+                 <button onClick={() => { setIsAddingNew(false); setPinPosition(null); }} className="flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors"><ChevronLeft size={16} /> Back</button>
               ) : (
                  <h3 className="font-bold text-base sm:text-lg text-gray-800">Confirm Redemption</h3>
               )}
@@ -230,9 +268,20 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
             <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar">
               {isAddingNew ? (
                 <form id="address-form" onSubmit={handleSaveAddress} className="space-y-3 sm:space-y-4">
-                  <button type="button" onClick={handleUseGPS} disabled={loadingLocation} className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center gap-2 text-sm font-bold hover:bg-blue-100 mb-2 transition-colors disabled:opacity-70">
-                    {loadingLocation ? <Loader2 className="animate-spin w-4 h-4 shrink-0"/> : <Crosshair className="w-4 h-4 shrink-0" />} {loadingLocation ? "Locating..." : "Use Current Location"}
-                  </button>
+                  
+                  {/* ✅ MAP AREA */}
+                  <div className="mb-5 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
+                      <p className="text-xs sm:text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+                          <MapPin size={16} className="text-indigo-600 shrink-0"/> Pinpoint your exact location
+                      </p>
+                      
+                      <LocationPicker position={pinPosition} setPosition={handleMapClick} />
+
+                      <button type="button" onClick={handleUseGPS} disabled={loadingLocation} className="w-full mt-2 py-2.5 bg-indigo-100 text-indigo-700 rounded-lg flex items-center justify-center gap-2 text-sm font-bold hover:bg-indigo-200 transition-colors disabled:opacity-70">
+                        {loadingLocation ? <Loader2 className="animate-spin w-4 h-4 shrink-0"/> : <Crosshair className="w-4 h-4 shrink-0" />} {loadingLocation ? "Locating..." : "Find my location automatically"}
+                      </button>
+                  </div>
+
                   <input required name="name" value={formData.name} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Full Name" />
                   <input required name="street" value={formData.street} onChange={handleInputChange} className="w-full p-2.5 sm:p-3 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 outline-none transition-colors" placeholder="Street Address" />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -262,7 +311,6 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
                             type="date" 
                             min={minDate} 
                             value={selectedDate} 
-                            // ✅ FIXED: showPicker() forces the calendar to pop open instantly on click
                             onClick={(e) => {
                               try { e.target.showPicker(); } catch (err) {}
                             }}
