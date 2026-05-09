@@ -22,8 +22,8 @@ import {
 const RevenueLineChart = dynamic(() => import("@/components/charts/RevenueLineChart"), {
   ssr: false,
   loading: () => (
-    <div className="w-full bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-      <div className="h-[350px] w-full animate-pulse rounded-2xl bg-slate-100" />
+    <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-6">
+      <div className="h-[250px] sm:h-[350px] w-full animate-pulse rounded-xl sm:rounded-2xl bg-slate-100" />
     </div>
   ),
 })
@@ -192,7 +192,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // ✅ Removed the subtext from the Net Revenue card
   const mainStats = [
     { 
       title: 'Net Revenue', 
@@ -214,41 +213,41 @@ export default function AdminDashboard() {
     { title: 'Refund Approved', value: dashboardData.refundApproved, icon: CheckCircle, gradient: 'from-lime-500 to-green-600', bgLight: 'bg-lime-50/50', textColor: 'text-lime-600' },
   ]
 
-  if (loading && dashboardData.revenue === 0) return <div className="flex items-center justify-center min-h-[70vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  if (loading && dashboardData.revenue === 0) return <div className="flex items-center justify-center min-h-[100dvh]"><div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600"></div></div>;
 
   return (
-    <div className="relative min-h-[85vh] w-full bg-slate-50/50">
-      <div className="max-w-7xl mx-auto space-y-8 mb-24 px-4 sm:px-6 lg:px-8 py-8">
+    <div className="relative min-h-[100dvh] w-full bg-slate-50/50">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 mb-24 px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
           <div className="space-y-1">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
               Admin <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Dashboard</span>
             </h1>
-            <p className="text-slate-500 text-sm sm:text-base">System overview and financial performance.</p>
+            <p className="text-slate-500 text-xs sm:text-sm lg:text-base">System overview and financial performance.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button onClick={fetchDashboardData} disabled={loading} className={`p-2 rounded-full border shadow-sm transition-all ${loading ? "bg-gray-100" : "bg-white hover:bg-gray-50"}`}>
-                <RotateCcw size={20} className={`text-slate-600 ${loading ? "animate-spin" : ""}`} />
+          <div className="flex flex-row items-center gap-2 sm:gap-3 w-full md:w-auto">
+            <button onClick={fetchDashboardData} disabled={loading} className={`p-2.5 sm:p-2.5 rounded-full border shadow-sm transition-all shrink-0 ${loading ? "bg-gray-100" : "bg-white hover:bg-gray-50"}`}>
+                <RotateCcw size={18} className={`text-slate-600 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
             </button>
-            <button onClick={GenerateReport} disabled={reportLoading} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg hover:bg-slate-800 transition-all disabled:opacity-70">
-                {reportLoading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                <span className="text-sm font-medium">Download Report</span>
+            <button onClick={GenerateReport} disabled={reportLoading} className="w-full md:w-auto flex justify-center items-center gap-2 bg-slate-900 text-white px-4 py-2.5 sm:py-2.5 rounded-full shadow-lg hover:bg-slate-800 transition-all disabled:opacity-70">
+                {reportLoading ? <Loader2 size={16} className="animate-spin sm:w-4 sm:h-4" /> : <Download size={16} className="sm:w-4 sm:h-4" />}
+                <span className="text-xs sm:text-sm font-medium">Download Report</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
           {mainStats.map((card, index) => (
-            <div key={index} className="group relative bg-white rounded-3xl p-5 lg:p-6 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
-              <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${card.gradient} opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150 duration-500`} />
-              <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${card.bgLight} ${card.textColor}`}><card.icon size={24} /></div>
+            <div key={index} className="group relative bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-center">
+              <div className={`absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br ${card.gradient} opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150 duration-500`} />
+              <div className="relative z-10 flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start gap-3 sm:gap-0">
+                <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 sm:mb-4 ${card.bgLight} ${card.textColor}`}>
+                  <card.icon size={20} className="sm:w-6 sm:h-6" />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-slate-500 text-xs lg:text-sm font-medium uppercase">{card.title}</p>
-                  <h3 className="text-2xl lg:text-3xl font-bold text-slate-900">{card.value}</h3>
+                <div className="space-y-0.5 sm:space-y-1 w-full text-right sm:text-left min-w-0">
+                  <p className="text-slate-500 text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-wider">{card.title}</p>
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter truncate">{card.value}</h3>
                 </div>
               </div>
             </div>
@@ -256,25 +255,32 @@ export default function AdminDashboard() {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-slate-800 mb-4 px-1">Order Status Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-3 sm:mb-4 px-1">Order Status Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {orderStatusStats.map((card, index) => (
-              <div key={index} className="group relative bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${card.bgLight} ${card.textColor} group-hover:scale-110 transition-transform`}><card.icon size={24} /></div>
-                  <div><p className="text-slate-500 text-sm font-medium">{card.title}</p><h3 className="text-2xl font-bold text-slate-900">{card.value}</h3></div>
+              <div key={index} className="group relative bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shrink-0 ${card.bgLight} ${card.textColor} group-hover:scale-110 transition-transform`}>
+                    <card.icon size={20} className="sm:w-6 sm:h-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">{card.title}</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">{card.value}</h3>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <RevenueLineChart
-          chartData={chartData}
-          currency={currency}
-          title="Platform Revenue Analytics"
-          subtitle="Earnings from fees (Last 7 Days)"
-        />
+        <div className="w-full overflow-hidden">
+          <RevenueLineChart
+            chartData={chartData}
+            currency={currency}
+            title="Platform Revenue Analytics"
+            subtitle="Earnings from fees (Last 7 Days)"
+          />
+        </div>
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ import {
   Users,
   MessageSquareWarning,
   Bike,
-  Coins // ✅ Added Coins icon for Extra Payments
+  Coins 
 } from "lucide-react"
 
 import Image from "next/image"
@@ -29,7 +29,6 @@ export default function AdminSidebar({ isOpen, onClose }) {
     { name: 'Approve Store', href: '/admin/approve', icon: ShieldCheckIcon },
     { name: 'Coupons', href: '/admin/coupons', icon: TicketPercentIcon },
     { name: 'Escrow', href: '/admin/escrow', icon: Wallet }, 
-    // ✅ ADDED: Extra Payments page link
     { name: 'Extra Payments', href: '/admin/extra-payments', icon: Coins }, 
     { name: 'Requests & Complaints', href: '/admin/complaints', icon: MessageSquareWarning }, 
   ]
@@ -47,13 +46,13 @@ export default function AdminSidebar({ isOpen, onClose }) {
       />
 
       {/* ======================================================
-          SIDEBAR CONTAINER
+          SIDEBAR CONTAINER (Added max-h-screen & overflow-hidden)
       ======================================================= */}
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] w-[280px] 
+        className={`fixed lg:sticky top-0 left-0 z-50 h-[100dvh] max-h-screen w-[280px] 
         bg-white border-r border-slate-100 shadow-2xl lg:shadow-none 
         transform transition-transform duration-300 ease-in-out 
-        flex flex-col 
+        flex flex-col overflow-hidden shrink-0
         ${isOpen ? "translate-x-0" : "-translate-x-full"} 
         lg:translate-x-0`}
       >
@@ -90,9 +89,9 @@ export default function AdminSidebar({ isOpen, onClose }) {
         </div>
 
         {/* ======================================================
-            2. SCROLLABLE NAVIGATION (Middle Section)
+            2. SCROLLABLE NAVIGATION (Added pb-24 & overscroll-contain)
         ======================================================= */}
-        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 pr-2">
+        <nav className="flex-1 pt-6 pb-24 px-4 space-y-1.5 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 pr-2">
           <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
             Main Menu
           </p>
@@ -104,7 +103,7 @@ export default function AdminSidebar({ isOpen, onClose }) {
                 key={i}
                 href={link.href}
                 onClick={onClose} 
-                className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium
+                className={`relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group font-medium shrink-0
                   ${isActive 
                     ? "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-500/20" 
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
