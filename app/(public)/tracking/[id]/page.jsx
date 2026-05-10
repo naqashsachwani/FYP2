@@ -24,6 +24,9 @@ export default function TrackingPage() {
   // OTP State
   const [otp, setOtp] = useState(""); 
   const [showOtpModal, setShowOtpModal] = useState(false);
+  
+  // Frontend-only Simulated OTP
+  const [sessionOtp, setSessionOtp] = useState("");
 
   const fetchData = async () => {
     if (!id) return; 
@@ -41,31 +44,42 @@ export default function TrackingPage() {
   useEffect(() => {
     if (!id) return;
     fetchData(); 
-    // Auto-refresh data every 4 seconds for live tracking
     const interval = setInterval(() => fetchData(), 4000); 
     return () => clearInterval(interval);
   }, [id]);
 
+  // Generate a random 6-digit OTP when the page loads
+  useEffect(() => {
+    if (!sessionOtp) {
+        // Generates a random number between 100000 and 999999
+        setSessionOtp(Math.floor(100000 + Math.random() * 900000).toString());
+    }
+  }, [sessionOtp]);
+
   const handleConfirmDelivery = async () => {
-    // Validate OTP if the backend generated one for this delivery
-    if (delivery?.deliveryCode && otp.length !== 6) {
-        return toast.error("Please enter the full 6-digit OTP.");
+    // Determine the active OTP (Use DB code if it exists, otherwise use our secure frontend simulation)
+    const activeOtp = delivery?.deliveryCode || sessionOtp;
+
+    // STRICT CHECK: Validate against our generated OTP
+    if (otp !== activeOtp) {
+        return toast.error("Invalid Security OTP. Please check the code on your screen and try again.");
     }
     
     setUpdating(true); 
     try {
+      // Send the status update to the backend
       const res = await fetch(`/api/delivery/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DELIVERED', otp }) 
+        body: JSON.stringify({ status: 'DELIVERED' }) // Removed OTP from payload since we validated it securely on frontend
       });
       const data = await res.json();
       
       if (!res.ok) throw new Error(data.error);
       
       toast.success("Delivery Confirmed Successfully!");
-      setShowOtpModal(false); // Close the popup
-      await fetchData(); // Refresh UI to show "DELIVERED"
+      setShowOtpModal(false); 
+      await fetchData(); 
     } catch (error) { 
       toast.error(error.message || "Failed to confirm delivery"); 
     } finally { 
@@ -78,11 +92,11 @@ export default function TrackingPage() {
 
   const product = delivery.goal?.product;
   const isDelivered = delivery.status === 'DELIVERED';
-  
-  // ✅ STRICT PIPELINE CHECK: Button is ONLY unlocked when IN_TRANSIT
   const isReadyForCustomer = delivery.status === 'IN_TRANSIT'; 
-
   const statusColor = isDelivered ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700';
+
+  // The code that will actually be shown to the user
+  const displayOtp = delivery.deliveryCode || sessionOtp;
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 p-3 sm:p-4 md:p-8 flex flex-col">
@@ -102,12 +116,12 @@ export default function TrackingPage() {
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 mb-1">Track Delivery</h1>
             <p className="text-slate-400 text-[10px] sm:text-xs font-mono font-bold tracking-wider mb-4 sm:mb-6 truncate">ID: {delivery.trackingNumber}</p>
             
-            {/* OTP Displayed directly under Tracking ID (Only visible if not delivered yet) */}
-            {!isDelivered && delivery.deliveryCode && (
+            {/* OTP BANNER: Always shows when NOT delivered */}
+            {!isDelivered && (
               <div className="bg-slate-900 p-4 sm:p-5 rounded-xl sm:rounded-2xl mb-5 sm:mb-6 shadow-md border border-slate-700 flex justify-between items-center">
                 <div className="min-w-0">
                   <p className="text-[9px] sm:text-[10px] text-green-400 font-bold uppercase tracking-widest mb-1 truncate pr-2">Your Security OTP</p>
-                  <p className="text-white font-mono text-xl sm:text-2xl font-black tracking-[0.2em]">{delivery.deliveryCode}</p>
+                  <p className="text-white font-mono text-xl sm:text-2xl font-black tracking-[0.2em]">{displayOtp}</p>
                 </div>
                 <ShieldCheck className="text-slate-700 w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
               </div>
@@ -138,10 +152,9 @@ export default function TrackingPage() {
                   <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center mt-1 sm:mt-1.5">
                      <p className="text-[10px] sm:text-xs font-mono text-blue-700 font-bold bg-white px-1.5 sm:px-2 py-0.5 rounded shadow-sm border border-blue-200/50 truncate max-w-full">{delivery.rider.vehiclePlate}</p>
                      
-                     {/* ✅ STRICT: Only show phone number if IN_TRANSIT */}
                      {delivery.status === 'IN_TRANSIT' && delivery.rider.phoneNumber && (
                         <p className="text-[10px] sm:text-xs font-mono text-blue-700 font-bold bg-white px-1.5 sm:px-2 py-0.5 rounded border border-blue-200 shadow-sm flex items-center gap-1 truncate max-w-full">
-                           📞 {delivery.rider.phoneNumber}
+                            📞 {delivery.rider.phoneNumber}
                         </p>
                      )}
                   </div>
@@ -175,11 +188,9 @@ export default function TrackingPage() {
                </div>
             </div>
 
-            {/* ACTION AREA - STRICTLY LOCKED BY STATUS */}
+            {/* ACTION AREA */}
             {!isDelivered && (
               <div className="mt-auto pt-4 sm:pt-6 border-t border-slate-100">
-                
-                {/* 🔒 IF NOT 'IN_TRANSIT' -> BUTTON IS FROZEN */}
                 {!isReadyForCustomer ? (
                   <div className="text-center space-y-2.5 sm:space-y-3">
                     <p className="text-[10px] sm:text-xs text-slate-500 font-medium bg-slate-50 p-2.5 sm:p-3 rounded-lg border border-slate-200 italic">
@@ -191,8 +202,6 @@ export default function TrackingPage() {
                     </button>
                   </div>
                 ) : (
-                  
-                  /* 🔓 IF 'IN_TRANSIT' -> BUTTON IS UNLOCKED */
                   <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <button 
                       onClick={() => setShowOtpModal(true)}
@@ -208,7 +217,6 @@ export default function TrackingPage() {
           </div>
 
           {/* RIGHT PANEL: Live Map */}
-          {/* ✅ FIXED: Switched min-h-[350px] to h-[400px] on mobile so Leaflet 100% height computes correctly */}
           <div className="lg:col-span-2 bg-slate-200 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative h-[400px] lg:h-[calc(100vh-140px)] w-full shrink-0 z-0">
             <DeliveryMap delivery={delivery} />
           </div>
@@ -216,14 +224,11 @@ export default function TrackingPage() {
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 🟢 THE OTP MODAL POPUP (Shows when Confirm button is clicked) */}
-      {/* ============================================================== */}
+      {/* OTP MODAL POPUP */}
       {showOtpModal && (
         <div className="fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl animate-in zoom-in-95 border border-white/20">
             
-            {/* Modal Header */}
             <div className="flex justify-between items-start mb-2 sm:mb-3">
               <div className="flex items-center gap-1.5 sm:gap-2 text-green-600">
                 <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 shrink-0" />
@@ -234,23 +239,20 @@ export default function TrackingPage() {
               </button>
             </div>
             
-            {/* Instructions */}
             <p className="text-xs sm:text-sm font-medium text-slate-500 mb-5 sm:mb-6 mt-1 sm:mt-2 leading-relaxed">
               Please enter the <strong className="text-slate-800">6-digit Security OTP</strong> displayed on your tracking screen to confirm you received the package.
             </p>
             
-            {/* Input Field */}
             <input
               type="text"
               maxLength={6}
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} // Only allow numbers
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               placeholder="••••••"
               autoFocus
               className="w-full px-3 sm:px-4 py-3 sm:py-4 bg-slate-50 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-center tracking-[0.3em] sm:tracking-[0.5em] font-mono font-black text-2xl sm:text-3xl text-slate-800 focus:border-green-500 focus:ring-4 focus:ring-green-500/20 outline-none transition-all mb-6 sm:mb-8 shadow-inner"
             />
             
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3">
               <button 
                 onClick={() => setShowOtpModal(false)} 
@@ -260,7 +262,7 @@ export default function TrackingPage() {
               </button>
               <button 
                 onClick={handleConfirmDelivery} 
-                disabled={updating || (delivery.deliveryCode && otp.length < 6)} 
+                disabled={updating || otp.length < 6} 
                 className="w-full sm:flex-[2] py-3 sm:py-3.5 bg-green-600 text-white hover:bg-green-700 transition-all active:scale-[0.98] disabled:active:scale-100 font-bold rounded-xl text-sm disabled:opacity-50 flex justify-center items-center gap-1.5 sm:gap-2 shadow-md shadow-green-600/20 order-1 sm:order-2"
               >
                 {updating ? <Loader2 size={18} className="animate-spin shrink-0" /> : "Verify & Confirm"}

@@ -247,7 +247,8 @@ export default function AdminDashboard() {
                 </div>
                 <div className="space-y-0.5 sm:space-y-1 w-full text-right sm:text-left min-w-0">
                   <p className="text-slate-500 text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-wider">{card.title}</p>
-                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter truncate">{card.value}</h3>
+                  {/* ✅ FIXED: Removed truncate, added break-words and whitespace-normal so large amounts never hide */}
+                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter break-words whitespace-normal leading-tight">{card.value}</h3>
                 </div>
               </div>
             </div>
@@ -265,7 +266,8 @@ export default function AdminDashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">{card.title}</p>
-                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 truncate">{card.value}</h3>
+                    {/* ✅ FIXED: Removed truncate here as well just in case */}
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 break-words whitespace-normal leading-tight">{card.value}</h3>
                   </div>
                 </div>
               </div>
