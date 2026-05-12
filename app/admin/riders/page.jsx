@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle, XCircle, Search, Car, UserCircle, FileText, ExternalLink, ShieldAlert, Ban, Filter } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Search, Car, UserCircle, FileText, ExternalLink, ShieldAlert, Ban, Filter, Edit, Image as ImageIcon, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminRiderManagementPage() {
@@ -9,8 +9,15 @@ export default function AdminRiderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   
-  // ✅ NEW: Default to ALL for dropdown, or you can keep it PENDING_APPROVAL
   const [filter, setFilter] = useState("PENDING_APPROVAL");
+
+  // --- EDIT MODAL STATE ---
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRider, setEditingRider] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    phoneNumber: "", vehicleType: "", vehiclePlate: "", cnicNumber: "", licenseNumber: "", idImageUrl: ""
+  });
+  const [imageUploading, setImageUploading] = useState(false);
 
   const fetchRiders = async () => {
     try {
@@ -27,6 +34,7 @@ export default function AdminRiderManagementPage() {
 
   useEffect(() => { fetchRiders(); }, []);
 
+  // --- STATUS CHANGE HANDLER ---
   const handleStatusChange = async (riderId, newStatus) => {
     if (!confirm(`Are you sure you want to ${newStatus.replace('_', ' ')} this rider?`)) return;
     
@@ -49,14 +57,94 @@ export default function AdminRiderManagementPage() {
     }
   };
 
+  // --- EDIT HANDLERS ---
+  const openEditModal = (rider) => {
+    setEditingRider(rider);
+    setEditFormData({
+      phoneNumber: rider.phoneNumber || "",
+      vehicleType: rider.vehicleType || "",
+      vehiclePlate: rider.vehiclePlate || "",
+      cnicNumber: rider.cnicNumber || "",
+      licenseNumber: rider.licenseNumber || "",
+      idImageUrl: rider.idImageUrl || ""
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // ✅ NEW: Handle multiple file uploads simultaneously
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setImageUploading(true);
+    
+    try {
+      // Process all selected files into Base64 strings
+      const base64Promises = files.map((file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const base64Images = await Promise.all(base64Promises);
+
+      // Save the array of images as a JSON string
+      setEditFormData(prev => ({ ...prev, idImageUrl: JSON.stringify(base64Images) }));
+      toast.success(`${base64Images.length} image(s) processed successfully`);
+    } catch (error) {
+      toast.error("Failed to process images.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleUpdateRider = async (e) => {
+    e.preventDefault();
+    setProcessingId(editingRider.id);
+    try {
+      const res = await fetch("/api/admin/riders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          riderId: editingRider.id,
+          ...editFormData
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update rider details");
+
+      toast.success("Rider details updated successfully!");
+      setIsEditModalOpen(false);
+      fetchRiders();
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const filteredRiders = riders.filter(r => filter === "ALL" || r.status === filter);
+
+  // Helper to parse images for the edit modal UI safely
+  const parseImages = (jsonStr) => {
+    if (!jsonStr) return [];
+    try { 
+      const parsed = JSON.parse(jsonStr); 
+      return Array.isArray(parsed) ? parsed : [jsonStr]; 
+    } catch (e) { 
+      return [jsonStr]; 
+    }
+  };
 
   if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 p-4 sm:p-6 md:p-10">
+    <div className="min-h-[100dvh] bg-slate-50 p-4 sm:p-6 md:p-10 relative">
       <div className="max-w-7xl mx-auto space-y-6">
         
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-5 sm:pb-0 sm:border-none">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Rider Fleet Management</h1>
@@ -79,6 +167,7 @@ export default function AdminRiderManagementPage() {
           </div>
         </div>
 
+        {/* DATA TABLE */}
         <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl shadow-sm overflow-hidden flex flex-col">
           {filteredRiders.length === 0 ? (
             <div className="p-12 sm:p-16 text-center text-slate-500 flex flex-col items-center justify-center">
@@ -103,7 +192,7 @@ export default function AdminRiderManagementPage() {
                     <tr key={rider.id} className="hover:bg-slate-50 transition-colors align-top sm:align-middle">
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center gap-2.5 sm:gap-3">
-                          <img src={rider.user.image} alt="Avatar" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-slate-200 shrink-0" />
+                          <img src={rider.user.image || "/default-avatar.png"} alt="Avatar" className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-slate-200 shrink-0 object-cover" />
                           <div className="min-w-0">
                             <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">{rider.user.name}</p>
                             <p className="text-slate-500 text-[10px] sm:text-xs truncate">{rider.user.email}</p>
@@ -114,26 +203,22 @@ export default function AdminRiderManagementPage() {
 
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 text-slate-700 font-medium text-xs sm:text-sm">
-                            <Car className="text-blue-500 w-3.5 h-3.5 sm:w-4 sm:h-4" />{rider.vehicleType}
+                            <Car className="text-blue-500 w-3.5 h-3.5 sm:w-4 sm:h-4" />{rider.vehicleType || "N/A"}
                         </div>
-                        <span className="bg-slate-100 text-slate-600 font-mono text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 rounded border border-slate-200 inline-block">{rider.vehiclePlate}</span>
+                        <span className="bg-slate-100 text-slate-600 font-mono text-[10px] sm:text-xs px-2 py-0.5 sm:py-1 rounded border border-slate-200 inline-block">{rider.vehiclePlate || "N/A"}</span>
                       </td>
 
                       <td className="px-4 sm:px-6 py-4">
                         <div className="space-y-1.5 sm:space-y-1">
-                          <p className="text-[10px] sm:text-xs text-slate-600 flex items-center gap-1.5 sm:gap-1"><UserCircle className="text-slate-400 w-3.5 h-3.5 sm:w-3 sm:h-3" /> <span className="font-mono">{rider.cnicNumber}</span></p>
-                          <p className="text-[10px] sm:text-xs text-slate-600 flex items-center gap-1.5 sm:gap-1"><FileText className="text-slate-400 w-3.5 h-3.5 sm:w-3 sm:h-3" /> <span className="font-mono">{rider.licenseNumber}</span></p>
+                          <p className="text-[10px] sm:text-xs text-slate-600 flex items-center gap-1.5 sm:gap-1"><UserCircle className="text-slate-400 w-3.5 h-3.5 sm:w-3 sm:h-3" /> <span className="font-mono">{rider.cnicNumber || "N/A"}</span></p>
+                          <p className="text-[10px] sm:text-xs text-slate-600 flex items-center gap-1.5 sm:gap-1"><FileText className="text-slate-400 w-3.5 h-3.5 sm:w-3 sm:h-3" /> <span className="font-mono">{rider.licenseNumber || "N/A"}</span></p>
                           {rider.idImageUrl && (
                             <div className="flex flex-col gap-1 mt-2">
-                              {(() => {
-                                let images = [];
-                                try { images = JSON.parse(rider.idImageUrl); if (!Array.isArray(images)) images = [rider.idImageUrl]; } catch (e) { images = [rider.idImageUrl]; }
-                                return images.map((imgUrl, idx) => (
-                                  <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-blue-600 hover:underline w-fit">
-                                    View Document {images.length > 1 ? idx + 1 : ''} <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                  </a>
-                                ));
-                              })()}
+                              {parseImages(rider.idImageUrl).map((imgUrl, idx) => (
+                                <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-blue-600 hover:underline w-fit">
+                                  View Document {parseImages(rider.idImageUrl).length > 1 ? idx + 1 : ''} <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                </a>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -153,13 +238,23 @@ export default function AdminRiderManagementPage() {
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 sm:gap-2">
                           
+                          {/* EDIT BUTTON */}
+                          <button
+                            onClick={() => openEditModal(rider)}
+                            className="p-1 sm:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors shadow-sm border border-blue-200"
+                            title="Edit Rider Details"
+                          >
+                            <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
+
                           {rider.status === 'APPROVED' && (
                              <button
                                onClick={() => handleStatusChange(rider.id, "SUSPENDED")}
                                disabled={processingId === rider.id}
-                               className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border border-orange-200 rounded-lg font-bold text-[10px] sm:text-xs transition-colors flex items-center gap-1 shadow-sm"
+                               className="p-1 sm:p-1.5 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white border border-orange-200 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                               title="Suspend"
                              >
-                               <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Disable
+                               {processingId === rider.id ? <Loader2 className="animate-spin w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Ban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                              </button>
                           )}
 
@@ -167,9 +262,10 @@ export default function AdminRiderManagementPage() {
                              <button
                                onClick={() => handleStatusChange(rider.id, "APPROVED")}
                                disabled={processingId === rider.id}
-                               className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-200 rounded-lg font-bold text-[10px] sm:text-xs transition-colors flex items-center gap-1 shadow-sm"
+                               className="p-1 sm:p-1.5 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-200 rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+                               title="Approve"
                              >
-                               <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Enable
+                               {processingId === rider.id ? <Loader2 className="animate-spin w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                              </button>
                           )}
 
@@ -177,7 +273,7 @@ export default function AdminRiderManagementPage() {
                             <button
                               onClick={() => handleStatusChange(rider.id, "REJECTED")}
                               disabled={processingId === rider.id}
-                              className="p-1 sm:p-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors disabled:opacity-50 shadow-sm border border-red-200"
+                              className="p-1 sm:p-1.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors shadow-sm border border-red-200"
                               title="Reject Rider"
                             >
                               {processingId === rider.id ? <Loader2 className="animate-spin w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
@@ -194,6 +290,135 @@ export default function AdminRiderManagementPage() {
           )}
         </div>
       </div>
+
+      {/* EDIT RIDER MODAL */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div className="p-5 sm:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+              <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <Edit className="text-blue-600" /> Edit Rider Profile
+              </h2>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
+              <form id="editRiderForm" onSubmit={handleUpdateRider} className="space-y-4">
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 uppercase">Phone Number</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.phoneNumber} 
+                      onChange={(e) => setEditFormData({...editFormData, phoneNumber: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 uppercase">Vehicle Type</label>
+                    <select 
+                      value={editFormData.vehicleType} 
+                      onChange={(e) => setEditFormData({...editFormData, vehicleType: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                    >
+                      <option value="Bike">Bike</option>
+                      <option value="Car">Car</option>
+                      <option value="Van">Van</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 uppercase">Vehicle Plate</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.vehiclePlate} 
+                      onChange={(e) => setEditFormData({...editFormData, vehiclePlate: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 uppercase">CNIC Number</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.cnicNumber} 
+                      onChange={(e) => setEditFormData({...editFormData, cnicNumber: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-600 uppercase">License Number</label>
+                    <input 
+                      type="text" 
+                      value={editFormData.licenseNumber} 
+                      onChange={(e) => setEditFormData({...editFormData, licenseNumber: e.target.value})}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1 sm:col-span-2 pt-2 border-t border-slate-100">
+                    <label className="text-xs font-bold text-slate-600 uppercase flex items-center gap-1"><ImageIcon size={14} /> Update Document Images</label>
+                    
+                    <div className="mt-2 flex items-center gap-3">
+                      <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2">
+                         {imageUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                         {imageUploading ? "Processing Images..." : "Upload New Images"}
+                         {/* ✅ NEW: "multiple" attribute allows selecting multiple files */}
+                         <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
+                      </label>
+                      <span className="text-xs text-slate-500 italic">Select multiple images to replace the current documents.</span>
+                    </div>
+
+                    {/* ✅ NEW: Visual Grid showing current uploaded images */}
+                    {parseImages(editFormData.idImageUrl).length > 0 && (
+                       <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                         <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider mb-2">✓ {parseImages(editFormData.idImageUrl).length} Document(s) Ready</p>
+                         <div className="flex flex-wrap gap-2">
+                           {parseImages(editFormData.idImageUrl).map((imgUrl, idx) => (
+                             <a key={idx} href={imgUrl} target="_blank" rel="noopener noreferrer" className="relative group block w-14 h-14 rounded-md border border-slate-200 overflow-hidden shadow-sm">
+                               <img src={imgUrl} alt={`Document ${idx+1}`} className="w-full h-full object-cover" />
+                               <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <ExternalLink className="text-white w-4 h-4" />
+                               </div>
+                             </a>
+                           ))}
+                         </div>
+                       </div>
+                    )}
+                  </div>
+                </div>
+
+              </form>
+            </div>
+
+            <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+              <button 
+                type="button" 
+                onClick={() => setIsEditModalOpen(false)} 
+                className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                form="editRiderForm"
+                disabled={processingId === editingRider?.id || imageUploading} 
+                className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors text-sm disabled:opacity-50 flex items-center gap-2 shadow-md shadow-blue-600/20"
+              >
+                {processingId === editingRider?.id ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

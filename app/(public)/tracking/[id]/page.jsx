@@ -24,9 +24,6 @@ export default function TrackingPage() {
   // OTP State
   const [otp, setOtp] = useState(""); 
   const [showOtpModal, setShowOtpModal] = useState(false);
-  
-  // Frontend-only Simulated OTP
-  const [sessionOtp, setSessionOtp] = useState("");
 
   const fetchData = async () => {
     if (!id) return; 
@@ -48,20 +45,9 @@ export default function TrackingPage() {
     return () => clearInterval(interval);
   }, [id]);
 
-  // Generate a random 6-digit OTP when the page loads
-  useEffect(() => {
-    if (!sessionOtp) {
-        // Generates a random number between 100000 and 999999
-        setSessionOtp(Math.floor(100000 + Math.random() * 900000).toString());
-    }
-  }, [sessionOtp]);
-
   const handleConfirmDelivery = async () => {
-    // Determine the active OTP (Use DB code if it exists, otherwise use our secure frontend simulation)
-    const activeOtp = delivery?.deliveryCode || sessionOtp;
-
-    // STRICT CHECK: Validate against our generated OTP
-    if (otp !== activeOtp) {
+    // STRICT CHECK: Validate against the permanent database OTP
+    if (otp !== delivery?.deliveryCode) {
         return toast.error("Invalid Security OTP. Please check the code on your screen and try again.");
     }
     
@@ -71,7 +57,7 @@ export default function TrackingPage() {
       const res = await fetch(`/api/delivery/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DELIVERED' }) // Removed OTP from payload since we validated it securely on frontend
+        body: JSON.stringify({ status: 'DELIVERED' }) 
       });
       const data = await res.json();
       
@@ -95,8 +81,8 @@ export default function TrackingPage() {
   const isReadyForCustomer = delivery.status === 'IN_TRANSIT'; 
   const statusColor = isDelivered ? 'bg-green-50 border-green-200 text-green-700' : 'bg-blue-50 border-blue-200 text-blue-700';
 
-  // The code that will actually be shown to the user
-  const displayOtp = delivery.deliveryCode || sessionOtp;
+  // The permanent code securely fetched from the database
+  const displayOtp = delivery.deliveryCode || "------";
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 p-3 sm:p-4 md:p-8 flex flex-col">

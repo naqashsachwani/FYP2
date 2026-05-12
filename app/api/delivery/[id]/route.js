@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
   const { id } = await params;
 
   try {
-    const delivery = await prisma.delivery.findFirst({
+    let delivery = await prisma.delivery.findFirst({
       where: {
         OR: [
           { id: id },
@@ -24,6 +24,20 @@ export async function GET(request, { params }) {
     });
 
     if (!delivery) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // ✅ DATABASE FIX: Generate OTP once and save it forever
+    if (!delivery.deliveryCode) {
+      const permanentOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      delivery = await prisma.delivery.update({
+        where: { id: delivery.id },
+        data: { deliveryCode: permanentOtp },
+        include: {
+          deliveryTrackings: { orderBy: { recordedAt: 'desc' } },
+          goal: { include: { product: { include: { store: true } }, user: true } },
+          rider: { include: { user: true } }
+        }
+      });
+    }
 
     const sanitized = JSON.parse(JSON.stringify(delivery, (key, value) => 
       (typeof value === 'bigint') ? value.toString() : value
@@ -75,8 +89,7 @@ export async function POST(request, { params }) {
                     const itemPrice = parseFloat(existingDelivery.goal?.targetAmount || existingDelivery.goal?.product?.price || 0);
                     const payoutAmount = itemPrice >= 5000 ? 400.0 : 200.0;
                     
-                    // ✅ THE FIX: Create the payout as PENDING and DO NOT update RiderProfile.totalEarnings.
-                    // The money will stay locked until the Admin clicks "Pay Rider" in Escrow.
+                    // The money stays locked until Admin clicks "Pay Rider" in Escrow
                     await prisma.riderPayout.create({
                         data: { 
                             riderId: existingDelivery.currentRiderId, 

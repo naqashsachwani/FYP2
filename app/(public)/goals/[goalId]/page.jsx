@@ -437,7 +437,8 @@ export default function GoalDetails() {
           <div className="h-64 sm:h-80 w-full"><Line data={chartData} options={{ maintainAspectRatio: false, responsive: true }} /></div>
         </div>
 
-        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* ✅ UPDATED GRID CLASS: Changed lg:grid-cols-3 to lg:grid-cols-4 so all 4 buttons stay on one line */}
+        <div className="mt-6 sm:mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           
           <button
             disabled={savingDeposit || isGoalCompleted}
