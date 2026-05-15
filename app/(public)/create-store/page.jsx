@@ -7,46 +7,51 @@ import Loading from "@/components/Loading"
 import { useAuth, useUser } from "@clerk/nextjs"
 import { useRouter } from "next/navigation"
 import axios from "axios"
-import { Upload, AlertCircle, RefreshCw } from "lucide-react"
+import { Upload, AlertCircle, RefreshCw, X } from "lucide-react"
 
 export default function CreateStore() {
-  // Authentication hooks from Clerk
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const { getToken } = useAuth()
 
-  // ================= STATE MANAGEMENT =================
-  
   const [alreadySubmitted, setAlreadySubmitted] = useState(false)
-
   const [status, setStatus] = useState("")
   const [loading, setLoading] = useState(true)
-  
   const [message, setMessage] = useState("")
-  
   const [rejectionReason, setRejectionReason] = useState("")
 
-  // Form Data State
+  // Multi-Image States
+  const [newImages, setNewImages] = useState([])
+  const [existingImages, setExistingImages] = useState([])
+
   const [storeInfo, setStoreInfo] = useState({
-    name: "",
-    username: "",
-    description: "",
-    email: "",
-    contact: "",
-    address: "",
-    image: null,      
-    taxId: "",
-    cnic: "",
-    bankName: "",
-    accountNumber: ""
+    name: "", username: "", description: "", email: "", contact: "",
+    address: "", taxId: "", cnic: "", bankName: "", accountNumber: ""
   })
 
-  // Generic handler for text input changes
   const onChangeHandler = (e) => {
     setStoreInfo({ ...storeInfo, [e.target.name]: e.target.value })
   }
 
-  // ================= DATA FETCHING =================
+  // Handle Multi-Image Selection
+  const handleImageChange = (e) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files)
+      const totalImages = existingImages.length + newImages.length + filesArray.length
+      if (totalImages > 5) {
+         return toast.error("You can upload a maximum of 5 images.")
+      }
+      setNewImages((prev) => [...prev, ...filesArray])
+    }
+  }
+
+  const removeNewImage = (index) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const removeExistingImage = (index) => {
+    setExistingImages((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const fetchSellerStatus = async () => {
     const token = await getToken()
@@ -55,21 +60,20 @@ export default function CreateStore() {
         headers: { Authorization: `Bearer ${token}` },
       })
       
-      // If the backend returns that a store/application exists
       if (data.exists) {
         setStatus(data.store.status)
         setAlreadySubmitted(true) 
         
-        // PRE-FILL FORM DATA: Populate the form state with existing data. T
         setStoreInfo(prev => ({
             ...prev,
-            name: data.store.name,
-            username: data.store.username,
-            description: data.store.description,
-            email: data.store.email,
-            contact: data.store.contact,
-            address: data.store.address,
+            name: data.store.name, username: data.store.username, description: data.store.description,
+            email: data.store.email, contact: data.store.contact, address: data.store.address,
         }))
+
+        // Load existing images from DB
+        if (data.store.images && data.store.images.length > 0) {
+            setExistingImages(data.store.images)
+        }
 
         if (data.store.status === "approved") {
             setMessage("Your store has been approved! Redirecting...")
@@ -89,26 +93,20 @@ export default function CreateStore() {
     setLoading(false)
   }
 
-  /**
-   * Resubmit Handler
-   * Triggered when a rejected user clicks "Fix & Resubmit".
-   * It flips the view back to the Form so they can edit their pre-filled data.
-   */
   const handleResubmit = () => {
     setAlreadySubmitted(false) 
     toast("You can now edit and resubmit your application.")
   }
 
-  // ================= FORM SUBMISSION =================
-
   const onSubmitHandler = async (e) => {
     e.preventDefault()
     if (!user) return toast("Please login to continue")
+    if (existingImages.length === 0 && newImages.length === 0) {
+        return toast.error("Please upload at least one image/document.")
+    }
 
     try {
       const token = await getToken()
-      
-      // Use FormData to handle file uploads (image) + text data
       const formData = new FormData()
       
       formData.append("name", storeInfo.name)
@@ -117,14 +115,19 @@ export default function CreateStore() {
       formData.append("email", storeInfo.email)
       formData.append("contact", storeInfo.contact)
       formData.append("address", storeInfo.address)
-      if(storeInfo.image) formData.append("image", storeInfo.image) 
-
       formData.append("taxId", storeInfo.taxId)
       formData.append("cnic", storeInfo.cnic)
       formData.append("bankName", storeInfo.bankName)
       formData.append("accountNumber", storeInfo.accountNumber)
 
-      // POST request to create or update the store application
+      // Append Existing URLs as JSON
+      formData.append("existingImages", JSON.stringify(existingImages))
+
+      // Append New Files
+      newImages.forEach((file) => {
+         formData.append("images", file)
+      })
+
       const { data } = await axios.post("/api/store/create", formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -133,22 +136,16 @@ export default function CreateStore() {
       setAlreadySubmitted(true) 
       setStatus("pending")      
       setMessage("Your application is under review.")
-      setRejectionReason("")    // Clear old errors
+      setRejectionReason("")    
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
     }
   }
 
-  // Effect to check status on component mount (once user is authenticated)
   useEffect(() => {
-    if (isLoaded && user) {
-        fetchSellerStatus()
-    } else if (isLoaded && !user) {
-        setLoading(false)
-    }
+    if (isLoaded && user) fetchSellerStatus()
+    else if (isLoaded && !user) setLoading(false)
   }, [isLoaded, user])
-
-  // ================= RENDER LOGIC =================
 
   if (!isLoaded || loading) return <div className="min-h-[100dvh] flex flex-col justify-center items-center"><Loading /></div>
 
@@ -164,12 +161,7 @@ export default function CreateStore() {
 
   return (
     <>
-      {/* CONDITIONAL RENDERING: 
-          If !alreadySubmitted -> Show Form 
-          If alreadySubmitted  -> Show Status Card 
-      */}
       {!alreadySubmitted ? (
-        // ================= VIEW 1: APPLICATION FORM =================
         <div className="relative min-h-[100dvh] bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-10 sm:py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-5 sm:p-8 md:p-12 border border-slate-200">
             
@@ -182,41 +174,44 @@ export default function CreateStore() {
               </p>
             </div>
 
-            {/* Image Upload Area */}
-            <div className="flex flex-col items-center gap-3 mb-8">
-              <label className="cursor-pointer flex flex-col items-center">
-                <div className="border-2 border-dashed border-slate-300 hover:border-indigo-400 rounded-2xl p-4 bg-white w-32 h-32 sm:w-40 sm:h-40 flex flex-col items-center justify-center overflow-hidden relative transition-colors">
-                  {storeInfo.image ? (
-                    <Image
-                      src={URL.createObjectURL(storeInfo.image)}
-                      className="object-contain"
-                      alt="Store logo"
-                      fill
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-400">
-                        <Upload className="w-8 h-8 sm:w-10 sm:h-10" />
-                        <span className="text-[10px] sm:text-xs mt-2 font-bold uppercase tracking-wider">Select Image</span>
-                    </div>
-                  )}
-                </div>
-                <p className="mt-2 text-xs sm:text-sm text-slate-500 font-medium">Upload Logo</p>
-                <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                            setStoreInfo({ ...storeInfo, image: e.target.files[0] })
-                        }
-                    }} 
-                    hidden 
-                />
-              </label>
+            {/* MULTI-IMAGE UPLOAD AREA */}
+            <div className="mb-8">
+              <label className="block text-slate-700 text-sm font-bold mb-3">Store Images(Max 5)</label>
+              <div className="flex flex-wrap gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                
+                {/* Existing Images (Resubmission) */}
+                {existingImages.map((url, i) => (
+                  <div key={`ext-${i}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-300 shadow-sm group">
+                    <Image src={url} fill className="object-cover" alt={`Existing image ${i}`} />
+                    <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X size={14}/>
+                    </button>
+                  </div>
+                ))}
+
+                {/* New Images */}
+                {newImages.map((file, i) => (
+                  <div key={`new-${i}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-300 shadow-sm group">
+                    <Image src={URL.createObjectURL(file)} fill className="object-cover" alt={`New image ${i}`} />
+                    <button type="button" onClick={() => removeNewImage(i)} className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X size={14}/>
+                    </button>
+                  </div>
+                ))}
+
+                {/* Upload Button Box */}
+                {(existingImages.length + newImages.length) < 5 && (
+                  <label className="cursor-pointer flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-indigo-300 bg-white hover:bg-indigo-50 rounded-xl transition-colors">
+                    <Upload className="w-6 h-6 text-indigo-500 mb-1" />
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Add Photo</span>
+                    <input type="file" accept="image/*" multiple onChange={handleImageChange} hidden />
+                  </label>
+                )}
+              </div>
             </div>
 
             <form onSubmit={(e) => toast.promise(onSubmitHandler(e), { loading: "Submitting..." })} className="space-y-6 sm:space-y-8">
               
-              {/* Section 1: Basic Store Details */}
               <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-100">
                 <h3 className="text-base sm:text-lg font-bold text-slate-700 mb-4 uppercase tracking-wider">Store Details</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -235,7 +230,6 @@ export default function CreateStore() {
                 </div>
               </div>
 
-              {/* Section 2: Contact Info */}
               <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-100">
                 <h3 className="text-base sm:text-lg font-bold text-slate-700 mb-4 uppercase tracking-wider">Contact Information</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -254,7 +248,6 @@ export default function CreateStore() {
                 </div>
               </div>
 
-              {/* Section 3: Legal & Banking */}
               <div className="bg-slate-50 p-5 sm:p-6 rounded-2xl border border-slate-100">
                 <h3 className="text-base sm:text-lg font-bold text-slate-700 mb-4 uppercase tracking-wider">Legal & Banking</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -286,22 +279,15 @@ export default function CreateStore() {
           </div>
         </div>
       ) : (
-        // Displays when user has already submitted an application
         <div className="min-h-[100dvh] flex flex-col items-center justify-center text-center px-4 sm:px-6 bg-gradient-to-br from-indigo-50 to-purple-100 py-12">
           <div className="bg-white p-6 sm:p-8 md:p-10 rounded-3xl shadow-xl w-[95%] sm:w-full max-w-lg border border-slate-100">
             <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">Application Status</h2>
             
-            {/* Dynamic Styling based on Status (Red for Rejected, Indigo for others) */}
-            <div className={`text-base sm:text-lg font-bold uppercase tracking-widest mb-1.5 sm:mb-2 ${
-                status === 'rejected' ? 'text-red-600' : 'text-indigo-600'
-            }`}>
+            <div className={`text-base sm:text-lg font-bold uppercase tracking-widest mb-1.5 sm:mb-2 ${status === 'rejected' ? 'text-red-600' : 'text-indigo-600'}`}>
                 {status}
             </div>
             <p className="text-slate-500 text-sm sm:text-base mb-6 sm:mb-8">{message}</p>
 
-            {/* REJECTION LOGIC:
-                If status is rejected, we show the admin's notes and a button to re-open the form. 
-            */}
             {status === 'rejected' && (
                 <div className="space-y-5 sm:space-y-6 border-t border-slate-100 pt-5 sm:pt-6 mt-4">
                     {rejectionReason && (

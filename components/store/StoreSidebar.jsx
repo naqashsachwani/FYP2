@@ -10,7 +10,8 @@ import {
   X, 
   Store, 
   DollarSign,
-  MessageSquareWarning 
+  MessageSquareWarning,
+  Target // ✅ NEW: Imported Target icon for Goals
 } from "lucide-react"
 
 import Image from "next/image"
@@ -24,6 +25,8 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
     { name: 'Add Product', href: '/store/add-product', icon: SquarePlusIcon },
     { name: 'Manage Product', href: '/store/manage-product', icon: SquarePenIcon },
     { name: 'Orders', href: '/store/orders', icon: LayoutListIcon },
+    // ✅ NEW: Added Goals link here
+    { name: 'Goal Progress', href: '/store/goals', icon: Target }, 
     { name: 'Revenue', href: '/store/revenue', icon: DollarSign },
     { name: 'Location Settings', href: '/store/store-settings', icon: Settings },
     { name: 'Requests & Support', href: '/store/request', icon: MessageSquareWarning },
@@ -47,7 +50,7 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
           ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0
         `}
       >
-        {/* ================= 1. FIXED HEADER (Does Not Scroll) ================= */}
+        {/* ================= 1. FIXED HEADER ================= */}
         <div className="relative pt-8 pb-6 px-4 sm:px-6 flex flex-col items-center border-b border-slate-50 shrink-0"> 
           <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-blue-50/50 to-transparent -z-10" />
 
@@ -115,7 +118,6 @@ const StoreSidebar = ({ storeInfo, isOpen, onClose }) => {
             )
           })}
         </nav>
-
       </aside>
     </>
   )

@@ -8,7 +8,6 @@ import { getRequestContext } from "@/lib/security/requestContext"
 import { checkRateLimit } from "@/lib/security/rateLimit"
 import { validateImageFiles } from "@/lib/security/uploadValidation"
 
-// ================== POST: Create or Resubmit Store Application ==================
 export async function POST(request) {
   try {
     // ================== AUTHENTICATION ==================
@@ -29,121 +28,103 @@ export async function POST(request) {
     // ================== FORM DATA ==================
     const formData = await request.formData()
     
-    // Extract all fields from form data
     const name = formData.get("name")
     const username = formData.get("username")
     const description = formData.get("description")
     const email = formData.get("email")
     const contact = formData.get("contact")
     const address = formData.get("address")
-    const imageFile = formData.get("image")
     const cnic = formData.get("cnic")
     const taxId = formData.get("taxId")
     const bankName = formData.get("bankName")
     const accountNumber = formData.get("accountNumber")
 
-    // Validate required fields
+    // Parse existing images that were kept during a resubmission
+    const existingImages = JSON.parse(formData.get("existingImages") || "[]")
+
     if (!name || !username || !email || !contact || !address || !cnic || !bankName || !accountNumber) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // ================== IMAGE UPLOAD ==================
-    let logoUrl = null
-    if (imageFile && typeof imageFile !== "string") {
-      const uploadValidation = validateImageFiles([imageFile], { maxImages: 1, maxFileBytes: 3 * 1024 * 1024 })
+    // ================== MULTI-IMAGE UPLOAD ==================
+    const newImageFiles = formData.getAll("images") // Get all uploaded files
+    let uploadedImageUrls = []
+
+    if (newImageFiles.length > 0) {
+      // Validate all files at once
+      const uploadValidation = validateImageFiles(newImageFiles, { maxImages: 5, maxFileBytes: 3 * 1024 * 1024 })
       if (!uploadValidation.ok) {
         return NextResponse.json({ error: uploadValidation.error }, { status: 400 })
       }
 
-      // Convert file to buffer
-      const buffer = Buffer.from(await imageFile.arrayBuffer())
-      // Upload to ImageKit
-      const uploadRes = await imagekit.upload({
-        file: buffer,
-        fileName: `store_logo_${username}`,
-        folder: "stores"
+      // Upload files concurrently to ImageKit
+      const uploadPromises = newImageFiles.map(async (file, index) => {
+        const buffer = Buffer.from(await file.arrayBuffer())
+        const uploadRes = await imagekit.upload({
+          file: buffer,
+          fileName: `store_img_${username}_${Date.now()}_${index}`,
+          folder: "stores"
+        })
+        return uploadRes.url
       })
-      logoUrl = uploadRes.url // Store uploaded image URL
+
+      uploadedImageUrls = await Promise.all(uploadPromises)
     }
+
+    // Combine existing images (if resubmitting) with newly uploaded ones
+    const finalImagesArray = [...existingImages, ...uploadedImageUrls]
+    // Designate the first image as the main logo (fallback to empty if none)
+    const logoUrl = finalImagesArray.length > 0 ? finalImagesArray[0] : ""
 
     // ================== EXISTING STORE CHECK ==================
     const existingStore = await prisma.store.findUnique({ where: { userId } })
 
     // ================== RESUBMISSION LOGIC ==================
     if (existingStore) {
-      // Case 1: Already approved → cannot resubmit
-      if (existingStore.status === 'approved') {
-        return NextResponse.json({ error: "Store already exists" }, { status: 400 })
-      }
-      // Case 2: Application pending → cannot resubmit
-      else if (existingStore.status === 'pending') {
-        return NextResponse.json({ error: "Application already under review" }, { status: 400 })
-      }
+      if (existingStore.status === 'approved') return NextResponse.json({ error: "Store already exists" }, { status: 400 })
+      if (existingStore.status === 'pending') return NextResponse.json({ error: "Application already under review" }, { status: 400 })
       
-      // Case 3: Rejected → allow resubmission
       await prisma.$transaction(async (tx) => {
-        // Update store info
-        const updateData = {
-          name, username, description, email, contact, address,
-          status: "pending", // Reset to pending
-          isActive: false
-        }
-        if (logoUrl) updateData.logo = logoUrl // Update logo if provided
-
         await tx.store.update({
           where: { id: existingStore.id },
-          data: updateData
+          data: {
+            name, username, description, email, contact, address,
+            status: "pending", isActive: false,
+            logo: logoUrl,
+            images: finalImagesArray // Save array of images
+          }
         })
 
-        //  Update or create store application
         const appData = {
-          businessName: name,
-          contactEmail: email,
-          contactPhone: contact,
-          address: address,
-          cnic: cnic,
-          taxId: taxId || null,
-          bankName: bankName,
-          accountNumber: accountNumber,
-          status: "PENDING", // Reset to pending
-          reviewNotes: null, // Clear previous rejection notes
-          reviewedBy: null,
-          reviewedAt: null
+          businessName: name, contactEmail: email, contactPhone: contact,
+          address: address, cnic: cnic, taxId: taxId || null,
+          bankName: bankName, accountNumber: accountNumber,
+          status: "PENDING", reviewNotes: null, reviewedBy: null, reviewedAt: null
         }
         
         await tx.storeApplication.upsert({
           where: { storeId: existingStore.id },
-          update: appData, // Update existing application
+          update: appData,
           create: {
-            userId,
-            storeId: existingStore.id,
-            ...appData,
-            documents: { logo: logoUrl || existingStore.logo } // Attach logo
+            userId, storeId: existingStore.id, ...appData,
+            documents: { images: finalImagesArray }
           }
         })
       })
 
-      // FIRE ENGINE: Notify user of resubmission
+      // Notify user
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (user) {
           await sendNotification({
-              userId: user.id,
-              email: user.email,
-              title: "Store Application Resubmitted 🏪",
-              message: `Your revised application for "${name}" has been received. Our team will review it shortly.`,
-              type: "SYSTEM_ALERT",
-              notifyInApp: true,
-              notifyEmail: true
+              userId: user.id, email: user.email, title: "Store Application Resubmitted 🏪",
+              message: `Your revised application for "${name}" has been received.`,
+              type: "SYSTEM_ALERT", notifyInApp: true, notifyEmail: true
           });
       }
 
       await writeSecurityAuditLog({
-        action: "STORE_APPLICATION_RESUBMIT",
-        actorUserId: userId,
-        entityType: "Store",
-        entityId: existingStore.id,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
+        action: "STORE_APPLICATION_RESUBMIT", actorUserId: userId, entityType: "Store",
+        entityId: existingStore.id, ipAddress: context.ipAddress, userAgent: context.userAgent,
         metadata: { username, status: "pending" },
       })
 
@@ -152,36 +133,21 @@ export async function POST(request) {
 
     // ================== NEW STORE CREATION ==================
     const createdStore = await prisma.$transaction(async (tx) => {
-      //  Create store
       const newStore = await tx.store.create({
         data: {
-          userId,
-          name,
-          username,
-          description,
-          email,
-          contact,
-          address,
-          logo: logoUrl || "", 
-          status: "pending",
-          isActive: false 
+          userId, name, username, description, email, contact, address,
+          logo: logoUrl, 
+          images: finalImagesArray, // Save array
+          status: "pending", isActive: false 
         }
       })
 
-      // Create store application with documents
       await tx.storeApplication.create({
         data: {
-          userId,
-          storeId: newStore.id,
-          businessName: name,
-          contactEmail: email,
-          contactPhone: contact,
-          address: address,
-          cnic: cnic,
-          taxId: taxId || null,
-          bankName: bankName,
-          accountNumber: accountNumber,
-          documents: { logo: logoUrl },
+          userId, storeId: newStore.id, businessName: name, contactEmail: email,
+          contactPhone: contact, address: address, cnic: cnic, taxId: taxId || null,
+          bankName: bankName, accountNumber: accountNumber,
+          documents: { images: finalImagesArray },
           status: "PENDING"
         }
       })
@@ -189,27 +155,18 @@ export async function POST(request) {
       return newStore
     })
 
-    // FIRE ENGINE: Notify user of initial submission
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (user) {
         await sendNotification({
-            userId: user.id,
-            email: user.email,
-            title: "Store Application Received 🏪",
-            message: `Your application to open "${name}" has been received successfully! Our team is currently reviewing your details.`,
-            type: "SYSTEM_ALERT",
-            notifyInApp: true,
-            notifyEmail: true
+            userId: user.id, email: user.email, title: "Store Application Received 🏪",
+            message: `Your application to open "${name}" has been received successfully!`,
+            type: "SYSTEM_ALERT", notifyInApp: true, notifyEmail: true
         });
     }
 
     await writeSecurityAuditLog({
-      action: "STORE_APPLICATION_CREATE",
-      actorUserId: userId,
-      entityType: "Store",
-      entityId: createdStore.id,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent,
+      action: "STORE_APPLICATION_CREATE", actorUserId: userId, entityType: "Store",
+      entityId: createdStore.id, ipAddress: context.ipAddress, userAgent: context.userAgent,
       metadata: { username, status: "pending" },
     })
 

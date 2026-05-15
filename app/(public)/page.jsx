@@ -7,11 +7,11 @@ import LatestProducts from "@/components/LatestProducts";
 
 export default function Home() {
     return (
-        <div className="flex flex-col min-h-[100dvh]">
+        // ✅ FIXED: Removed `pb-16 md:pb-24` from here so the CTA sits flush with the footer
+        <div className="w-full space-y-16 md:space-y-24">
             <Hero />
             <LatestProducts />
             <BestSelling />
-            {/* ✅ FIXED: Removed the stray 'z' character */}
             <OurSpecs />
             <CallToAction />
         </div>

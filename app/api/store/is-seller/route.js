@@ -1,7 +1,7 @@
-import authSeller from "@/middlewares/authSeller"; // Middleware to check if user is a seller
-import { getAuth } from "@clerk/nextjs/server"; // Clerk authentication for server-side requests
-import prisma from "@/lib/prisma"; // Prisma client for database operations
-import { NextResponse } from "next/server"; // Next.js response helper
+import authSeller from "@/middlewares/authSeller"; 
+import { getAuth } from "@clerk/nextjs/server"; 
+import prisma from "@/lib/prisma"; 
+import { NextResponse } from "next/server"; 
 
 // ================== GET: Verify Seller & Fetch Store Info ==================
 export async function GET(request) {
@@ -9,27 +9,32 @@ export async function GET(request) {
         // Get authenticated user's ID
         const { userId } = getAuth(request);
 
-        //  Check if the user is a seller using middleware
-        const isSeller = await authSeller(userId);
+        // 🛡️ THE FIX: If Clerk hasn't loaded the user yet, return false gracefully
+        if (!userId) {
+            return NextResponse.json({ isSeller: false }, { status: 200 });
+        }
+
+        // Check if the user is a seller using middleware
+        const sellerStoreId = await authSeller(userId);
 
         // If not a seller, return 401 Unauthorized
-        if (!isSeller) {
+        if (!sellerStoreId) {
             return NextResponse.json({ error: 'not authorized' }, { status: 401 });
         }
 
-        //  Fetch the store associated with this seller
+        // Fetch the store associated with this seller
         const storeInfo = await prisma.store.findUnique({
             where: { userId }
         });
 
-        //  Return seller status and store info
-        return NextResponse.json({ isSeller, storeInfo });
+        // Return seller status and store info
+        return NextResponse.json({ isSeller: true, storeInfo });
 
     } catch (error) {
         // Log any errors for debugging
-        console.error(error);
+        console.error("is-seller API Error:", error);
 
-        // Return 400 Bad Request with error message
-        return NextResponse.json({ error: error.code || error.message }, { status: 400 });
+        // Return 500 with error message
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

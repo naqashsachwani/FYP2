@@ -10,12 +10,6 @@ datasource db {
 }
 
 // ---------- ENUMS ----------
-enum OrderStatus {
-  ORDER_PLACED
-  PROCESSING
-  SHIPPED
-  DELIVERED
-}
 
 enum PaymentMethod {
   STRIPE
@@ -110,7 +104,7 @@ enum ComplaintType {
 }
 
 enum WalletTransactionType {
-  REFUND_CREDIT     // Money added back from a cancelled goal/order
+  REFUND_CREDIT     // Money added back from a cancelled goal
   DEPOSIT_PAYMENT   // Money used from wallet to pay for a new goal
   WITHDRAWAL        // User withdrew money to their bank
   DELIVERY_PAYOUT
@@ -150,7 +144,6 @@ model User {
   ratings            Rating[]
   addresses          Address[]
   store              Store?
-  buyerOrders        Order[]            @relation("BuyerRelation")
   goals              Goal[]
   deposits           Deposit[]
   transactions       Transaction[]
@@ -198,6 +191,7 @@ model Store {
   status      String   @default("pending")
   isActive    Boolean  @default(false)
   logo        String
+  images      String[] @default([])
   email       String
   contact     String
   createdAt   DateTime @default(now())
@@ -205,7 +199,6 @@ model Store {
 
   // Relations
   products         Product[]
-  orders           Order[]
   user             User              @relation(fields: [userId], references: [id])
   storeApplication StoreApplication? @relation("Store_Application")
   priceLocks       PriceLock[]
@@ -255,7 +248,6 @@ model Product {
 
   // Relations
   store      Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
   ratings    Rating[]
   goals      Goal[]
   deposits   Deposit[]
@@ -264,48 +256,6 @@ model Product {
   @@index([storeId])
   @@index([category])
   @@index([inStock])
-}
-
-model Order {
-  id            String        @id @default(cuid())
-  total         Float
-  status        OrderStatus   @default(ORDER_PLACED)
-  userId        String
-  storeId       String
-  addressId     String
-  isPaid        Boolean       @default(false)
-  paymentMethod PaymentMethod
-  isCouponUsed  Boolean       @default(false)
-  couponCode    String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relations
-  user           User            @relation("BuyerRelation", fields: [userId], references: [id])
-  store          Store           @relation(fields: [storeId], references: [id])
-  address        Address         @relation(fields: [addressId], references: [id])
-  transactions   Transaction[]
-  refundRequests RefundRequest[]
-  escrows        Escrow[]
-  priceLocks     PriceLock[]
-  complaints     Complaint[]
-
-  @@index([userId])
-  @@index([storeId])
-  @@index([status])
-  @@index([isPaid])
-}
-
-model OrderItem {
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-
-  // Relations
-  product Product @relation(fields: [productId], references: [id])
-
-  @@id([orderId, productId])
 }
 
 model Rating {
@@ -322,10 +272,10 @@ model Rating {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  goal     Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  goal      Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  delivery  Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
   @@unique([userId, productId, goalId])
 }
@@ -348,7 +298,6 @@ model Address {
   createdAt DateTime @default(now())
 
   // Relations
-  orders Order[]
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -386,21 +335,21 @@ model CouponUsage {
 }
 
 model Goal {
-  id             String     @id @default(cuid())
-  userId         String
-  productId      String?
-  targetAmount   Decimal    @db.Decimal(18, 2)
-  saved          Decimal    @db.Decimal(18, 2) @default(0)
-  status         GoalStatus @default(ACTIVE)
-  startDate      DateTime?  @default(now())
-  endDate        DateTime?
+  id              String     @id @default(cuid())
+  userId          String
+  productId       String?
+  targetAmount    Decimal    @db.Decimal(18, 2)
+  saved           Decimal    @db.Decimal(18, 2) @default(0)
+  status          GoalStatus @default(ACTIVE)
+  startDate       DateTime?  @default(now())
+  endDate         DateTime?
   
-  priceLocked    Boolean    @default(true)
-  lockedPrice    Decimal    @db.Decimal(18, 2)
-  couponCode     String?
-  coupon         Coupon?    @relation(fields: [couponCode], references: [code])
-  deliveryFee    Decimal    @db.Decimal(18, 2) @default(0)
-  discountAmount Decimal    @db.Decimal(18, 2) @default(0)
+  priceLocked     Boolean    @default(true)
+  lockedPrice     Decimal    @db.Decimal(18, 2)
+  couponCode      String?
+  coupon          Coupon?    @relation(fields: [couponCode], references: [code])
+  deliveryFee     Decimal    @db.Decimal(18, 2) @default(0)
+  discountAmount  Decimal    @db.Decimal(18, 2) @default(0)
 
   // Relations
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -454,7 +403,6 @@ model Deposit {
 model Delivery {
   id             String         @id @default(cuid())
   goalId         String         @unique
-  orderId        String?
   deliveryDate   DateTime?
   estimatedDate  DateTime?
   status         DeliveryStatus @default(PENDING)
@@ -463,7 +411,7 @@ model Delivery {
   
   // --- Customer Location ---
   shippingAddress String?
-  coordinates     String?        
+  coordinates      String?        
   destinationLat  Float?         
   destinationLng  Float?         
 
@@ -582,7 +530,6 @@ model PriceLock {
   id            String    @id @default(cuid())
   productId     String
   goalId        String?   @unique
-  orderId       String?
   lockedPrice   Decimal   @db.Decimal(18, 2)
   originalPrice Decimal   @db.Decimal(18, 2)
   lockedBy      String?
@@ -594,7 +541,6 @@ model PriceLock {
   // Relations
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   goal    Goal?   @relation("GoalPriceLock", fields: [goalId], references: [id])
-  order   Order?  @relation(fields: [orderId], references: [id])
   store   Store?  @relation(fields: [storeId], references: [id])
 
   createdAt DateTime @default(now())
@@ -602,7 +548,6 @@ model PriceLock {
 
   @@index([productId])
   @@index([goalId])
-  @@index([orderId])
   @@index([storeId])
   @@index([status])
   @@index([expiresAt])
@@ -611,7 +556,6 @@ model PriceLock {
 model Escrow {
   id          String       @id @default(cuid())
   goalId      String?      @unique
-  orderId     String?
   amount      Decimal      @db.Decimal(18, 2)
   
   platformFee Decimal      @db.Decimal(18, 2) @default(0) 
@@ -626,13 +570,11 @@ model Escrow {
 
   // Relations
   goal  Goal?  @relation("GoalEscrow", fields: [goalId], references: [id], onDelete: Cascade)
-  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([goalId])
-  @@index([orderId])
   @@index([status])
   @@index([status, updatedAt])
   @@index([status, releasedAt])
@@ -641,7 +583,6 @@ model Escrow {
 model Transaction {
   id                String            @id @default(cuid())
   userId            String?
-  orderId           String?
   goalId            String?
   amount            Decimal           @db.Decimal(18, 2)
   currency          String            @default("PKR")
@@ -652,14 +593,12 @@ model Transaction {
 
   // Relations
   user  User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
   goal  Goal?  @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([orderId])
   @@index([goalId])
   @@index([providerPaymentId])
   @@index([status])
@@ -669,7 +608,6 @@ model RefundRequest {
   id           String       @id @default(cuid())
   userId       String
   goalId       String?      @unique
-  orderId      String?
   amount       Decimal      @db.Decimal(18, 2)
   reason       String
   status       RefundStatus @default(REQUESTED)
@@ -680,14 +618,12 @@ model RefundRequest {
   // Relations
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   goal  Goal? @relation("GoalRefundRequest", fields: [goalId], references: [id])
-  order Order? @relation(fields: [orderId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([goalId])
-  @@index([orderId])
   @@index([status])
   @@index([status, updatedAt])
 }
@@ -728,8 +664,8 @@ model WalletTransaction {
   walletId    String
   amount      Decimal               @db.Decimal(18, 2) // Positive for credit, Negative for debit
   type        WalletTransactionType
-  description String?                
-  referenceId String?                
+  description String?               
+  referenceId String?               
 
   // Relations
   wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
@@ -758,7 +694,6 @@ model Complaint {
   targetStoreId   String?
 
   goalId          String?
-  orderId         String?
 
   adminNotes      String?
   resolvedAt      DateTime?
@@ -774,7 +709,6 @@ model Complaint {
   targetStore     Store?   @relation("ComplaintsAgainstStore", fields: [targetStoreId], references: [id])
 
   goal            Goal?    @relation(fields: [goalId], references: [id])
-  order           Order?   @relation(fields: [orderId], references: [id])
 
   @@index([filerUserId])
   @@index([filerStoreId])

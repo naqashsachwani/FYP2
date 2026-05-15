@@ -84,7 +84,7 @@ export default function DeliveryMap({ delivery }) {
   
   // Status Checks
   const isDelivered = delivery?.status === 'DELIVERED';
-  const isInTransit = delivery?.status === 'IN_TRANSIT'; // ✅ NEW: Check if strictly in transit
+  const isInTransit = delivery?.status === 'IN_TRANSIT'; 
   
   // Progress defaults to 100% if delivered, otherwise 0%
   const [progress, setProgress] = useState(isDelivered ? 1.0 : 0.0); 
@@ -123,7 +123,10 @@ export default function DeliveryMap({ delivery }) {
 
     const fetchRoadPath = async () => {
       try {
-        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${storeLocation.lng},${storeLocation.lat};${customerLocation.lng},${customerLocation.lat}?overview=full&geometries=geojson`);
+        // ✅ The base URL is securely fetched from the .env file with a fallback
+        const baseUrl = process.env.NEXT_PUBLIC_OSRM_BASE_URL || 'https://router.project-osrm.org';
+        const res = await fetch(`${baseUrl}/route/v1/driving/${storeLocation.lng},${storeLocation.lat};${customerLocation.lng},${customerLocation.lat}?overview=full&geometries=geojson`);
+        
         const data = await res.json();
         
         if (data.routes && data.routes.length > 0) {
@@ -198,14 +201,14 @@ export default function DeliveryMap({ delivery }) {
         <div className="absolute top-4 right-4 z-[1000]">
             <button
               onClick={handleManualUpdate}
-              disabled={!isInTransit || progress >= 1 || fullRoute.length === 0} // ✅ BUTTON DISABLED IF NOT IN TRANSIT
+              disabled={!isInTransit || progress >= 1 || fullRoute.length === 0}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 disabled:bg-slate-400 disabled:cursor-not-allowed border border-white/20"
             >
               <RefreshCw size={18} />
               {(progress >= 1 || isDelivered) 
                 ? "Rider Arrived" 
                 : !isInTransit 
-                  ? "Waiting for Transit" // ✅ SHOWS THIS MESSAGE IF IT'S NOT READY
+                  ? "Waiting for Transit" 
                   : "Fetch Rider Update"}
             </button>
         </div>
