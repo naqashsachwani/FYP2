@@ -150,7 +150,8 @@ export default function RiderWalletPage() {
       {/* WITHDRAWAL MODAL */}
       {isWithdrawModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-md shadow-2xl flex flex-col border border-white/20 overflow-hidden max-h-[calc(100dvh-6rem)] sm:max-h-[70dvh]">
+          {/* ✅ UPDATED: mt-[60px] pushes it below mobile navbar, calc(100dvh-80px) stops clipping */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl w-full max-w-md shadow-2xl flex flex-col border border-white/20 overflow-hidden max-h-[calc(100dvh-80px)] mt-[60px] sm:mt-0 sm:max-h-[70dvh]">
             
             {/* Header (Fixed) */}
             <div className="flex justify-between items-center p-4 sm:p-5 border-b border-slate-100 shrink-0 bg-blue-50/50">

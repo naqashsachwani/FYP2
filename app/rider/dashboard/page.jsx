@@ -25,7 +25,6 @@ export default function RiderDashboard() {
   const [payouts, setPayouts] = useState([]); 
   const [loading, setLoading] = useState(true);
 
-  // Helper function to format date as D/M/YYYY (e.g., 29/6/2026)
   const formatDate = (dateInput) => {
     const d = new Date(dateInput);
     return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
@@ -82,32 +81,26 @@ export default function RiderDashboard() {
       fetchDashboardData();
   }
 
-  // --- PDF GENERATION LOGIC ---
   const handleDownloadPDF = () => {
     if (!profile || payouts.length === 0) {
       return toast.error("Not enough data to generate report.");
     }
 
     const doc = new jsPDF();
-    
-    // Use the custom date formatter
     const generatedDate = formatDate(new Date());
 
-    // 1. Header
     doc.setFontSize(22);
-    doc.setTextColor(37, 99, 235); // Blue-600
+    doc.setTextColor(37, 99, 235);
     doc.text("DreamSaver", 14, 22);
     
     doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42); // Slate-900
+    doc.setTextColor(15, 23, 42); 
     doc.text("Rider Financial Report", 14, 30);
 
-    // 2. Report Details
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Date Generated: ${generatedDate}`, 14, 40);
 
-    // 3. Financial Summary
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
     doc.text("Account Summary", 14, 52); 
@@ -118,7 +111,6 @@ export default function RiderDashboard() {
     doc.text(`Available Wallet Balance: Rs ${profile?.walletBalance?.toLocaleString() || 0}`, 14, 66);
     doc.text(`Total Completed Deliveries: ${stats?.completedDeliveries || 0}`, 14, 72);
 
-    // 4. Ledger Table
     const tableColumn = ["Date", "Description", "Transaction", "Status", "Amount (Rs)"];
     const tableRows = [];
 
@@ -126,7 +118,7 @@ export default function RiderDashboard() {
 
     sortedPayouts.forEach(tx => {
       const txData = [
-        formatDate(tx.createdAt), // Use the custom date formatter here too
+        formatDate(tx.createdAt),
         tx.description || (tx.type === 'EARNING' ? 'Delivery Payout' : 'Bank Withdrawal'),
         tx.type === 'EARNING' ? 'Credit (+)' : 'Debit (-)',
         tx.status,
@@ -145,7 +137,6 @@ export default function RiderDashboard() {
       alternateRowStyles: { fillColor: [248, 250, 252] }
     });
 
-    // 5. Save PDF
     doc.save(`Rider_Financial_Report_${generatedDate.replace(/\//g, '-')}.pdf`);
     toast.success("Report downloaded successfully!");
   };
@@ -166,7 +157,8 @@ export default function RiderDashboard() {
                 </p>
             </div>
             
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0 mt-2 sm:mt-0">
+            {/* ✅ FIXED: justify-center on mobile, sm:justify-end on larger screens */}
+            <div className="flex items-center justify-center sm:justify-end gap-2 w-full sm:w-auto shrink-0 mt-3 sm:mt-0">
                 <button 
                     onClick={handleDownloadPDF}
                     className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-500/20 text-xs sm:text-sm font-semibold"
