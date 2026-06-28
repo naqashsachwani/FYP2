@@ -419,19 +419,6 @@ export default function GoalDetails() {
         <h1 className="text-2xl sm:text-3xl font-extrabold mb-4 sm:mb-6 text-slate-900 leading-tight truncate px-1" title={goal.product?.name || "Savings Goal"}>{goal.product?.name || "Savings Goal"}</h1>
         <GoalCard goal={goal} />
 
-        <div className="mt-6 sm:mt-8 bg-white p-5 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200">
-          <h2 className="text-lg sm:text-xl font-bold mb-3 text-slate-800">Progress Tracking</h2>
-          <div className="w-full bg-slate-100 rounded-full h-6 sm:h-8 overflow-hidden relative shadow-inner border border-slate-200">
-            <div className="h-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold bg-gradient-to-r from-emerald-500 to-green-600 transition-all duration-700 shadow-md" style={{ width: `${Math.min(goal.progressPercent, 100)}%` }}>
-              {goal.progressPercent > 10 && `${Math.min(Math.round(goal.progressPercent), 100)}%`}
-            </div>
-          </div>
-          <div className="flex justify-between mt-3 text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider">
-            <span>Saved: {goal.currency || "Rs"} {goal.saved.toLocaleString()}</span>
-            <span>Target: {goal.currency || "Rs"} {goal.targetAmount.toLocaleString()}</span>
-          </div>
-        </div>
-
         <div className="mt-6 sm:mt-8 p-5 sm:p-6 bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <h2 className="text-lg sm:text-xl font-bold mb-4 text-slate-800">Savings Growth</h2>
           <div className="h-64 sm:h-80 w-full"><Line data={chartData} options={{ maintainAspectRatio: false, responsive: true }} /></div>
