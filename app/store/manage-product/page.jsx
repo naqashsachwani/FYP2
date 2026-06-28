@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from "react" 
+import { useEffect, useState, useCallback } from "react" 
 import { toast } from "react-hot-toast" 
 import Image from "next/image" 
 import Loading from "@/components/Loading" 
 import { useAuth, useUser } from "@clerk/nextjs"
 import axios from "axios" 
-import { Pencil, Trash2, Upload, Search, ChevronLeft, ChevronRight } from "lucide-react" 
+import { Pencil, Trash2, Upload, Search, ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react" 
 
 export default function StoreManageProducts() {
 
@@ -35,7 +35,8 @@ export default function StoreManageProducts() {
   })
 
   // --- API: Fetch Products ---
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
     try {
       const token = await getToken()
       const { data } = await axios.get('/api/store/product', {
@@ -44,8 +45,15 @@ export default function StoreManageProducts() {
       setProducts(data.products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)))
     } catch (error) {
       toast.error(error?.response?.data?.error || error.message)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
+  }, [getToken])
+
+  const handleRefresh = () => {
+    setSearchTerm("")
+    setCurrentPage(1)
+    fetchProducts()
   }
 
   // --- API: Toggle Stock Status ---
@@ -150,7 +158,7 @@ export default function StoreManageProducts() {
 
   useEffect(() => {
     if (user) fetchProducts()
-  }, [user])
+  }, [user, fetchProducts])
 
   // Reset pagination to page 1 when searching
   useEffect(() => {
@@ -171,7 +179,7 @@ export default function StoreManageProducts() {
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
   const currentProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (loading) return <Loading />
+  if (loading && products.length === 0) return <Loading />
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-blue-50 to-white py-6 sm:py-8 px-3 sm:px-6 md:px-12">
@@ -183,15 +191,25 @@ export default function StoreManageProducts() {
         <p className="text-sm sm:text-base text-gray-600 mb-5 sm:mb-6">Update, edit, or remove items from your <span className="font-medium text-blue-500">DreamSaver</span> store catalog.</p>
 
         {/* Search Bar */}
-        <div className="mb-5 sm:mb-6 relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-            <input 
-                type="text" 
-                placeholder="Search by name, description, or price..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-shadow"
-            />
+        <div className="mb-5 sm:mb-6 flex items-center gap-3">
+            <div className="relative w-full sm:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                <input 
+                    type="text" 
+                    placeholder="Search by name, description, or price..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl border border-gray-200 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-shadow"
+                />
+            </div>
+            <button 
+                onClick={handleRefresh}
+                disabled={loading}
+                className="p-2.5 sm:p-3 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset search and refresh"
+            >
+                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+            </button>
         </div>
 
         {/* Data Table Wrapper */}

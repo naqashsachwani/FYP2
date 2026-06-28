@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Wallet, PackageCheck, Clock, Truck, RotateCw } from "lucide-react";
+import { Loader2, Wallet, PackageCheck, Clock, Truck, RotateCw, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import dynamic from "next/dynamic";
 
@@ -49,9 +49,9 @@ export default function RiderDashboard() {
       return data;
   }
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await fetch("/api/rider/dashboard");
       if (res.status === 403) return router.push("/rider/rider-signup"); 
       const data = await res.json();
@@ -64,9 +64,13 @@ export default function RiderDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+
+  const handleRefresh = () => {
+      fetchDashboardData();
+  }
 
   if (loading && !profile) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
@@ -83,8 +87,13 @@ export default function RiderDashboard() {
                     Track your earnings, active deliveries, and performance.
                 </p>
             </div>
-            <button onClick={fetchDashboardData} className="p-1.5 sm:p-2 border rounded-full hover:bg-slate-50 transition text-slate-500 shadow-sm shrink-0">
-                <RotateCw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+            <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-1.5 sm:p-2 border rounded-full hover:bg-slate-50 transition text-slate-500 shadow-sm shrink-0"
+                title="Refresh Dashboard"
+            >
+                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
             </button>
         </div>
 
@@ -94,7 +103,7 @@ export default function RiderDashboard() {
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-3 sm:mb-4">
                     <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Available Balance</p>
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Earning</p>
                 <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">Rs {profile?.walletBalance?.toLocaleString() || 0}</h3>
                 <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-[0.08] rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110" />
             </div>

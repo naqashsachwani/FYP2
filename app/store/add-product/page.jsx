@@ -5,7 +5,7 @@ import axios from "axios"
 import Image from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
-import { UploadCloud, X } from "lucide-react" 
+import { UploadCloud, X, RefreshCcw } from "lucide-react" 
 
 export default function StoreAddProduct() {
   
@@ -42,11 +42,16 @@ export default function StoreAddProduct() {
     setImages(prev => ({ ...prev, [key]: file }))
   }
 
+  // Pure refresh without confirmation dialog to act as a normal reset
+  const handleRefresh = () => {
+    setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "" })
+    setImages({ 1: null, 2: null, 3: null, 4: null })
+  }
+
   // Resets all state back to initial empty values, allowing the user to start over.
   const handleReset = () => {
     if(confirm("Are you sure you want to clear the form?")) {
-        setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "" })
-        setImages({ 1: null, 2: null, 3: null, 4: null })
+        handleRefresh()
         toast.success("Form cleared")
     }
   }
@@ -109,9 +114,18 @@ export default function StoreAddProduct() {
     <div className="flex flex-col items-center px-4 sm:px-6 md:px-16 py-8 sm:py-10 bg-gradient-to-b from-slate-50 to-white min-h-[100dvh]">
       
       {/* Header */}
-      <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 mb-5 sm:mb-6 text-center">
-        DreamSaver <span className="text-blue-600">Product Upload</span>
-      </h1>
+      <div className="w-full max-w-2xl flex justify-between items-center mb-5 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-slate-800 text-center w-full">
+            DreamSaver <span className="text-blue-600">Product Upload</span>
+        </h1>
+        <button 
+            onClick={handleRefresh}
+            className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600"
+            title="Clear Form"
+        >
+            <RefreshCcw size={18} className="sm:w-5 sm:h-5" />
+        </button>
+      </div>
 
       {/* Main Form */}
       <form

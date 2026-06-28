@@ -13,7 +13,8 @@ import {
     Package,
     TrendingDown,
     Wallet,
-    CreditCard
+    CreditCard,
+    RefreshCcw
 } from "lucide-react" 
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast" 
@@ -77,6 +78,7 @@ export default function Dashboard() {
     }
 
     const fetchDashboardData = async () => {
+        setLoading(true)
         try {
             const token = await getToken()
             
@@ -105,6 +107,10 @@ export default function Dashboard() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleRefresh = () => {
+        fetchDashboardData();
     }
 
     const GenerateReport = async () => {
@@ -309,7 +315,7 @@ export default function Dashboard() {
         }
     ]
 
-    if (loading) return (
+    if (loading && dashboardData.availableBalance === 0) return (
         <div className="min-h-[70vh] flex items-center justify-center bg-slate-50/50">
             <div className="text-center space-y-3">
                 <Loading />
@@ -332,13 +338,21 @@ export default function Dashboard() {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-3 mt-2 sm:mt-0">
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-0">
+                        <button 
+                            onClick={handleRefresh} 
+                            disabled={loading}
+                            className={`p-2.5 sm:p-3 rounded-xl sm:rounded-full border shadow-sm transition-all shrink-0 ${loading ? "bg-slate-100 border-slate-200 text-slate-400" : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"}`}
+                            title="Refresh dashboard"
+                        >
+                            <RefreshCcw size={18} className={`${loading ? "animate-spin" : ""}`} />
+                        </button>
                         <button 
                             onClick={GenerateReport}
                             disabled={reportLoading}
                             className="group w-full sm:w-auto flex justify-center items-center gap-2 bg-slate-900 text-white px-5 py-2.5 sm:py-3 rounded-xl sm:rounded-full shadow-lg shadow-slate-900/20 hover:bg-slate-800 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-70"
                         >
-                            <DownloadIcon size={18} className="group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                            {reportLoading ? <RefreshCcw size={18} className="animate-spin shrink-0" /> : <DownloadIcon size={18} className="group-hover:-translate-y-0.5 transition-transform shrink-0" />}
                             <span className="font-medium text-sm">Download Report</span>
                         </button>
                     </div>

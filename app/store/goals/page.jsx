@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@clerk/nextjs"
 import axios from "axios"
 import toast from "react-hot-toast"
-import { Search, Loader2, Target, ChevronLeft, ChevronRight, Package, User, X, Calendar, Wallet } from "lucide-react"
+import { Search, Loader2, Target, ChevronLeft, ChevronRight, Package, User, X, Calendar, Wallet, RefreshCcw } from "lucide-react"
 import Image from "next/image"
 
 export default function StoreGoalsPage() {
@@ -38,27 +38,39 @@ export default function StoreGoalsPage() {
     setPage(1)
   }, [statusFilter])
 
-  // Fetch Data
-  useEffect(() => {
-    const fetchGoals = async () => {
-      setLoading(true)
-      try {
-        const token = await getToken()
-        const { data } = await axios.get(`/api/store/goals?page=${page}&limit=10&search=${debouncedSearch}&status=${statusFilter}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        setGoals(data.goals)
-        setTotalPages(data.pagination.totalPages)
-        setTotalGoals(data.pagination.total)
-      } catch (error) {
-        toast.error("Failed to load goals data")
-      } finally {
-        setLoading(false)
-      }
+  // Fetch Data Function
+  const fetchGoals = useCallback(async () => {
+    setLoading(true)
+    try {
+      const token = await getToken()
+      const { data } = await axios.get(`/api/store/goals?page=${page}&limit=10&search=${debouncedSearch}&status=${statusFilter}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setGoals(data.goals)
+      setTotalPages(data.pagination.totalPages)
+      setTotalGoals(data.pagination.total)
+    } catch (error) {
+      toast.error("Failed to load goals data")
+    } finally {
+      setLoading(false)
     }
-
-    fetchGoals()
   }, [page, debouncedSearch, statusFilter, getToken])
+
+  useEffect(() => {
+    fetchGoals()
+  }, [fetchGoals])
+
+  const handleRefresh = () => {
+    setSearchInput("")
+    setDebouncedSearch("")
+    setStatusFilter("ALL")
+    setPage(1)
+    // The fetch will trigger automatically due to dependency changes, 
+    // but we can call it explicitly if state was already matched to default
+    if (searchInput === "" && statusFilter === "ALL" && page === 1) {
+        fetchGoals();
+    }
+  }
 
   // Helper function for status badges
   const getStatusBadge = (status) => {
@@ -115,6 +127,15 @@ export default function StoreGoalsPage() {
           <div className="text-xs sm:text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2.5 rounded-xl whitespace-nowrap w-full sm:w-auto text-center border border-slate-200">
             Total Records: <span className="text-slate-800">{totalGoals}</span>
           </div>
+
+          <button 
+            onClick={handleRefresh} 
+            disabled={loading}
+            className="p-2.5 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition-colors shadow-sm text-slate-600 shrink-0"
+            title="Reset filters and refresh"
+          >
+            <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Gift, Send, Search, ChevronLeft, ChevronRight, Store, Truck, History, CircleDollarSign, X, Users, User } from "lucide-react";
+import { Loader2, Gift, Send, Search, ChevronLeft, ChevronRight, Store, Truck, History, CircleDollarSign, X, Users, User, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 
 // BONUS DETAILS MODAL
@@ -74,12 +74,19 @@ export default function ExtraPaymentsPage() {
   });
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/manual-payouts");
       const data = await res.json();
       setStores(data.stores || []); setRiders(data.riders || []); setHistory(data.history || []); setNetRevenue(data.netRevenue || 0); 
     } catch (e) { toast.error("Failed to load data"); } 
     finally { setLoading(false); }
+  };
+
+  const handleRefresh = () => {
+    setSearchTerm("");
+    setCurrentPage(1);
+    fetchData();
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -152,7 +159,7 @@ export default function ExtraPaymentsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredHistory.length / ITEMS_PER_PAGE));
   const currentHistory = filteredHistory.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && history.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 min-h-[100dvh] relative">
@@ -250,9 +257,19 @@ export default function ExtraPaymentsPage() {
           <div className="lg:col-span-2 bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full min-h-[400px]">
             <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 bg-slate-50/50 shrink-0">
               <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2"><History className="text-indigo-500 w-5 h-5 sm:w-6 sm:h-6 shrink-0"/> Payout History</h2>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input type="text" placeholder="Search ID or Recipient..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 border border-slate-200 rounded-lg text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-shadow" />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <input type="text" placeholder="Search ID or Recipient..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 border border-slate-200 rounded-lg text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white transition-shadow" />
+                </div>
+                <button 
+                  onClick={handleRefresh} 
+                  disabled={loading}
+                  className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                  title="Reset search and refresh"
+                >
+                  <RefreshCcw size={18} className={`sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} />
+                </button>
               </div>
             </div>
 

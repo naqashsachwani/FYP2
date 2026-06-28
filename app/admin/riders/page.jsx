@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle, XCircle, Search, Car, UserCircle, FileText, ExternalLink, ShieldAlert, Ban, Filter, Edit, Image as ImageIcon, Upload } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Search, Car, UserCircle, FileText, ExternalLink, ShieldAlert, Ban, Filter, Edit, Image as ImageIcon, Upload, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function AdminRiderManagementPage() {
@@ -20,6 +20,7 @@ export default function AdminRiderManagementPage() {
   const [imageUploading, setImageUploading] = useState(false);
 
   const fetchRiders = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/riders");
       if (!res.ok) throw new Error("Failed to fetch riders");
@@ -33,6 +34,11 @@ export default function AdminRiderManagementPage() {
   };
 
   useEffect(() => { fetchRiders(); }, []);
+
+  const handleRefresh = () => {
+    setFilter("PENDING_APPROVAL");
+    fetchRiders();
+  };
 
   // --- STATUS CHANGE HANDLER ---
   const handleStatusChange = async (riderId, newStatus) => {
@@ -71,7 +77,6 @@ export default function AdminRiderManagementPage() {
     setIsEditModalOpen(true);
   };
 
-  // ✅ NEW: Handle multiple file uploads simultaneously
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -79,7 +84,6 @@ export default function AdminRiderManagementPage() {
     setImageUploading(true);
     
     try {
-      // Process all selected files into Base64 strings
       const base64Promises = files.map((file) => {
         return new Promise((resolve) => {
           const reader = new FileReader();
@@ -90,7 +94,6 @@ export default function AdminRiderManagementPage() {
 
       const base64Images = await Promise.all(base64Promises);
 
-      // Save the array of images as a JSON string
       setEditFormData(prev => ({ ...prev, idImageUrl: JSON.stringify(base64Images) }));
       toast.success(`${base64Images.length} image(s) processed successfully`);
     } catch (error) {
@@ -127,7 +130,6 @@ export default function AdminRiderManagementPage() {
 
   const filteredRiders = riders.filter(r => filter === "ALL" || r.status === filter);
 
-  // Helper to parse images for the edit modal UI safely
   const parseImages = (jsonStr) => {
     if (!jsonStr) return [];
     try { 
@@ -138,7 +140,7 @@ export default function AdminRiderManagementPage() {
     }
   };
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && riders.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 p-4 sm:p-6 md:p-10 relative">
@@ -151,19 +153,29 @@ export default function AdminRiderManagementPage() {
             <p className="text-xs sm:text-sm text-slate-500 mt-1">Review, approve, and manage DreamSaver delivery personnel.</p>
           </div>
           
-          <div className="relative w-full sm:w-56 mt-2 sm:mt-0">
-             <select 
-                value={filter} 
-                onChange={(e) => setFilter(e.target.value)} 
-                className="w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-bold text-slate-700 shadow-sm cursor-pointer transition-shadow"
-             >
-               <option value="ALL">All Riders</option>
-               <option value="PENDING_APPROVAL">Pending Approval</option>
-               <option value="APPROVED">Approved</option>
-               <option value="SUSPENDED">Suspended</option>
-               <option value="REJECTED">Rejected</option>
-             </select>
-             <Filter className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-4 sm:h-4" />
+          <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <div className="relative w-full sm:w-56">
+               <select 
+                 value={filter} 
+                 onChange={(e) => setFilter(e.target.value)} 
+                 className="w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 bg-white border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-bold text-slate-700 shadow-sm cursor-pointer transition-shadow"
+               >
+                 <option value="ALL">All Riders</option>
+                 <option value="PENDING_APPROVAL">Pending Approval</option>
+                 <option value="APPROVED">Approved</option>
+                 <option value="SUSPENDED">Suspended</option>
+                 <option value="REJECTED">Rejected</option>
+               </select>
+               <Filter className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-4 sm:h-4" />
+            </div>
+            <button 
+              onClick={handleRefresh} 
+              disabled={loading}
+              className="p-2.5 sm:p-3 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+              title="Reset filters and refresh"
+            >
+              <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
         </div>
 
@@ -369,13 +381,11 @@ export default function AdminRiderManagementPage() {
                       <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-medium px-4 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2">
                          {imageUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                          {imageUploading ? "Processing Images..." : "Upload New Images"}
-                         {/* ✅ NEW: "multiple" attribute allows selecting multiple files */}
                          <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                       </label>
                       <span className="text-xs text-slate-500 italic">Select multiple images to replace the current documents.</span>
                     </div>
 
-                    {/* ✅ NEW: Visual Grid showing current uploaded images */}
                     {parseImages(editFormData.idImageUrl).length > 0 && (
                        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                          <p className="text-[10px] text-green-600 font-bold uppercase tracking-wider mb-2">✓ {parseImages(editFormData.idImageUrl).length} Document(s) Ready</p>

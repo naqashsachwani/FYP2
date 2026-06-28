@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo } from "react" 
+import { useEffect, useState, useMemo, useCallback } from "react" 
 import Loading from "@/components/Loading" 
 import { useAuth } from "@clerk/nextjs" 
 import axios from "axios" 
 import toast from "react-hot-toast" 
-import { Search, MapPin, Truck, CheckCircle, Calendar, Clock, Play, EyeOff, RefreshCw, ChevronLeft, ChevronRight, Filter, Upload, Send, X } from "lucide-react" 
+import { Search, MapPin, Truck, CheckCircle, Clock, Upload, RefreshCcw, ChevronLeft, ChevronRight, Filter, Send, X, AlertTriangle } from "lucide-react" 
 import dynamic from 'next/dynamic' 
 
 // Next.js dynamic import to prevent SSR issues with Leaflet
@@ -33,7 +33,7 @@ export default function StoreOrders() {
 
     const { getToken } = useAuth()
 
-    const fetchOrders = async (isManualRefresh = false) => {
+    const fetchOrders = useCallback(async (isManualRefresh = false) => {
        try {
          if (isManualRefresh) setIsRefreshing(true); 
          const token = await getToken()
@@ -48,7 +48,14 @@ export default function StoreOrders() {
          setLoading(false) 
          setIsRefreshing(false) 
        }
-    }    
+    }, [getToken])    
+
+    const handleRefresh = () => {
+        setSearchTerm("")
+        setStatusFilter("ALL")
+        setCurrentPage(1)
+        fetchOrders(true)
+    }
 
     const handleAssignRider = async (deliveryId) => {
         if (!selectedRiderId) return toast.error("Please select a rider first");
@@ -96,6 +103,7 @@ export default function StoreOrders() {
             transit: orders.filter(o => o.status === 'IN_TRANSIT').length,
             dispatched: orders.filter(o => o.status === 'DISPATCHED').length, 
             delivered: orders.filter(o => o.status === 'DELIVERED').length,
+            failed: orders.filter(o => o.status === 'FAILED').length,
         }
     }, [orders])
 
@@ -122,6 +130,7 @@ export default function StoreOrders() {
             case 'DISPATCHED': return 'bg-orange-50 text-orange-700 border-orange-200'
             case 'IN_TRANSIT': return 'bg-blue-50 text-blue-700 border-blue-200'
             case 'PENDING': return 'bg-yellow-50 text-yellow-700 border-yellow-200'
+            case 'FAILED': return 'bg-red-50 text-red-700 border-red-200'
             default: return 'bg-gray-50 text-gray-700 border-gray-200'
         }
     }
@@ -130,10 +139,11 @@ export default function StoreOrders() {
         if (status === 'DELIVERED') return <CheckCircle size={16} className="sm:w-5 sm:h-5 shrink-0" />
         if (status === 'PENDING') return <Clock size={16} className="sm:w-5 sm:h-5 shrink-0" />
         if (status === 'DISPATCHED') return <Upload size={16} className="sm:w-5 sm:h-5 shrink-0" />
+        if (status === 'FAILED') return <AlertTriangle size={16} className="sm:w-5 sm:h-5 shrink-0" />
         return <Truck size={16} className="sm:w-5 sm:h-5 shrink-0" />
     }
 
-    useEffect(() => { fetchOrders() }, [])
+    useEffect(() => { fetchOrders() }, [fetchOrders])
 
     if (loading && orders.length === 0) return <Loading />
 
@@ -159,23 +169,29 @@ export default function StoreOrders() {
                                 <option value="IN_TRANSIT">In Transit</option>
                                 <option value="DISPATCHED">Dispatched</option>
                                 <option value="DELIVERED">Delivered</option>
+                                <option value="FAILED">Failed</option>
                             </select>
                         </div>
-                        <button onClick={() => fetchOrders(true)} disabled={isRefreshing} className="p-2 sm:p-2.5 border border-gray-300 rounded-lg bg-white text-gray-600 flex justify-center hover:bg-gray-50 transition-colors">
-                            <RefreshCw size={20} className={isRefreshing ? "animate-spin text-blue-600" : ""} />
+                        <button 
+                            onClick={handleRefresh} 
+                            disabled={isRefreshing} 
+                            className="p-2 sm:p-2.5 border border-gray-300 rounded-lg bg-white text-gray-600 flex justify-center hover:bg-gray-50 transition-colors"
+                            title="Reset filters and refresh"
+                        >
+                            <RefreshCcw size={20} className={isRefreshing ? "animate-spin text-blue-600" : ""} />
                         </button>
                     </div>
                 </div>
 
                 {/* Stats Grid */}
-                {/* Responsive fix: 2 cols on mobile, 3 on tablet, 5 on desktop */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
                     {[
                         { label: 'Total Orders', val: stats.total, icon: '📦', color: 'bg-slate-100' },
                         { label: 'Pending', val: stats.pending, icon: '⏳', color: 'bg-yellow-100' },
                         { label: 'In Transit', val: stats.transit, icon: '🚚', color: 'bg-blue-100' },
                         { label: 'Dispatched', val: stats.dispatched, icon: '📤', color: 'bg-orange-100' }, 
-                        { label: 'Delivered', val: stats.delivered, icon: '✅', color: 'bg-green-100' }
+                        { label: 'Delivered', val: stats.delivered, icon: '✅', color: 'bg-green-100' },
+                        { label: 'Failed', val: stats.failed, icon: '❌', color: 'bg-red-100' }
                     ].map((stat, i) => (
                         <div key={i} className="bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 flex items-center">
                             <div className={`p-2 sm:p-3 rounded-lg ${stat.color} mr-2 sm:mr-3 shrink-0 text-sm sm:text-base`}>{stat.icon}</div>
@@ -206,10 +222,19 @@ export default function StoreOrders() {
                                                 <option value="IN_TRANSIT">In Transit</option>
                                                 <option value="DISPATCHED">Dispatched</option>
                                                 <option value="DELIVERED">Delivered</option>
+                                                <option value="FAILED">Failed</option>
                                             </select>
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-gray-600 whitespace-nowrap">
-                                            {order.riderName ? order.riderName : order.isWaitingForRider ? <span className="text-yellow-600 bg-yellow-50 px-2 py-1 rounded">Waiting...</span> : <span className="italic font-normal opacity-50">Unassigned</span>}
+                                            {order.isWaitingForRider ? (
+                                                <span className="text-yellow-600 bg-yellow-50 px-2 py-1 rounded text-[10px] sm:text-xs">Waiting...</span>
+                                            ) : order.status === 'FAILED' ? (
+                                                <span className="text-red-600 bg-red-50 px-2 py-1 rounded text-[10px] sm:text-xs">Re-assign</span>
+                                            ) : order.riderName ? (
+                                                order.riderName
+                                            ) : (
+                                                <span className="italic font-normal opacity-50 text-[10px] sm:text-xs">Unassigned</span>
+                                            )}
                                         </td>
                                         <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap"><button className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-bold flex items-center gap-1">View</button></td>
                                     </tr>
@@ -276,9 +301,13 @@ export default function StoreOrders() {
                                         </div>
                                     </div>
                                     
-                                    {selectedOrder.type === 'DELIVERY' && selectedOrder.status === 'PENDING' && !selectedOrder.riderName && (
-                                        <div className="bg-blue-50 p-3 sm:p-4 rounded-xl border border-blue-200">
-                                            <h3 className="font-bold text-[10px] sm:text-xs text-blue-600 uppercase tracking-widest mb-2 sm:mb-3 flex items-center gap-2"><Truck size={14} className="shrink-0"/> Dispatch Logistics</h3>
+                                    {/* Dispatch / Re-assign Rider Block */}
+                                    {selectedOrder.type === 'DELIVERY' && ((selectedOrder.status === 'PENDING' && !selectedOrder.riderName) || selectedOrder.status === 'FAILED') && (
+                                        <div className="bg-blue-50 p-3 sm:p-4 rounded-xl border border-blue-200 mt-4">
+                                            <h3 className="font-bold text-[10px] sm:text-xs text-blue-600 uppercase tracking-widest mb-2 sm:mb-3 flex items-center gap-2">
+                                                <Truck size={14} className="shrink-0"/> 
+                                                {selectedOrder.status === 'FAILED' ? 'Re-assign Logistics' : 'Dispatch Logistics'}
+                                            </h3>
                                             
                                             {selectedOrder.isWaitingForRider ? (
                                                 <p className="text-xs sm:text-sm font-bold text-blue-800 text-center py-2 bg-blue-100 rounded-lg">Request sent! Waiting for Rider.</p>
@@ -298,8 +327,17 @@ export default function StoreOrders() {
                                         </div>
                                     )}
 
-                                    {selectedOrder.riderName && (
-                                       <div className="bg-green-50 p-3 sm:p-4 rounded-xl border border-green-200">
+                                    {/* Previous Rider (Failed) History Block */}
+                                    {selectedOrder.riderName && selectedOrder.status === 'FAILED' && (
+                                        <div className="bg-red-50 p-3 sm:p-4 rounded-xl border border-red-200 mt-4">
+                                            <h3 className="font-bold text-[10px] sm:text-xs text-red-600 uppercase tracking-widest mb-1">Previous Rider (Delivery Failed)</h3>
+                                            <p className="font-bold text-red-800 text-xs sm:text-sm flex items-center gap-2"><Truck size={14} className="shrink-0 sm:w-4 sm:h-4"/> {selectedOrder.riderName}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Active Assigned Rider Block */}
+                                    {selectedOrder.riderName && selectedOrder.status !== 'FAILED' && (
+                                       <div className="bg-green-50 p-3 sm:p-4 rounded-xl border border-green-200 mt-4">
                                             <h3 className="font-bold text-[10px] sm:text-xs text-green-600 uppercase tracking-widest mb-1">Assigned Rider</h3>
                                             <p className="font-bold text-green-800 text-xs sm:text-sm flex items-center gap-2"><Truck size={14} className="shrink-0 sm:w-4 sm:h-4"/> {selectedOrder.riderName}</p>
                                        </div>

@@ -6,7 +6,7 @@ import axios from "axios"
 import toast from "react-hot-toast"
 import Loading from "@/components/Loading"
 import StoreInfo from "@/components/admin/StoreInfo"
-import { Shield, CheckCircle, XCircle, Clock, AlertCircle, Store, Search, Loader2 } from "lucide-react"
+import { Shield, CheckCircle, XCircle, Clock, AlertCircle, Store, Search, Loader2, RefreshCcw } from "lucide-react"
 import Image from "next/image"
 
 export default function AdminApprove() {
@@ -21,6 +21,7 @@ export default function AdminApprove() {
   const [processingId, setProcessingId] = useState(null)
 
   const fetchStores = async () => {
+    setLoading(true)
     try {
       const token = await getToken()
       const { data } = await axios.get('/api/admin/approve-store', {
@@ -32,6 +33,12 @@ export default function AdminApprove() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleRefresh = () => {
+    setSearchTerm("")
+    setStatusFilter("pending")
+    fetchStores()
   }
 
   const handleApprove = async ({ storeId, status }) => {
@@ -71,7 +78,7 @@ export default function AdminApprove() {
   const approvedCount = useMemo(() => stores.filter(s => s.status === 'approved').length, [stores])
   const rejectedCount = useMemo(() => stores.filter(s => s.status === 'rejected').length, [stores])
 
-  if (loading)
+  if (loading && stores.length === 0)
     return (
       <div className="flex items-center justify-center min-h-[100dvh]">
         <Loading />
@@ -122,8 +129,8 @@ export default function AdminApprove() {
       </div>
 
       {/* FILTER & SEARCH BAR */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:max-w-md">
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full lg:max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
           <input
             type="text"
@@ -134,7 +141,7 @@ export default function AdminApprove() {
           />
         </div>
 
-        <div className="flex flex-row items-center gap-3 sm:gap-4 w-full md:w-auto">
+        <div className="flex flex-row items-center gap-3 sm:gap-4 w-full lg:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -148,12 +155,19 @@ export default function AdminApprove() {
           <div className="hidden sm:flex text-xs font-bold text-slate-500 bg-slate-100 px-3 py-2 rounded-lg items-center justify-center whitespace-nowrap border border-slate-200 shadow-sm shrink-0 h-full">
             {filteredStores.length} Result{filteredStores.length !== 1 ? 's' : ''}
           </div>
+          <button 
+            onClick={handleRefresh} 
+            disabled={loading}
+            className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
+            title="Reset filters and refresh"
+          >
+            <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
       </div>
 
       {/* STORE CARDS GRID */}
       {filteredStores.length ? (
-        // ✅ FIXED: Strictly 1 column layout. Card will now perfectly match the search bar width.
         <div className="grid gap-6 grid-cols-1 pb-12 w-full">
           {filteredStores.map((store) => (
             <div key={store.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col w-full">

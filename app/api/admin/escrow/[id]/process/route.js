@@ -255,7 +255,6 @@ export async function POST(req, { params }) {
        }
 
        // 1. Mark Payout as TRANSFERRED
-       // ✅ FIX: Using the correct Prisma Enum value your database expects.
        await prisma.riderPayout.update({
          where: { id },
          data: { 
@@ -264,11 +263,12 @@ export async function POST(req, { params }) {
          }
        });
 
-       // 2. Officially Increment Rider's Wallet/Earnings
+       // 2. ✅ Officially Increment Rider's Wallet AND Earnings (Unlocks the money for them)
        await prisma.riderProfile.update({
          where: { id: payout.riderId },
          data: { 
-             totalEarnings: { increment: payout.amount } 
+             totalEarnings: { increment: payout.amount },
+             walletBalance: { increment: payout.amount } // Allow rider to withdraw it now
          }
        });
 
@@ -277,8 +277,8 @@ export async function POST(req, { params }) {
           await sendNotification({
              userId: payout.rider.userId, 
              email: payout.rider.user.email,
-             title: "Payout Received! 💸", 
-             message: `Rs ${payout.amount} has been added to your earnings for your recent delivery.`, 
+             title: "Delivery Earnings Approved! 💸", 
+             message: `Rs ${payout.amount} has been added to your available balance for your recent delivery and is now ready for withdrawal.`, 
              type: "SYSTEM_ALERT", 
              notifyInApp: true, 
              notifyEmail: true

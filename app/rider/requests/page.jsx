@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Package, MapPin, Store, Check, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Loader2, Package, MapPin, Store, Check, X, Search, ChevronLeft, ChevronRight, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function RiderRequestsPage() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
+  // UPDATED: Now tracks both the ID and the specific action being processed
+  const [processingData, setProcessingData] = useState({ id: null, action: null });
   
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 6;
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/rider/jobs?type=pending");
       if (!res.ok) throw new Error("Failed to load requests");
@@ -23,13 +25,19 @@ export default function RiderRequestsPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const handleRefresh = () => {
+    setSearchTerm("");
+    setCurrentPage(1);
+    fetchRequests();
   };
 
-  useEffect(() => { fetchRequests(); }, []);
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
   useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
   const handleAction = async (assignmentId, deliveryId, action) => {
-    setProcessingId(assignmentId);
+    setProcessingData({ id: assignmentId, action });
     try {
       const res = await fetch("/api/rider/dashboard", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -39,7 +47,7 @@ export default function RiderRequestsPage() {
       toast.success(action === 'ACCEPT' ? "Delivery Accepted!" : "Delivery Rejected");
       fetchRequests(); 
     } catch (error) { toast.error(error.message); } 
-    finally { setProcessingId(null); }
+    finally { setProcessingData({ id: null, action: null }); }
   };
 
   const filtered = assignments.filter(task => {
@@ -52,7 +60,7 @@ export default function RiderRequestsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentItems = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && assignments.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -62,9 +70,19 @@ export default function RiderRequestsPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Delivery Requests</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">Accept or reject incoming delivery assignments.</p>
         </div>
-        <div className="relative w-full md:w-72">
-           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
-           <input type="text" placeholder="Search product, store, area..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+        <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+            <div className="relative w-full md:w-72">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
+               <input type="text" placeholder="Search product, store, area..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-shadow" />
+            </div>
+            <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset search and refresh"
+            >
+                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+            </button>
         </div>
       </div>
 
@@ -109,11 +127,19 @@ export default function RiderRequestsPage() {
               </div>
               
               <div className="p-3 sm:p-4 bg-slate-50 flex gap-2 sm:gap-3 border-t border-slate-100 shrink-0">
-                <button onClick={() => handleAction(task.id, task.deliveryId, 'REJECT')} disabled={processingId === task.id} className="flex-1 py-2 sm:py-2.5 bg-white border border-red-200 text-red-600 font-bold text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-red-50 flex justify-center items-center gap-1.5 sm:gap-2 shadow-sm transition-colors disabled:opacity-50">
-                  {processingId === task.id ? <Loader2 className="animate-spin w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <X className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />} Reject
+                <button 
+                  onClick={() => handleAction(task.id, task.deliveryId, 'REJECT')} 
+                  disabled={processingData.id === task.id} 
+                  className="flex-1 py-2 sm:py-2.5 bg-white border border-red-200 text-red-600 font-bold text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-red-50 flex justify-center items-center gap-1.5 sm:gap-2 shadow-sm transition-colors disabled:opacity-50"
+                >
+                  {processingData.id === task.id && processingData.action === 'REJECT' ? <Loader2 className="animate-spin w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <X className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />} Reject
                 </button>
-                <button onClick={() => handleAction(task.id, task.deliveryId, 'ACCEPT')} disabled={processingId === task.id} className="flex-1 py-2 sm:py-2.5 bg-blue-600 text-white font-bold text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 flex justify-center items-center gap-1.5 sm:gap-2 transition-colors disabled:opacity-50 active:scale-[0.98] disabled:active:scale-100">
-                  {processingId === task.id ? <Loader2 className="animate-spin w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Check className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />} Accept
+                <button 
+                  onClick={() => handleAction(task.id, task.deliveryId, 'ACCEPT')} 
+                  disabled={processingData.id === task.id} 
+                  className="flex-1 py-2 sm:py-2.5 bg-blue-600 text-white font-bold text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-blue-700 shadow-md shadow-blue-200 flex justify-center items-center gap-1.5 sm:gap-2 transition-colors disabled:opacity-50 active:scale-[0.98] disabled:active:scale-100"
+                >
+                  {processingData.id === task.id && processingData.action === 'ACCEPT' ? <Loader2 className="animate-spin w-4 h-4 sm:w-[18px] sm:h-[18px]" /> : <Check className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" />} Accept
                 </button>
               </div>
             </div>

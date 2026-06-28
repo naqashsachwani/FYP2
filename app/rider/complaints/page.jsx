@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Loader2, AlertTriangle, CheckCircle, MessageSquareWarning, X, Clock, ShieldAlert, ChevronDown, Image as ImageIcon, Hash, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { Loader2, AlertTriangle, CheckCircle, MessageSquareWarning, X, Clock, ShieldAlert, ChevronDown, Image as ImageIcon, Hash, ChevronLeft, ChevronRight, Check, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function RiderComplaintsPage() {
@@ -26,7 +26,8 @@ export default function RiderComplaintsPage() {
     targetStoreId: "" 
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/rider/complaints");
       if (!res.ok) throw new Error("Failed to load data");
@@ -35,10 +36,16 @@ export default function RiderComplaintsPage() {
       setDeliveries(data.deliveries);
     } catch (error) { toast.error("Could not load complaints."); } 
     finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+  
+  const handleRefresh = () => {
+    setFilterStatus("ALL");
+    setCurrentPage(1);
+    fetchData();
   };
 
-  useEffect(() => { fetchData(); }, []);
-  
   useEffect(() => { setCurrentPage(1); }, [filterStatus]);
 
   useEffect(() => {
@@ -97,7 +104,7 @@ export default function RiderComplaintsPage() {
       { label: status === "REJECTED" ? "Rejected" : "Resolved", active: ["RESOLVED", "REJECTED"].includes(status), isError: status === "REJECTED" }
   ];
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && complaints.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   const selectedDelivery = deliveries.find(d => d.goalId === formData.goalId);
 
@@ -121,14 +128,24 @@ export default function RiderComplaintsPage() {
           <div className="text-xs sm:text-sm font-medium text-slate-500 w-full sm:w-auto text-left">
             Showing <span className="font-bold text-slate-700">{filteredItems.length}</span> tickets
           </div>
-          <div className="relative w-full sm:w-48">
-            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-3 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer transition-shadow focus:ring-2 focus:ring-blue-100">
-              <option value="ALL">All Statuses</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
+          <div className="flex w-full sm:w-auto gap-2">
+              <div className="relative w-full sm:w-48">
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-3 sm:pl-4 pr-8 sm:pr-10 py-2 sm:py-2.5 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer transition-shadow focus:ring-2 focus:ring-blue-100">
+                  <option value="ALL">All Statuses</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="RESOLVED">Resolved</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <button 
+                  onClick={handleRefresh} 
+                  disabled={loading}
+                  className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
+                  title="Reset filters and refresh"
+              >
+                  <RefreshCcw size={16} className={`sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} />
+              </button>
           </div>
         </div>
 

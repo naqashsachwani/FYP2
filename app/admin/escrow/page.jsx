@@ -2,13 +2,99 @@
 
 import { useEffect, useState } from "react";
 import { 
-  Loader2, DollarSign, ArrowDownLeft, AlertCircle, RefreshCw, 
+  Loader2, DollarSign, ArrowDownLeft, AlertCircle, RefreshCcw, 
   Search, Copy, CheckCircle, ChevronLeft, ChevronRight, X, 
-  Store, CreditCard, ShieldAlert, Download, Car, ListFilter, ArrowUpDown, Gift
+  Store, CreditCard, ShieldAlert, Download, Car, ListFilter, ArrowUpDown, Gift,
+  User, Package, MapPin
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+// =====================================
+// RIDER PAYOUT DETAILS MODAL
+// =====================================
+const RiderPayoutModal = ({ payout, onClose }) => {
+  if (!payout) return null;
+  const rider = payout.rider;
+  const delivery = payout.delivery;
+  const product = delivery?.goal?.product;
+  const store = product?.store;
+  const customer = delivery?.goal?.user;
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-[95%] sm:w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20 max-h-[90dvh] flex flex-col">
+         {/* Header */}
+         <div className="flex justify-between items-center p-4 sm:p-6 border-b bg-slate-50 shrink-0">
+           <h2 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2"><Car className="text-slate-600 w-5 h-5 sm:w-6 sm:h-6"/> Rider Payout Details</h2>
+           <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-200 text-slate-500 rounded-full transition-colors"><X size={20}/></button>
+         </div>
+
+         {/* Body */}
+         <div className="p-4 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar">
+
+            {/* Amount Banner */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 flex justify-between items-center shadow-sm">
+               <div>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Payout Amount</p>
+                  <p className="text-2xl sm:text-3xl font-black font-mono text-slate-900">Rs {payout.amount?.toLocaleString()}</p>
+               </div>
+               <div className="text-right">
+                  <span className={`px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-bold border ${payout.status === 'PENDING' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200'}`}>{payout.status === 'TRANSFERRED' ? 'APPROVED' : payout.status}</span>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Rider Info */}
+                <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
+                    <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2"><User size={16} className="text-slate-500"/> Rider Profile</h3>
+                    <p className="text-xs text-slate-500 mb-1">Name: <span className="font-bold text-slate-800">{rider?.user?.name || "N/A"}</span></p>
+                    <p className="text-xs text-slate-500 mb-1">Phone: <span className="font-bold text-slate-800">{rider?.phoneNumber || "N/A"}</span></p>
+                    <p className="text-xs text-slate-500 mb-1">Vehicle: <span className="font-bold text-slate-800">{rider?.vehicleType || "N/A"}</span></p>
+                    <p className="text-xs text-slate-500">Plate: <span className="font-bold text-slate-800">{rider?.vehiclePlate || "N/A"}</span></p>
+                </div>
+
+                {/* Delivery Info */}
+                <div className="border border-slate-100 rounded-xl p-4 bg-slate-50">
+                    <h3 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2"><Package size={16} className="text-slate-500"/> Delivery Summary</h3>
+                    <p className="text-xs text-slate-500 mb-1">Status: <span className={`font-bold ${delivery?.status === 'DELIVERED' ? 'text-green-600' : 'text-slate-800'}`}>{delivery?.status || "N/A"}</span></p>
+                    <p className="text-xs text-slate-500 mb-1">Item: <span className="font-bold text-slate-800 truncate" title={product?.name}>{product?.name?.slice(0,25) || "N/A"}</span></p>
+                    <p className="text-xs text-slate-500 mb-1">Delivered: <span className="font-bold text-slate-800">{delivery?.deliveryDate ? new Date(delivery.deliveryDate).toLocaleDateString() : "N/A"}</span></p>
+                    <p className="text-xs text-slate-500">Tracking ID: <span className="font-mono font-bold text-slate-700">{delivery?.trackingNumber || "N/A"}</span></p>
+                </div>
+            </div>
+
+            {/* Route */}
+            <div className="border border-slate-100 rounded-xl p-4 bg-white shadow-sm">
+                <h3 className="font-bold text-sm text-slate-800 mb-4 flex items-center gap-2"><MapPin size={16} className="text-slate-500"/> Route Details</h3>
+                <div className="relative pl-6 border-l-2 border-slate-200 space-y-6">
+                    <div className="relative">
+                        <div className="absolute -left-[31px] bg-white p-1 rounded-full border border-slate-100"><Store size={14} className="text-slate-400" /></div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Pickup (Store)</p>
+                        <p className="text-sm font-bold text-slate-800">{store?.name || "N/A"}</p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{store?.address || "No address provided"}</p>
+                    </div>
+                    <div className="relative">
+                        <div className="absolute -left-[31px] bg-white p-1 rounded-full border border-slate-100"><MapPin size={14} className="text-slate-600" /></div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Dropoff (Customer)</p>
+                        <p className="text-sm font-bold text-slate-800">{customer?.name || "N/A"}</p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">{delivery?.shippingAddress || "No address provided"}</p>
+                    </div>
+                </div>
+            </div>
+         </div>
+
+         <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 shrink-0 flex justify-end">
+            <button onClick={onClose} className="w-full sm:w-auto px-6 py-2.5 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-colors shadow-md">Close</button>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+
+// =====================================
 // BONUS DETAILS MODAL
+// =====================================
 const BonusDetailsModal = ({ bonus, onClose }) => {
   if (!bonus) return null;
   return (
@@ -53,13 +139,15 @@ const BonusDetailsModal = ({ bonus, onClose }) => {
   );
 };
 
-// GOAL DETAILS MODAL COMPONENT
+// =====================================
+// GOAL DETAILS MODAL
+// =====================================
 const GoalDetailsModal = ({ goalId, onClose }) => {
   const [goal, setGoal] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!goalId || goalId === "BONUS") return; 
+    if (!goalId || goalId === "BONUS" || goalId.length < 15) return; // Prevent rider payout IDs from calling Goal API
     const fetchDetails = async () => {
       try {
         setLoading(true);
@@ -72,7 +160,7 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
     fetchDetails();
   }, [goalId]);
 
-  if (!goalId || goalId === "BONUS") return null; 
+  if (!goalId || goalId === "BONUS" || goalId.length < 15) return null; 
   if (loading) return <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"><Loader2 className="animate-spin text-white w-10 h-10" /></div>;
   if (!goal) return null; 
 
@@ -130,6 +218,7 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
   );
 };
 
+
 export default function AdminEscrowPage() {
   const [data, setData] = useState(null); 
   const [loading, setLoading] = useState(true); 
@@ -143,6 +232,7 @@ export default function AdminEscrowPage() {
   
   const [selectedGoalId, setSelectedGoalId] = useState(null); 
   const [selectedBonus, setSelectedBonus] = useState(null); 
+  const [selectedRiderPayout, setSelectedRiderPayout] = useState(null); 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); 
 
   const fetchData = async () => {
@@ -158,11 +248,19 @@ export default function AdminEscrowPage() {
 
   useEffect(() => { fetchData(); }, [page, filter]);
 
+  const handleRefresh = () => {
+    setSearchTerm("");
+    setFilter("ALL");
+    setSortOrder("NEWEST");
+    setPage(1);
+    fetchData();
+  };
+
   const handleProcess = async (itemId, actionType, sourceTable) => {
     let confirmMsg = "";
     if (actionType === 'RELEASE') confirmMsg = "Release funds to Store (5% fee)?";
     else if (actionType === 'REFUND') confirmMsg = "Refund funds to User (20% penalty)?";
-    else if (actionType === 'RELEASE_RIDER') confirmMsg = "Approve Rider Withdrawal Request?";
+    else if (actionType === 'RELEASE_RIDER') confirmMsg = "Approve Earnings for Rider Wallet?";
 
     if (!confirm(confirmMsg)) return;
     
@@ -179,7 +277,6 @@ export default function AdminEscrowPage() {
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); toast.success("Copied"); };
 
-  // ✅ SAFE SEARCH FUNCTION (Prevents undefined crashes)
   const matchesSearch = (item) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -288,6 +385,7 @@ export default function AdminEscrowPage() {
       {/* RENDER MODALS */}
       {selectedGoalId && selectedGoalId !== "BONUS" && <GoalDetailsModal goalId={selectedGoalId} onClose={() => setSelectedGoalId(null)} />}
       <BonusDetailsModal bonus={selectedBonus} onClose={() => setSelectedBonus(null)} />
+      <RiderPayoutModal payout={selectedRiderPayout} onClose={() => setSelectedRiderPayout(null)} />
 
       <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         
@@ -298,7 +396,14 @@ export default function AdminEscrowPage() {
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input type="text" placeholder="Search ID, Amount, Status..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg sm:rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm text-sm transition-shadow" />
              </div>
-             <button onClick={fetchData} className="p-2 sm:p-2.5 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 shadow-sm transition-colors text-gray-600 shrink-0"><RefreshCw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} /></button>
+             <button 
+               onClick={handleRefresh} 
+               disabled={loading}
+               className="p-2 sm:p-2.5 bg-white border border-gray-300 rounded-lg sm:rounded-xl hover:bg-gray-50 shadow-sm transition-colors text-gray-600 shrink-0"
+               title="Reset search and refresh"
+             >
+               <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+             </button>
           </div>
         </div>
 
@@ -358,7 +463,7 @@ export default function AdminEscrowPage() {
 
             {/* PENDING RIDER PAYOUTS SECTION */}
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-4 sm:p-6 border-b bg-blue-50/50"><h2 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Car className="text-blue-600 w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> Rider Withdrawals</h2></div>
+                <div className="p-4 sm:p-6 border-b bg-blue-50/50"><h2 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2"><Car className="text-blue-600 w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> Pending Rider Payouts</h2></div>
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-sm text-left min-w-[600px]">
                         <thead className="bg-gray-50 text-gray-500 uppercase font-bold text-[9px] sm:text-[10px] tracking-wider">
@@ -367,7 +472,7 @@ export default function AdminEscrowPage() {
                         <tbody className="divide-y divide-gray-100">
                             {pendingRiderPayouts.length === 0 ? <tr><td colSpan="5" className="px-4 sm:px-6 py-10 sm:py-12 text-center text-gray-400 text-xs sm:text-sm">No pending rider payouts matching search.</td></tr> : pendingRiderPayouts.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-mono text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">{item.id.slice(-8).toUpperCase()}</td>
+                                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-mono text-[10px] sm:text-xs text-blue-600 cursor-pointer hover:underline whitespace-nowrap" onClick={() => setSelectedRiderPayout(item.raw)}>{item.id.slice(-8).toUpperCase()}</td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-xs sm:text-sm text-blue-700 whitespace-nowrap">{item.customerName}</td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4 text-gray-600 text-xs sm:text-sm max-w-[150px] sm:max-w-[200px] truncate" title={item.productName}>{item.productName}</td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-green-600 font-mono text-sm sm:text-base whitespace-nowrap">Rs {item.amount.toLocaleString()}</td>
@@ -449,11 +554,15 @@ export default function AdminEscrowPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {historyData.map((h) => (
-                      <tr key={h.id} className="hover:bg-gray-50 cursor-pointer group transition-colors" onClick={() => h.status === 'EXTRA_PAYMENT' ? setSelectedBonus(h) : setSelectedGoalId(h.goalId)}>
+                      <tr key={h.id} className="hover:bg-gray-50 cursor-pointer group transition-colors" onClick={() => {
+                          if (h.type === 'EXTRA_PAYMENT') setSelectedBonus(h);
+                          else if (h.type === 'RIDER_PAYOUT') setSelectedRiderPayout(h.raw);
+                          else setSelectedGoalId(h.goalId);
+                      }}>
                         <td className="px-4 sm:px-6 py-3 sm:py-4 font-mono text-[10px] sm:text-xs text-blue-600 group-hover:underline whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                                {h.goalId === "BONUS" ? h.id.slice(-8).toUpperCase() : h.goalId ? h.goalId.slice(0, 8) + '...' : 'N/A'}
-                                {h.goalId !== "BONUS" && <button onClick={(e) => { e.stopPropagation(); copyToClipboard(h.goalId); }} className="p-1 hover:bg-blue-100 rounded transition-colors"><Copy size={12} /></button>}
+                                {h.goalId === "BONUS" ? h.id.slice(-8).toUpperCase() : h.type === "RIDER_PAYOUT" ? h.id.slice(-8).toUpperCase() : h.goalId ? h.goalId.slice(0, 8) + '...' : 'N/A'}
+                                {h.goalId !== "BONUS" && h.type !== "RIDER_PAYOUT" && <button onClick={(e) => { e.stopPropagation(); copyToClipboard(h.goalId); }} className="p-1 hover:bg-blue-100 rounded transition-colors"><Copy size={12} /></button>}
                             </div>
                         </td>
                         <td className="px-4 sm:px-6 py-3 sm:py-4 text-gray-500 font-medium text-[10px] sm:text-xs whitespace-nowrap">{new Date(h.date).toLocaleDateString('en-GB')}</td>
@@ -462,11 +571,12 @@ export default function AdminEscrowPage() {
                             {h.status === 'REFUNDED' && <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] uppercase font-bold bg-red-100 text-red-700 flex items-center gap-1 w-fit border border-red-200 shadow-sm"><ShieldAlert size={10} className="sm:w-3 sm:h-3"/> Cancelled</span>}
                             {h.status === 'HELD' && <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] uppercase font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 shadow-sm w-fit">Pending</span>}
                             {h.status === 'EXTRA_PAYMENT' && <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] uppercase font-bold bg-indigo-100 text-indigo-700 flex items-center gap-1 w-fit border border-indigo-200 shadow-sm"><Gift size={10} className="sm:w-3 sm:h-3"/> Bonus</span>}
+                            {h.type === 'RIDER_PAYOUT' && <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] uppercase font-bold bg-blue-100 text-blue-700 flex items-center gap-1 w-fit border border-blue-200 shadow-sm"><Car size={10} className="sm:w-3 sm:h-3"/> Rider Paid</span>}
                         </td>
                         <td className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-xs sm:text-sm text-slate-800 max-w-[150px] sm:max-w-[200px] truncate" title={h.productName}>{h.productName}</td>
                         <td className="px-4 sm:px-6 py-3 sm:py-4 font-mono font-bold text-xs sm:text-sm text-gray-800 whitespace-nowrap">Rs {h.amount.toLocaleString()}</td>
                         <td className="px-4 sm:px-6 py-3 sm:py-4 text-gray-600 font-mono text-[10px] sm:text-xs whitespace-nowrap">
-                            {h.status === 'HELD' || h.status === 'EXTRA_PAYMENT' ? '-' : <span className="font-bold text-green-600">+ Rs {h.platformFee.toLocaleString()}</span>}
+                            {h.status === 'HELD' || h.status === 'EXTRA_PAYMENT' || h.type === 'RIDER_PAYOUT' ? '-' : <span className="font-bold text-green-600">+ Rs {h.platformFee.toLocaleString()}</span>}
                             {h.status === 'REFUNDED' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">(10% Fee)</span>}
                             {h.status === 'RELEASED' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">(5% Fee)</span>}
                         </td>
@@ -475,6 +585,7 @@ export default function AdminEscrowPage() {
                             {h.status === 'REFUNDED' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">(80% User Refund)</span>}
                             {h.status === 'RELEASED' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">(95% Store)</span>}
                             {h.status === 'EXTRA_PAYMENT' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">To {h.storeName}</span>}
+                            {h.type === 'RIDER_PAYOUT' && <span className="text-[9px] sm:text-[10px] text-gray-400 block font-sans">To Rider</span>}
                         </td>
                       </tr>
                     ))}

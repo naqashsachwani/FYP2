@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { format } from "date-fns" 
 import toast from "react-hot-toast" 
-import { Loader2, Trash2 } from "lucide-react" 
+import { Loader2, Trash2, RefreshCcw } from "lucide-react" 
 import { useAuth } from "@clerk/nextjs" 
 import axios from "axios" 
 
@@ -14,6 +14,7 @@ export default function AdminCoupons() {
   // --- Local State Management ---
   const [coupons, setCoupons] = useState([]) // Stores the list of existing coupons
   const [isSubmitting, setIsSubmitting] = useState(false) // Tracks form submission status
+  const [isLoading, setIsLoading] = useState(true)
 
   // Initial state for the creation form
   const [newCoupon, setNewCoupon] = useState({
@@ -30,6 +31,7 @@ export default function AdminCoupons() {
   // --- API: Fetching Data ---
   // Retrieves the current list of coupons from the backend
   const fetchCoupons = async () => {
+    setIsLoading(true)
     try {
       const token = await getToken()
       const { data } = await axios.get('/api/admin/coupon', {
@@ -39,7 +41,13 @@ export default function AdminCoupons() {
     } catch (error) {
       // Handles backend-specific errors or generic network failures
       toast.error(error?.response?.data?.error || error.message)
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  const handleRefresh = () => {
+    fetchCoupons();
   }
 
   // --- API: Adding Data ---
@@ -118,11 +126,21 @@ export default function AdminCoupons() {
     <div className="min-h-[100dvh] bg-gray-50 p-4 sm:p-6 md:p-12 text-gray-700">
       <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
         
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-            DreamSaver <span className="text-indigo-600">Admin Panel</span>
-          </h1>
-          <p className="text-slate-500 mt-1 text-xs sm:text-sm">Manage promotional and discount codes.</p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              DreamSaver <span className="text-indigo-600">Admin Coupon</span>
+            </h1>
+            <p className="text-slate-500 mt-1 text-xs sm:text-sm">Manage promotional and discount codes.</p>
+          </div>
+          <button 
+            onClick={handleRefresh} 
+            disabled={isLoading}
+            className="p-2.5 sm:p-3 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600"
+            title="Refresh coupons"
+          >
+            <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${isLoading ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
         {/* SECTION: Creation Form */}

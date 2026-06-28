@@ -1,8 +1,7 @@
 "use client"; 
 
 import { useEffect, useState, useMemo } from "react";
-// ✅ FIXED: Added ChevronDown, AlertTriangle, MessageSquareWarning, and Check back to the imports
-import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock, Image as ImageIcon, ChevronLeft, ChevronRight, Banknote, Truck, Hash, Clock, ChevronDown, AlertTriangle, MessageSquareWarning, Check } from "lucide-react";
+import { Loader2, User, Store as StoreIcon, CheckCircle, XCircle, ExternalLink, DollarSign, Wallet, ShieldAlert, FileText, X, CreditCard, Search, Filter, Ticket, CalendarClock, Image as ImageIcon, ChevronLeft, ChevronRight, Banknote, Truck, Hash, Clock, ChevronDown, AlertTriangle, MessageSquareWarning, Check, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast"; 
 
 const GoalDetailsModal = ({ goalId, onClose }) => {
@@ -136,12 +135,22 @@ export default function AdminComplaintsPage() {
   const [creditAmount, setCreditAmount] = useState("");
 
   const fetchComplaints = async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/admin/complaints");
       const data = await res.json();
       setComplaints(data.complaints);
     } catch (e) { toast.error("Failed to load complaints"); }
     finally { setLoading(false); }
+  };
+
+  const handleRefresh = () => {
+    setSearchTerm("");
+    setStatusFilter("ALL");
+    setTypeFilter("ALL");
+    setFilerFilter("ALL");
+    setCurrentPage(1);
+    fetchComplaints();
   };
 
   useEffect(() => { fetchComplaints(); }, []);
@@ -238,7 +247,7 @@ export default function AdminComplaintsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredComplaints.length / ITEMS_PER_PAGE));
   const currentComplaints = filteredComplaints.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && complaints.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 sm:p-6 lg:p-12 bg-slate-50 min-h-[100dvh] relative">
@@ -260,8 +269,8 @@ export default function AdminComplaintsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row gap-3 sm:gap-4">
-            <div className="relative flex-1">
+        <div className="bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row gap-3 sm:gap-4 items-center">
+            <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-[18px] sm:h-[18px]" />
               <input 
                 type="text" 
@@ -273,7 +282,7 @@ export default function AdminComplaintsPage() {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full lg:w-auto">
-              <div className="relative flex-1 sm:w-36 md:w-40">
+              <div className="relative flex-1 sm:w-32 md:w-36">
                 <Filter className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full pl-8 sm:pl-9 pr-8 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700 transition-shadow cursor-pointer">
                   <option value="ALL">All Statuses</option>
@@ -283,7 +292,7 @@ export default function AdminComplaintsPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="relative flex-1 sm:w-36 md:w-40">
+              <div className="relative flex-1 sm:w-32 md:w-36">
                 <Filter className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-full pl-8 sm:pl-9 pr-8 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700 transition-shadow cursor-pointer">
                   <option value="ALL">All Types</option>
@@ -299,7 +308,7 @@ export default function AdminComplaintsPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <div className="relative flex-1 sm:w-36 md:w-40">
+              <div className="relative flex-1 sm:w-32 md:w-36">
                 <Filter className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <select value={filerFilter} onChange={(e) => setFilerFilter(e.target.value)} className="w-full pl-8 sm:pl-9 pr-8 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none font-medium text-slate-700 transition-shadow cursor-pointer">
                   <option value="ALL">Filed By (All)</option>
@@ -309,6 +318,14 @@ export default function AdminComplaintsPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
+              <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset filters and refresh"
+              >
+                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+              </button>
             </div>
         </div>
 
@@ -318,9 +335,6 @@ export default function AdminComplaintsPage() {
                 <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-slate-200 mx-auto mb-3 sm:mb-4" />
                 <h3 className="text-base sm:text-lg font-bold text-slate-700">No Complaints Found</h3>
                 <p className="text-slate-500 text-xs sm:text-sm mt-1">Try adjusting your filters or search term.</p>
-                {(searchTerm || statusFilter !== "ALL" || typeFilter !== "ALL" || filerFilter !== "ALL") && (
-                  <button onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); setTypeFilter("ALL"); setFilerFilter("ALL"); }} className="mt-4 sm:mt-5 text-blue-600 hover:underline text-xs sm:text-sm font-medium">Clear all filters</button>
-                )}
              </div>
           ) : (
              <>

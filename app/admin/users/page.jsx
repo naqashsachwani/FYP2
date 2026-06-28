@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react" 
 import toast from "react-hot-toast" 
-import { Loader2, UserX, Users, ShieldAlert, ShieldCheck } from "lucide-react" 
+import { Loader2, UserX, Users, ShieldAlert, ShieldCheck, RefreshCw } from "lucide-react" 
 import { useAuth } from "@clerk/nextjs" 
 import axios from "axios" 
 
@@ -31,6 +31,12 @@ export default function AdminUsers() {
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  // --- REFRESH HANDLER ---
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchUsers();
+  }
 
   // --- TOGGLE ENABLE/DISABLE ---
   // Reverses a user's active status 
@@ -87,9 +93,18 @@ export default function AdminUsers() {
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         
         {/* Page Header */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-            <Users className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Manage <span className="text-blue-600">Users</span></h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+                <Users className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Manage <span className="text-blue-600">Users</span></h1>
+            </div>
+            <button 
+                onClick={handleRefresh} 
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all text-sm font-bold w-fit"
+                title="Refresh Users"
+            >
+                <RefreshCw className="w-4 h-4" /> 
+            </button>
         </div>
 
         {/* Users Table Container */}

@@ -23,10 +23,11 @@ export async function GET(req) {
     let earnings = 0;
     let withdrawals = 0;
 
+    // ✅ FIXED: Both Earnings and Withdrawals use "TRANSFERRED" as their success state
     payouts.forEach((p) => {
-      if (p.type === 'EARNING') {
+      if (p.type === 'EARNING' && p.status === 'TRANSFERRED') {
         earnings += p.amount;
-      } else if (p.type === 'WITHDRAWAL') {
+      } else if (p.type === 'WITHDRAWAL' && p.status === 'TRANSFERRED') {
         withdrawals += p.amount;
       }
     });
@@ -67,10 +68,11 @@ export async function POST(req) {
     let earnings = 0;
     let withdrawals = 0;
 
+    // ✅ FIXED: Using "TRANSFERRED" for the balance check calculations
     payouts.forEach((p) => {
-      if (p.type === 'EARNING') {
+      if (p.type === 'EARNING' && p.status === 'TRANSFERRED') {
         earnings += p.amount;
-      } else if (p.type === 'WITHDRAWAL') {
+      } else if (p.type === 'WITHDRAWAL' && p.status === 'TRANSFERRED') {
         withdrawals += p.amount;
       }
     });
@@ -82,12 +84,13 @@ export async function POST(req) {
     }
 
     await prisma.$transaction(async (tx) => {
+      // ✅ FIXED: Status changed from "COMPLETED" to "TRANSFERRED"
       await tx.riderPayout.create({
         data: {
           riderId: riderId,
           amount: withdrawAmount,
           type: "WITHDRAWAL",
-          status: "PENDING",
+          status: "TRANSFERRED",
           description: `Bank Transfer to ${accountName} (${accountNumber.slice(-4)})`
         }
       });
@@ -102,8 +105,8 @@ export async function POST(req) {
       await sendNotification({
         userId: userId,
         email: userRecord.email,
-        title: "Withdrawal Requested 💸",
-        message: `Your request to withdraw Rs ${withdrawAmount.toLocaleString()} to account ending in ${accountNumber.slice(-4)} has been successfully submitted. It is currently pending processing.`,
+        title: "Funds Withdrawn Successfully 💸",
+        message: `You have successfully withdrawn Rs ${withdrawAmount.toLocaleString()} to account ending in ${accountNumber.slice(-4)}. The funds will reflect in your bank account shortly.`,
         type: "SYSTEM_ALERT",
         notifyInApp: true,
         notifyEmail: true

@@ -101,25 +101,18 @@ export async function POST(req, { params }) {
       });
 
       if (!existingPayout) {
-          // ✅ CREATED AS AN "EARNING" SO WALLET API CAN READ IT
+          // ✅ CREATED AS PENDING EARNING (Needs Admin Approval before hitting wallet)
           await prisma.riderPayout.create({
             data: { 
                 riderId, 
                 deliveryId: id, 
                 amount: payoutAmount,
                 type: 'EARNING',
-                status: 'TRANSFERRED', 
+                status: 'PENDING', 
                 description: `Delivery Payout for ${delivery.trackingNumber || id.slice(-6)}`
             }
           });
-          
-          await prisma.riderProfile.update({
-             where: { id: riderId },
-             data: { 
-                 totalEarnings: { increment: payoutAmount },
-                 walletBalance: { increment: payoutAmount }
-             }
-          });
+          // Note: We no longer update the walletBalance here. Admin approval does that.
       }
 
       const updated = await prisma.delivery.update({

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Wallet, ArrowDownLeft, ArrowUpRight, History, X, Building, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Loader2, Wallet, ArrowDownLeft, ArrowUpRight, History, X, Building, ChevronLeft, ChevronRight, Clock, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function RiderWalletPage() {
@@ -18,16 +18,22 @@ export default function RiderWalletPage() {
   const [accountName, setAccountName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
 
-  const fetchWallet = async () => {
+  const fetchWallet = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/rider/wallet"); 
       if (!res.ok) throw new Error("Failed to fetch wallet");
       setWalletData(await res.json());
     } catch (error) { toast.error("Could not load wallet data"); } 
     finally { setLoading(false); }
+  }, []);
+
+  const handleRefresh = () => {
+    setCurrentPage(1);
+    fetchWallet();
   };
 
-  useEffect(() => { fetchWallet(); }, []);
+  useEffect(() => { fetchWallet(); }, [fetchWallet]);
 
   const handleWithdraw = async (e) => {
     e.preventDefault(); 
@@ -36,7 +42,7 @@ export default function RiderWalletPage() {
     if (amountNum < 500) return toast.error("Minimum withdrawal amount is Rs 500");
 
     setIsProcessing(true);
-    const toastId = toast.loading("Submitting withdrawal request...");
+    const toastId = toast.loading("Processing withdrawal...");
 
     try {
       const res = await fetch("/api/rider/wallet", {
@@ -46,7 +52,8 @@ export default function RiderWalletPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      toast.success("Request submitted! Funds will be transferred shortly.", { id: toastId });
+      // ✅ Updated Toast
+      toast.success("Funds withdrawn successfully!", { id: toastId });
       setIsWithdrawModalOpen(false);
       setWithdrawAmount(""); setAccountName(""); setAccountNumber("");
       setCurrentPage(1); fetchWallet(); 
@@ -54,26 +61,34 @@ export default function RiderWalletPage() {
     finally { setIsProcessing(false); }
   };
 
-  const totalPages = Math.ceil(walletData.transactions.length / TRANSACTIONS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(walletData.transactions.length / TRANSACTIONS_PER_PAGE));
   const currentTransactions = walletData.transactions.slice((currentPage - 1) * TRANSACTIONS_PER_PAGE, currentPage * TRANSACTIONS_PER_PAGE);
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && walletData.transactions.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6 sm:space-y-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2 sm:gap-3">
-            <Wallet className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8 shrink-0" /> My Earnings Wallet
-          </h1>
-          <p className="text-slate-500 mt-1.5 text-sm sm:text-base">Manage your delivery payouts and withdraw to your bank.</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2 sm:gap-3">
+              <Wallet className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8 shrink-0" /> My Earnings Wallet
+            </h1>
+            <p className="text-slate-500 mt-1.5 text-sm sm:text-base">Manage your delivery payouts and withdraw to your bank.</p>
+          </div>
+          <button 
+              onClick={handleRefresh} 
+              disabled={loading}
+              className="p-2 sm:p-2.5 border border-slate-200 bg-white rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0 mt-1"
+              title="Refresh wallet"
+          >
+              <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
-        {/* ✅ LIGHT BLUE WALLET THEME */}
         <div className="bg-blue-50 text-blue-900 p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-blue-200 relative overflow-hidden flex flex-col justify-between">
           <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-20 pointer-events-none"><Wallet size={120} className="text-blue-400 w-20 h-20 sm:w-28 sm:h-28 lg:w-[120px] lg:h-[120px]" /></div>
           <div className="relative z-10">
             <p className="text-blue-500 font-bold uppercase tracking-wider text-xs sm:text-sm mb-1.5 sm:mb-2">Available Balance</p>
-            {/* ✅ Fixed Truncation: Kept on one line for better UI */}
             <h2 className="text-3xl sm:text-5xl md:text-6xl font-black font-mono tracking-tighter text-blue-900 whitespace-nowrap overflow-hidden text-ellipsis w-[85%] sm:w-full">
                 Rs {Number(walletData.balance).toLocaleString()}
             </h2>
@@ -102,17 +117,21 @@ export default function RiderWalletPage() {
             <>
               <div className="space-y-3 sm:space-y-4">
                 {currentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 hover:bg-slate-50 rounded-xl sm:rounded-2xl transition border border-transparent hover:border-slate-100 gap-3 sm:gap-0">
+                  <div key={tx.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl transition border border-transparent gap-3 sm:gap-0 ${tx.status === 'PENDING' ? 'bg-orange-50/50 border-orange-100' : 'hover:bg-slate-50 hover:border-slate-100'}`}>
                     <div className="flex items-start sm:items-center gap-3 sm:gap-4">
-                      <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${tx.type === 'EARNING' ? 'bg-blue-100 text-blue-600' : 'bg-orange-100 text-orange-600'}`}>
+                      <div className={`p-2 sm:p-3 rounded-xl shrink-0 ${tx.type === 'EARNING' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
                         {tx.type === 'EARNING' ? <ArrowDownLeft size={20} className="w-4 h-4 sm:w-5 sm:h-5"/> : <ArrowUpRight size={20} className="w-4 h-4 sm:w-5 sm:h-5"/>}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 text-sm sm:text-base leading-snug">{tx.description || "Wallet Update"}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="font-bold text-slate-900 text-sm sm:text-base leading-snug">{tx.description || "Wallet Update"}</p>
+                            {/* ✅ PENDING EARNING BADGE */}
+                            {tx.status === 'PENDING' && <span className="bg-orange-100 text-orange-700 text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><Clock size={10}/> Admin Approval Pending</span>}
+                        </div>
                         <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">{new Date(tx.createdAt).toLocaleDateString()} - {new Date(tx.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                       </div>
                     </div>
-                    <div className={`text-base sm:text-lg lg:text-xl font-black font-mono self-end sm:self-auto ${tx.type === 'EARNING' ? 'text-blue-600' : 'text-slate-900'}`}>
+                    <div className={`text-base sm:text-lg lg:text-xl font-black font-mono self-end sm:self-auto ${tx.status === 'PENDING' ? 'text-orange-500 opacity-60' : tx.type === 'EARNING' ? 'text-blue-600' : 'text-slate-900'}`}>
                       {tx.type === 'EARNING' ? '+' : '-'}Rs {Number(tx.amount).toLocaleString()}
                     </div>
                   </div>
@@ -150,15 +169,15 @@ export default function RiderWalletPage() {
                   <input type="number" required min="500" max={Number(walletData.balance)} value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="e.g. 1500" className="w-full border border-slate-300 p-2.5 sm:p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm shadow-sm transition-shadow" />
                 </div>
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Transfer Method</label>
+                  <label className="block text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Transfer Method</label>
                   <div className="w-full border border-slate-200 bg-slate-50 text-slate-500 p-2.5 sm:p-3 rounded-xl text-sm font-bold cursor-not-allowed">Bank Transfer</div>
                 </div>
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Account Title / Name</label>
+                  <label className="block text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Account Title / Name</label>
                   <input type="text" required value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="e.g. John Doe" className="w-full border border-slate-300 p-2.5 sm:p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-sm transition-shadow" />
                 </div>
                 <div>
-                  <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Account Number / IBAN</label>
+                  <label className="block text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-1.5">Account Number / IBAN</label>
                   <input type="text" required value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="e.g. PK32 HABB 0000 1234 5678 90" className="w-full border border-slate-300 p-2.5 sm:p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm shadow-sm transition-shadow" />
                 </div>
                 <div className="pt-2 sm:pt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">

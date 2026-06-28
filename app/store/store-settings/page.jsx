@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from "react" 
+import { useState, useEffect, useCallback } from "react" 
 import { useAuth } from "@clerk/nextjs" 
 import axios from "axios" 
 import toast from "react-hot-toast" 
-import { MapPin, Save, Crosshair, Store, Search, Loader2 } from "lucide-react" 
+import { MapPin, Save, Crosshair, Store, Search, Loader2, RefreshCcw } from "lucide-react" 
 import Loading from "@/components/Loading" 
 import dynamic from 'next/dynamic' 
 
@@ -29,31 +29,37 @@ export default function StoreSettings() {
     })
 
     // 1. Fetch Existing Settings
-    useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const token = await getToken()
-                const { data } = await axios.get('/api/store/settings', {
-                    headers: { Authorization: `Bearer ${token}` }
+    const fetchSettings = useCallback(async () => {
+        setLoading(true)
+        try {
+            const token = await getToken()
+            const { data } = await axios.get('/api/store/settings', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            if (data.store) {
+                setFormData({
+                    address: data.store.address || "",
+                    city: data.store.city || "Karachi",
+                    zip: data.store.zip || "",
+                    latitude: data.store.latitude !== null ? data.store.latitude : "",
+                    longitude: data.store.longitude !== null ? data.store.longitude : ""
                 })
-                if (data.store) {
-                    setFormData({
-                        address: data.store.address || "",
-                        city: data.store.city || "Karachi",
-                        zip: data.store.zip || "",
-                        latitude: data.store.latitude !== null ? data.store.latitude : "",
-                        longitude: data.store.longitude !== null ? data.store.longitude : ""
-                    })
-                }
-            } catch (error) {
-                console.error(error)
-                toast.error("Could not load settings")
-            } finally {
-                setLoading(false)
             }
+        } catch (error) {
+            console.error(error)
+            toast.error("Could not load settings")
+        } finally {
+            setLoading(false)
         }
+    }, [getToken])
+
+    useEffect(() => {
         fetchSettings()
-    }, [getToken]) 
+    }, [fetchSettings]) 
+
+    const handleRefresh = () => {
+        fetchSettings()
+    }
     
     // Convert formData strings back into the object format {lat, lng} required by the LocationPicker component
     const mapPosition = formData.latitude && formData.longitude 
@@ -173,13 +179,23 @@ export default function StoreSettings() {
             <div className="max-w-3xl mx-auto">
                 
                 {/* Header Section */}
-                <div className="mb-6 sm:mb-8">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
-                        <Store className="text-blue-600 shrink-0 w-6 h-6 sm:w-8 sm:h-8"/> Store Settings
-                    </h1>
-                    <p className="text-slate-500 mt-1.5 sm:mt-2 text-sm sm:text-base">
-                        Set your store's pickup location. This is where the delivery line will start on the map.
-                    </p>
+                <div className="mb-6 sm:mb-8 flex justify-between items-start">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                            <Store className="text-blue-600 shrink-0 w-6 h-6 sm:w-8 sm:h-8"/> Store Settings
+                        </h1>
+                        <p className="text-slate-500 mt-1.5 sm:mt-2 text-sm sm:text-base">
+                            Set your store's pickup location. This is where the delivery line will start on the map.
+                        </p>
+                    </div>
+                    <button 
+                        onClick={handleRefresh}
+                        disabled={loading}
+                        className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 mt-1 shrink-0"
+                        title="Reset settings form"
+                    >
+                        <RefreshCcw size={18} className="sm:w-5 sm:h-5" />
+                    </button>
                 </div>
 
                 {/* Main Settings Form Card */}

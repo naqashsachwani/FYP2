@@ -14,7 +14,6 @@ import {
   XCircle,
   CheckCircle,
   Download,
-  RotateCcw,
   Bike,
   Loader2
 } from "lucide-react"
@@ -103,6 +102,10 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleRefresh = () => {
+    fetchDashboardData();
   }
 
   useEffect(() => {
@@ -227,8 +230,13 @@ export default function AdminDashboard() {
             <p className="text-slate-500 text-xs sm:text-sm lg:text-base">System overview and financial performance.</p>
           </div>
           <div className="flex flex-row items-center gap-2 sm:gap-3 w-full md:w-auto">
-            <button onClick={fetchDashboardData} disabled={loading} className={`p-2.5 sm:p-2.5 rounded-full border shadow-sm transition-all shrink-0 ${loading ? "bg-gray-100" : "bg-white hover:bg-gray-50"}`}>
-                <RotateCcw size={18} className={`text-slate-600 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+            <button 
+                onClick={handleRefresh} 
+                disabled={loading} 
+                className={`p-2.5 sm:p-2.5 rounded-full border shadow-sm transition-all shrink-0 ${loading ? "bg-gray-100" : "bg-white hover:bg-gray-50"}`}
+                title="Refresh dashboard"
+            >
+                <RefreshCcw size={18} className={`text-slate-600 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
             </button>
             <button onClick={GenerateReport} disabled={reportLoading} className="w-full md:w-auto flex justify-center items-center gap-2 bg-slate-900 text-white px-4 py-2.5 sm:py-2.5 rounded-full shadow-lg hover:bg-slate-800 transition-all disabled:opacity-70">
                 {reportLoading ? <Loader2 size={16} className="animate-spin sm:w-4 sm:h-4" /> : <Download size={16} className="sm:w-4 sm:h-4" />}
@@ -247,7 +255,6 @@ export default function AdminDashboard() {
                 </div>
                 <div className="space-y-0.5 sm:space-y-1 w-full text-right sm:text-left min-w-0">
                   <p className="text-slate-500 text-[10px] sm:text-xs lg:text-sm font-bold uppercase tracking-wider">{card.title}</p>
-                  {/* ✅ FIXED: Removed truncate, added break-words and whitespace-normal so large amounts never hide */}
                   <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tighter break-words whitespace-normal leading-tight">{card.value}</h3>
                 </div>
               </div>
@@ -266,7 +273,6 @@ export default function AdminDashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-slate-500 text-xs sm:text-sm font-medium uppercase tracking-wider">{card.title}</p>
-                    {/* ✅ FIXED: Removed truncate here as well just in case */}
                     <h3 className="text-xl sm:text-2xl font-bold text-slate-900 break-words whitespace-normal leading-tight">{card.value}</h3>
                   </div>
                 </div>

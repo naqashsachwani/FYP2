@@ -17,7 +17,8 @@ import {
   Save, 
   CheckCircle2, 
   AlertCircle,
-  Trash2 
+  Trash2,
+  RefreshCw 
 } from "lucide-react"
 
 export default function AdminStores() {
@@ -52,6 +53,15 @@ export default function AdminStores() {
             toast.error(error?.response?.data?.error || error.message)
         }
         setLoading(false) // Turn off the spinner regardless of success or failure
+    }
+
+    // --- REFRESH HANDLER ---
+    const handleRefresh = () => {
+        setSearchTerm("")
+        setDebouncedSearch("")
+        setStatusFilter("all")
+        setLoading(true)
+        fetchStores()
     }
 
     // Opens the Edit Modal and pre-fills the form state with the existing store data.
@@ -228,6 +238,14 @@ export default function AdminStores() {
                         <span className="hidden md:block text-sm font-medium text-slate-500 whitespace-nowrap">
                             {filteredStores.length} Result{filteredStores.length !== 1 && 's'}
                         </span>
+                        {/* REFRESH BUTTON */}
+                        <button 
+                            onClick={handleRefresh} 
+                            className="px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all flex items-center justify-center" 
+                            title="Refresh & Reset Filters"
+                        >
+                            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
+                        </button>
                     </div>
                 </div>
             </div>

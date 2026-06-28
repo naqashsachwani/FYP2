@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Loader2, AlertCircle, PlusCircle, CheckCircle, MessageSquareWarning, X, Package, ShieldAlert, Lock, Clock, User, Truck, ChevronDown, Check, Hash, ChevronLeft, ChevronRight, Filter } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { Loader2, AlertCircle, PlusCircle, CheckCircle, MessageSquareWarning, X, Package, ShieldAlert, Lock, Clock, User, Truck, ChevronDown, Check, Hash, ChevronLeft, ChevronRight, Filter, RefreshCcw } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "@clerk/nextjs";
 
@@ -27,7 +27,8 @@ export default function StoreRequestsPage() {
     description: ""
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/store/request");
       if (!res.ok) throw new Error("Failed to load data");
@@ -39,11 +40,17 @@ export default function StoreRequestsPage() {
     } finally {
       setLoading(false); 
     }
+  }, []);
+
+  const handleRefresh = () => {
+    setFilterStatus("ALL");
+    setCurrentPage(1);
+    fetchData();
   };
 
   useEffect(() => {
     if (isLoaded && userId) fetchData();
-  }, [isLoaded, userId]);
+  }, [isLoaded, userId, fetchData]);
 
   // Reset pagination when filter changes
   useEffect(() => { setCurrentPage(1); }, [filterStatus]);
@@ -123,7 +130,7 @@ export default function StoreRequestsPage() {
     ];
   };
 
-  if (loading || !isLoaded) {
+  if ((loading && requests.length === 0) || !isLoaded) {
     return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600 w-10 h-10" /></div>;
   }
 
@@ -149,22 +156,30 @@ export default function StoreRequestsPage() {
           </button>
         </div>
 
-        {requests.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200">
-            <div className="text-xs sm:text-sm font-medium text-slate-500 w-full sm:w-auto text-left">
-              Showing <span className="font-bold text-slate-700">{filteredRequests.length}</span> requests
-            </div>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-slate-200">
+          <div className="text-xs sm:text-sm font-medium text-slate-500 w-full sm:w-auto text-left">
+            Showing <span className="font-bold text-slate-700">{filteredRequests.length}</span> requests
+          </div>
+          <div className="flex w-full sm:w-auto gap-2">
             <div className="relative w-full sm:w-48">
-              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer">
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold text-slate-700 appearance-none outline-none cursor-pointer">
                 <option value="ALL">All Statuses</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="REJECTED">Rejected</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
             </div>
+            <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-2 sm:p-2.5 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset filters and refresh"
+            >
+                <RefreshCcw size={16} className={`sm:w-[18px] sm:h-[18px] ${loading ? "animate-spin" : ""}`} />
+            </button>
           </div>
-        )}
+        </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
           {requests.length === 0 ? (

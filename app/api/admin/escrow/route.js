@@ -38,7 +38,7 @@ export async function GET(req) {
       }),
       prisma.riderPayout.aggregate({
         _sum: { amount: true },
-        where: { status: "TRANSFERRED" }
+        where: { type: "EARNING", status: "TRANSFERRED" } 
       }),
       prisma.storePayout.aggregate({
         _sum: { amount: true },
@@ -46,7 +46,7 @@ export async function GET(req) {
       })
     ]);
 
-    // 2. Fetch Actionables Safely (Removed the broken 'delivery' relation from RiderPayout)
+    // 2. Fetch Actionables Safely
     const pendingReleases = await prisma.escrow.findMany({
       where: {
         status: "HELD",
@@ -64,10 +64,17 @@ export async function GET(req) {
       }
     });
 
-    // ✅ Safely fetches Rider Withdrawal Requests
+    // ✅ FETCHES PENDING RIDER EARNINGS WITH DEEP DELIVERY DETAILS FOR MODAL
     const pendingRiderPayouts = await prisma.riderPayout.findMany({
-      where: { status: "PENDING" },
-      include: { rider: { include: { user: true } } } 
+      where: { type: "EARNING", status: "PENDING" },
+      include: { 
+        rider: { include: { user: true } },
+        delivery: {
+            include: {
+                goal: { include: { user: true, product: { include: { store: true } } } }
+            }
+        }
+      } 
     });
 
     // 3. Fetch History
@@ -89,6 +96,19 @@ export async function GET(req) {
       manualHistory = await prisma.manualPayout.findMany({
         orderBy: { createdAt: 'desc' }
       });
+    }
+
+    // ✅ FETCH COMPLETED RIDER PAYOUTS FOR HISTORY TABLE
+    let completedRiderPayouts = [];
+    if (filter === "ALL" || filter === "HISTORY") {
+        completedRiderPayouts = await prisma.riderPayout.findMany({
+            where: { type: "EARNING", status: "TRANSFERRED" },
+            include: { 
+                rider: { include: { user: true } },
+                delivery: { include: { goal: { include: { user: true, product: { include: { store: true } } } } } }
+            },
+            orderBy: { transferredAt: 'desc' }
+        });
     }
 
     // 4. Map and Format Everything
@@ -120,7 +140,22 @@ export async function GET(req) {
       type: "MANUAL"
     }));
 
-    const combinedHistory = [...formattedEscrow, ...formattedManual].sort(
+    const formattedCompletedRiders = completedRiderPayouts.map(p => ({
+      id: p.id,
+      goalId: p.id, // Displaying Payout ID
+      amount: normalize(p.amount),
+      platformFee: 0,
+      netAmount: normalize(p.amount),
+      status: "TRANSFERRED",
+      date: p.transferredAt || p.createdAt,
+      customerName: "Rider Payout",
+      storeName: p.rider?.user?.name || "Unknown Rider",
+      productName: p.description || "Delivery Earnings",
+      type: "RIDER_PAYOUT",
+      raw: p // Passed for the modal
+    }));
+
+    const combinedHistory = [...formattedEscrow, ...formattedManual, ...formattedCompletedRiders].sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
 
@@ -139,7 +174,8 @@ export async function GET(req) {
 
     const formattedRiders = pendingRiderPayouts.map(p => ({
       id: p.id, sourceTable: "RIDER_PAYOUT", amount: normalize(p.amount), type: "RIDER_PAYOUT",
-      customerName: p.rider?.user?.name, storeName: "Rider Withdrawal", productName: p.description || "Withdrawal Request"
+      customerName: p.rider?.user?.name, storeName: "Rider Payout", productName: p.description || "Delivery Earnings",
+      raw: p // Passed for the modal
     }));
 
     const grossEarnings = normalize(earningsAgg._sum.platformFee);

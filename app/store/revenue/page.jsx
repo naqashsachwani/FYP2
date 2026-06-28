@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   Loader2, TrendingUp, Clock, AlertCircle, Search, Copy, X, CreditCard, 
-  Calendar, CheckCircle, ShieldAlert, ChevronLeft, ChevronRight, RefreshCw, 
+  Calendar, CheckCircle, ShieldAlert, ChevronLeft, ChevronRight, RefreshCcw, 
   TrendingDown, Wallet, Banknote, Gift, Building 
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -185,7 +185,7 @@ export default function StoreRevenuePage() {
   const [accountNumber, setAccountNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const fetchRevenue = async () => {
+  const fetchRevenue = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/store/revenue");
@@ -194,9 +194,20 @@ export default function StoreRevenuePage() {
       setData(jsonData);
     } catch (error) { toast.error("Could not load revenue data"); } 
     finally { setLoading(false); }
+  }, []);
+
+  const handleRefresh = () => {
+    setSearchTerm("");
+    setLedgerFilter("ALL");
+    setWithdrawFilter("ALL");
+    setBonusFilter("ALL");
+    setLedgerPage(1);
+    setWithdrawPage(1);
+    setBonusPage(1);
+    fetchRevenue();
   };
 
-  useEffect(() => { fetchRevenue(); }, []);
+  useEffect(() => { fetchRevenue(); }, [fetchRevenue]);
   useEffect(() => { setLedgerPage(1); setWithdrawPage(1); setBonusPage(1); }, [searchTerm]);
 
   const copyToClipboard = (e, text) => {
@@ -299,14 +310,21 @@ export default function StoreRevenuePage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input type="text" placeholder="Search across all records..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 pr-4 py-2 sm:py-2.5 border border-slate-200 rounded-lg sm:rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm" />
             </div>
-            <button onClick={fetchRevenue} className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"><RefreshCw size={20} className={loading ? "animate-spin w-4 h-4 sm:w-5 sm:h-5" : "w-4 h-4 sm:w-5 sm:h-5"} /></button>
+            <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset filters and refresh"
+            >
+                <RefreshCcw size={20} className={loading ? "animate-spin w-4 h-4 sm:w-5 sm:h-5" : "w-4 h-4 sm:w-5 sm:h-5"} />
+            </button>
           </div>
         </div>
 
         {/* TOP STATS CARDS */}
         {/* ✅ REMOVED break-words/truncate AND ADDED whitespace-nowrap with responsive text sizing to guarantee full single line amounts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 w-full">
-           
+            
            <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-blue-100 relative overflow-hidden flex flex-col justify-between group h-full">
             <div className="relative z-10 flex justify-between items-start gap-2">
               <div className="flex-1">

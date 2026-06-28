@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, ArrowLeft, Store, MapPin, Phone, ShieldCheck, Upload, AlertTriangle, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Store, MapPin, Phone, ShieldCheck, Upload, AlertTriangle, CheckCircle, RefreshCcw } from "lucide-react";
 
 export default function ActiveDeliveryPage() {
   const params = useParams();
@@ -18,7 +18,8 @@ export default function ActiveDeliveryPage() {
   const [showFailModal, setShowFailModal] = useState(false);
   const [failReason, setFailReason] = useState("");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch(`/api/rider/delivery/${deliveryId}`);
       if (!res.ok) throw new Error("Failed to load delivery");
@@ -30,11 +31,15 @@ export default function ActiveDeliveryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [deliveryId, router]);
 
   useEffect(() => {
     if (deliveryId) fetchData();
-  }, [deliveryId]);
+  }, [deliveryId, fetchData]);
+
+  const handleRefresh = () => {
+    fetchData();
+  };
 
   const handleSubmit = async (action) => {
     if (action === "FAIL" && !failReason.trim()) return toast.error("Please provide a reason for failure");
@@ -67,7 +72,7 @@ export default function ActiveDeliveryPage() {
     }
   };
 
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
+  if (loading && !delivery) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600 w-10 h-10" /></div>;
   if (!delivery) return null;
 
   const isDelivered = delivery.status === "DELIVERED";
@@ -89,17 +94,29 @@ export default function ActiveDeliveryPage() {
                 <ArrowLeft size={16} className="w-4 h-4" /> Back to Dashboard
             </button>
             
-            <h1 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight ${isDelivered ? 'text-emerald-600' : isFailed ? 'text-red-600' : 'text-slate-900'}`}>
-                {isDelivered ? "Delivery Complete 🎉" : isFailed ? "Delivery Failed" : "Active Delivery"}
-            </h1>
-            
-            <span className={`px-2.5 py-1 sm:py-1.5 rounded-md bg-white text-[10px] sm:text-xs font-bold font-mono shadow-sm border ${
-                isDelivered ? 'text-emerald-700 border-emerald-200' : 
-                isFailed ? 'text-red-700 border-red-200' : 
-                'text-slate-600 border-slate-200'
-            }`}>
-                {delivery.trackingNumber}
-            </span>
+            <div className="w-full flex justify-between items-start sm:items-center">
+              <div>
+                <h1 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight ${isDelivered ? 'text-emerald-600' : isFailed ? 'text-red-600' : 'text-slate-900'}`}>
+                    {isDelivered ? "Delivery Complete 🎉" : isFailed ? "Delivery Failed" : "Active Delivery"}
+                </h1>
+                
+                <span className={`px-2.5 py-1 sm:py-1.5 rounded-md bg-white text-[10px] sm:text-xs font-bold font-mono shadow-sm border mt-2 inline-block ${
+                    isDelivered ? 'text-emerald-700 border-emerald-200' : 
+                    isFailed ? 'text-red-700 border-red-200' : 
+                    'text-slate-600 border-slate-200'
+                }`}>
+                    {delivery.trackingNumber}
+                </span>
+              </div>
+              <button 
+                  onClick={handleRefresh} 
+                  disabled={loading || processing}
+                  className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                  title="Refresh status"
+              >
+                  <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
         </div>
 
         {/* PACKAGE PAYOUT CARD */}
@@ -211,14 +228,16 @@ export default function ActiveDeliveryPage() {
                             <Upload className="text-slate-500 group-hover:text-blue-600 transition-colors w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <span className="font-bold text-slate-700 group-hover:text-blue-800 transition-colors text-sm sm:text-base">Take Delivery Photo</span>
-                        <span className="text-[10px] sm:text-xs text-slate-400 mt-1 font-medium">Optional but recommended</span>
+                        {/* UPDATED: Changed text to Mandatory */}
+                        <span className="text-[10px] sm:text-xs text-red-500 mt-1 font-bold">Mandatory for completion</span>
                       </>
                     )}
                   </label>
                 </div>
 
+                {/* UPDATED: Disabled if processing OR if there is no proof file uploaded */}
                 <button 
-                  onClick={() => handleSubmit('DELIVER')} disabled={processing}
+                  onClick={() => handleSubmit('DELIVER')} disabled={processing || !proofFile}
                   className="w-full py-3.5 sm:py-4 bg-slate-900 text-white text-sm sm:text-base font-bold rounded-xl sm:rounded-2xl hover:bg-black transition flex justify-center items-center gap-2 disabled:opacity-50 shadow-xl shadow-slate-900/20 active:scale-[0.98] disabled:active:scale-100"
                 >
                   {processing ? <Loader2 className="animate-spin w-4 h-4 sm:w-5 sm:h-5" /> : "Complete Delivery"}
