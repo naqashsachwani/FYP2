@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useUser, useClerk } from "@clerk/nextjs" 
-import { CrownIcon, Menu, X, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react" 
+import { CrownIcon, MenuIcon, XIcon, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight, Truck, ShieldCheck } from "lucide-react" 
 import toast from "react-hot-toast"
 
 export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
@@ -15,6 +15,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   
+  const [showAdminBtn, setShowAdminBtn] = useState(false)
   const [showSellerBtn, setShowSellerBtn] = useState(false)
   const [showRiderBtn, setShowRiderBtn] = useState(false)
 
@@ -33,11 +34,16 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
 
     const checkRoles = async () => {
       try {
-        const [sellerRes, riderRes] = await Promise.all([
+        const [adminRes, sellerRes, riderRes] = await Promise.all([
+          fetch('/api/admin/is-admin').catch(() => null),
           fetch('/api/store/is-seller').catch(() => null),
           fetch('/api/rider/is-rider').catch(() => null)
         ]);
 
+        if (adminRes?.ok) {
+           const adminData = await adminRes.json();
+           setShowAdminBtn(adminData.isAdmin === true);
+        }
         if (sellerRes?.ok) {
            const sellerData = await sellerRes.json();
            setShowSellerBtn(!!sellerData.isSeller);
@@ -124,7 +130,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
             className="lg:hidden p-1.5 sm:p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0"
             aria-label="Toggle Sidebar" 
           >
-            {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
+            {isSidebarOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
           </button>
 
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
@@ -220,13 +226,13 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                   <div className="relative">
                     <button 
                       onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
-                      className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm hover:shadow-md hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                      className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm border border-slate-100 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
                     >
-                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-slate-200 shrink-0">
-                        <img src={user?.imageUrl} alt={user?.fullName || "Admin"} className="w-full h-full object-cover" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-blue-200 bg-white shrink-0">
+                        <img src={user?.imageUrl} alt="Profile" className="w-full h-full object-cover" />
                       </div>
                       <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
-                        <p className="text-sm font-medium text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
+                        <p className="text-sm font-bold text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
                         <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Administrator</p>
                       </div>
                     </button>
@@ -249,16 +255,15 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                               <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                             </Link>
 
-                            {/* Admin Dashboard link is explicitly removed from here because user is already on the Admin dashboard */}
+                            {/* Admin Dashboard explicitly removed from Admin Navbar */}
 
-                            {/* Admins implicitly have access to Store and Rider, so we show them unconditionally (or based on their fallback flags just to be safe) */}
-                            {(true || showSellerBtn) && (
+                            {(showAdminBtn || showSellerBtn) && (
                               <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                                 <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
                               </Link>
                             )}
 
-                            {(true || showRiderBtn) && (
+                            {(showAdminBtn || showRiderBtn) && (
                               <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                                  <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
                               </Link>
@@ -281,6 +286,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
         </div>
       </header>
 
+      {/* NOTIFICATION VIEW MODAL */}
       {selectedNotif && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -289,7 +295,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                   <Bell className="text-blue-600 shrink-0" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
-              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
+              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><XIcon size={20} /></button>
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto">

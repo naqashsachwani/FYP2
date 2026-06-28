@@ -3,7 +3,7 @@
 import { useUser, useClerk } from "@clerk/nextjs" 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Store, Trash2, ChevronLeft, ChevronRight } from "lucide-react" 
+import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Store, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react" 
 
 export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
   const { user } = useUser()
@@ -13,25 +13,25 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   
-  // Strict Role Logic
   const [showAdminBtn, setShowAdminBtn] = useState(false)
   const [showSellerBtn, setShowSellerBtn] = useState(false)
+  const [showRiderBtn, setShowRiderBtn] = useState(false)
 
-  // Notification & Pagination State
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifPage, setNotifPage] = useState(1)
   const NOTIFS_PER_PAGE = 4
-  const [selectedNotif, setSelectedNotif] = useState(null) // ✅ Added missing state
+  const [selectedNotif, setSelectedNotif] = useState(null)
 
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const checkRoles = async () => {
       try {
-        const [adminRes, sellerRes] = await Promise.all([
+        const [adminRes, sellerRes, riderRes] = await Promise.all([
           fetch('/api/admin/is-admin').catch(() => null),
-          fetch('/api/store/is-seller').catch(() => null)
+          fetch('/api/store/is-seller').catch(() => null),
+          fetch('/api/rider/is-rider').catch(() => null)
         ]);
 
         if (adminRes?.ok) {
@@ -41,6 +41,10 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
         if (sellerRes?.ok) {
            const sellerData = await sellerRes.json();
            setShowSellerBtn(!!sellerData.isSeller);
+        }
+        if (riderRes?.ok) {
+           const riderData = await riderRes.json();
+           setShowRiderBtn(riderData.isRider === true);
         }
       } catch (error) { console.error(error) }
     }
@@ -67,14 +71,12 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
     if (!isBellOpen) setNotifPage(1);
   }, [isBellOpen]);
 
-  // ✅ Added missing function to handle opening notifications
   const openNotification = (notif) => {
       if (!notif.isRead) markAsRead(notif.id);
       setSelectedNotif(notif);
       setIsBellOpen(false);
   };
 
-  // Mark single notification as read
   const markAsRead = async (id, e) => {
     if (e) e.stopPropagation();
     try {
@@ -84,7 +86,6 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
     } catch (error) { console.error(error) }
   };
 
-  // Delete a notification
   const deleteNotification = async (id, e) => {
     if (e) e.stopPropagation();
     try {
@@ -95,14 +96,12 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
         return prev.filter(n => n.id !== id);
       });
       
-      // Adjust pagination if we delete the last item on a page
       const newTotalPages = Math.max(1, Math.ceil((notifications.length - 1) / NOTIFS_PER_PAGE));
       if (notifPage > newTotalPages) setNotifPage(newTotalPages);
 
     } catch (error) { console.error(error) }
   };
 
-  // Derived Pagination Variables
   const totalNotifPages = Math.max(1, Math.ceil(notifications.length / NOTIFS_PER_PAGE));
   const currentNotifs = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
 
@@ -252,7 +251,6 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
                         <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                       </Link>
                       
-                      {/* ✅ Admin Access - Renders Admin Dashboard */}
                       {showAdminBtn && (
                         <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
                           <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
@@ -284,7 +282,6 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
       </div>
     </header>
 
-    {/* NOTIFICATION VIEW MODAL */}
     {selectedNotif && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">

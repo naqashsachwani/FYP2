@@ -3,7 +3,7 @@
 import { useUser, useClerk } from "@clerk/nextjs" 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Truck, Trash2, ChevronLeft, ChevronRight } from "lucide-react" 
+import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Truck, Store, Trash2, ChevronLeft, ChevronRight } from "lucide-react" 
 import toast from "react-hot-toast"
 
 export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
@@ -15,6 +15,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [mounted, setMounted] = useState(false)
   
   const [showAdminBtn, setShowAdminBtn] = useState(false)
+  const [showSellerBtn, setShowSellerBtn] = useState(false)
   const [showRiderBtn, setShowRiderBtn] = useState(false)
 
   const [notifications, setNotifications] = useState([])
@@ -30,14 +31,19 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
 
     const checkRoles = async () => {
       try {
-        const [adminRes, riderRes] = await Promise.all([
+        const [adminRes, sellerRes, riderRes] = await Promise.all([
           fetch('/api/admin/is-admin').catch(() => null),
+          fetch('/api/store/is-seller').catch(() => null),
           fetch('/api/rider/is-rider').catch(() => null)
         ]);
 
         if (adminRes?.ok) {
             const data = await adminRes.json();
             setShowAdminBtn(data.isAdmin === true);
+        }
+        if (sellerRes?.ok) {
+           const sellerData = await sellerRes.json();
+           setShowSellerBtn(!!sellerData.isSeller);
         }
         if (riderRes?.ok) {
            const riderData = await riderRes.json();
@@ -111,7 +117,6 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
     <>
     <header className="h-[60px] sm:h-[73px] shrink-0 flex items-center justify-between px-3 sm:px-4 lg:px-6 bg-white border-b border-slate-200 z-30 relative">
       
-      {/* Left Area: Logo */}
       <div className="flex items-center gap-2 sm:gap-4 lg:w-[240px] shrink-0">
         <button
           onClick={onToggleSidebar}
@@ -130,7 +135,6 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
         </Link>
       </div>
 
-      {/* Right Area: Notifications & Profile Pill */}
       <div className="flex items-center gap-2 sm:gap-5">
         {mounted && user && (
           <>
@@ -240,7 +244,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
                         </Link>
                       )}
 
-                      {/* Store Dashboard link is explicitly removed from here because user is already on the Store dashboard */}
+                      {/* Store Dashboard explicitly removed from Store Navbar */}
 
                       {(showAdminBtn || showRiderBtn) && (
                         <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium">

@@ -21,7 +21,7 @@ const Navbar = () => {
 
   const [mounted, setMounted] = useState(false); 
 
-  // Role & Notification States
+  // Role States
   const [showAdminBtn, setShowAdminBtn] = useState(false);
   const [showSellerBtn, setShowSellerBtn] = useState(false);
   const [showRiderBtn, setShowRiderBtn] = useState(false); 
@@ -328,12 +328,14 @@ const Navbar = () => {
                               </Link>
                             )}
 
-                            {showSellerBtn && (
+                            {/* Ensure only true Sellers or Admins see this */}
+                            {(showAdminBtn || showSellerBtn) && (
                               <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                                 <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
                               </Link>
                             )}
 
+                            {/* Ensure only true Riders or Admins see this */}
                             {(showAdminBtn || showRiderBtn) && (
                               <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                                 <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
@@ -368,7 +370,6 @@ const Navbar = () => {
                 </>
               )}
 
-              {/* Login Button for unauthenticated users */}
               {mounted && !user && (
                 <button
                   onClick={openSignIn}
@@ -378,7 +379,6 @@ const Navbar = () => {
                 </button>
               )}
 
-              {/* Mobile Toggle */}
               <button
                 onClick={() => { setIsMobileMenuOpen(!isMobileMenuOpen); setIsProfileOpen(false); setIsBellOpen(false); }}
                 className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition shadow-sm hover:shadow-md ml-0.5 sm:ml-1"
