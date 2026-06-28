@@ -15,7 +15,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [showSellerBtn, setShowSellerBtn] = useState(false)
-  const [showRiderBtn, setShowRiderBtn] = useState(false) // ✅ Added Rider State
+  const [showRiderBtn, setShowRiderBtn] = useState(false)
 
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -36,7 +36,6 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
         const sellerData = await sellerRes.json();
         setShowSellerBtn(!!sellerData.isSeller);
 
-        // ✅ Check Rider Status
         const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
         if (riderRes && riderRes.ok) {
            const riderData = await riderRes.json();
@@ -140,130 +139,133 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
           ) : (
             <>
               {user && (
-                <div className="relative">
-                  <button
-                    onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
-                    className="relative p-1.5 sm:p-2 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
-                  >
-                    <Bell className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px]" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
+                <>
+                  {/* BELL DROPDOWN WRAPPER */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
+                      className="relative p-1.5 sm:p-2 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
+                    >
+                      <Bell className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px]" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
 
-                  {isBellOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                      <div className="absolute right-[-20px] sm:right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
-                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-                          <p className="text-sm font-bold text-slate-800">Notifications</p>
-                          <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
-                        </div>
-                        
-                        <div className="max-h-[60vh] overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <p className="px-4 py-8 text-sm text-slate-500 text-center font-medium">You have no notifications.</p>
-                          ) : (
-                            currentNotifications.map(notif => (
-                              <div 
-                                key={notif.id} 
-                                onClick={() => openNotification(notif)}
-                                className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
-                              >
-                                <div className="flex justify-between items-start mb-1 gap-2">
-                                  <p className={`text-sm pr-2 line-clamp-1 w-full break-words ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
-                                      {notif.title}
-                                  </p>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                      {!notif.isRead && (
-                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-blue-600 font-bold hover:underline bg-blue-100 px-1.5 py-0.5 rounded whitespace-nowrap">
-                                          Mark Read
+                    {isBellOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
+                        <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top-right">
+                          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                            <p className="text-sm font-bold text-slate-800">Notifications</p>
+                            <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
+                          </div>
+                          
+                          <div className="max-h-[60vh] overflow-y-auto">
+                            {notifications.length === 0 ? (
+                              <p className="px-4 py-8 text-sm text-slate-500 text-center font-medium">You have no notifications.</p>
+                            ) : (
+                              currentNotifications.map(notif => (
+                                <div 
+                                  key={notif.id} 
+                                  onClick={() => openNotification(notif)}
+                                  className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-blue-50/30' : ''}`}
+                                >
+                                  <div className="flex justify-between items-start mb-1 gap-2">
+                                    <p className={`text-sm pr-2 line-clamp-1 w-full break-words ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
+                                        {notif.title}
+                                    </p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {!notif.isRead && (
+                                          <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-blue-600 font-bold hover:underline bg-blue-100 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                            Mark Read
+                                          </button>
+                                        )}
+                                        <button onClick={(e) => deleteNotification(notif.id, e)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors" title="Delete">
+                                            <Trash2 size={14} />
                                         </button>
-                                      )}
-                                      <button onClick={(e) => deleteNotification(notif.id, e)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors" title="Delete">
-                                          <Trash2 size={14} />
-                                      </button>
+                                    </div>
                                   </div>
+                                  <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
+                                  <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
+                                    {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </span>
                                 </div>
-                                <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
-                                <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
-                                  {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
+                              ))
+                            )}
+                          </div>
+
+                          {notifications.length > 0 && (
+                              <div className="p-3 border-t border-slate-100 bg-gray-50 flex items-center justify-between shrink-0">
+                                  <span className="text-xs font-semibold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
+                                  <div className="flex gap-2">
+                                      <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} disabled={notifPage === 1} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronLeft size={16} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} disabled={notifPage === totalNotifPages} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronRight size={16} /></button>
+                                  </div>
                               </div>
-                            ))
                           )}
                         </div>
+                      </>
+                    )}
+                  </div>
 
-                        {notifications.length > 0 && (
-                            <div className="p-3 border-t border-slate-100 bg-gray-50 flex items-center justify-between shrink-0">
-                                <span className="text-xs font-semibold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} disabled={notifPage === 1} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronLeft size={16} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} disabled={notifPage === totalNotifPages} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronRight size={16} /></button>
-                                </div>
-                            </div>
-                        )}
+                  {/* PROFILE DROPDOWN WRAPPER */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
+                      className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm hover:shadow-md hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                    >
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-slate-200 shrink-0">
+                        <img src={user?.imageUrl} alt={user?.fullName || "Admin"} className="w-full h-full object-cover" />
                       </div>
-                    </>
-                  )}
-                </div>
+                      <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
+                        <p className="text-sm font-medium text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
+                        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Administrator</p>
+                      </div>
+                    </button>
+
+                    {isProfileOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                        <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top-right">
+                          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 sm:hidden">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
+                            <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                          </div>
+
+                          <div className="px-2 space-y-1">
+                            <button onClick={() => { openUserProfile(); setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
+                            </button>
+
+                            <Link href="/" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
+                            </Link>
+
+                            {showSellerBtn && (
+                              <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                                <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
+                              </Link>
+                            )}
+
+                            <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                               <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
+                            </Link>
+                          </div>
+
+                          <div className="border-t border-slate-100 mt-2 pt-2 px-2">
+                            <button onClick={() => signOut({ redirectUrl: '/' })} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
+                              <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
-
-              <div className="relative">
-                <button 
-                  onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
-                  className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm hover:shadow-md hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                >
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border-2 border-slate-200 shrink-0">
-                    <img src={user?.imageUrl} alt={user?.fullName || "Admin"} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
-                    <p className="text-sm font-medium text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Administrator</p>
-                  </div>
-                </button>
-
-                {isProfileOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                    <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
-                      <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 sm:hidden">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
-                        <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-                      </div>
-
-                      <div className="px-2 space-y-1">
-                        <button onClick={() => { openUserProfile(); setIsProfileOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                          <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
-                        </button>
-
-                        <Link href="/" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                          <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
-                        </Link>
-
-                        {showSellerBtn && (
-                          <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
-                          </Link>
-                        )}
-
-                        {/* ✅ NEW: Rider Dashboard Link. (Included in AdminNavbar because they are Admin, or Rider fallback) */}
-                        <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                           <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
-                        </Link>
-                      </div>
-
-                      <div className="border-t border-slate-100 mt-2 pt-2 px-2">
-                        <button onClick={() => signOut({ redirectUrl: '/' })} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
-                          <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
             </>
           )}
         </div>

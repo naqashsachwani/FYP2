@@ -321,7 +321,7 @@ export default function AdminComplaintsPage() {
               <button 
                 onClick={handleRefresh} 
                 disabled={loading}
-                className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
+                className="flex items-center justify-center w-full sm:w-auto p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
                 title="Reset filters and refresh"
               >
                 <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
@@ -335,6 +335,9 @@ export default function AdminComplaintsPage() {
                 <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-slate-200 mx-auto mb-3 sm:mb-4" />
                 <h3 className="text-base sm:text-lg font-bold text-slate-700">No Complaints Found</h3>
                 <p className="text-slate-500 text-xs sm:text-sm mt-1">Try adjusting your filters or search term.</p>
+                {(searchTerm || statusFilter !== "ALL" || typeFilter !== "ALL" || filerFilter !== "ALL") && (
+                  <button onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); setTypeFilter("ALL"); setFilerFilter("ALL"); }} className="mt-4 sm:mt-5 text-blue-600 hover:underline text-xs sm:text-sm font-medium">Clear all filters</button>
+                )}
              </div>
           ) : (
              <>

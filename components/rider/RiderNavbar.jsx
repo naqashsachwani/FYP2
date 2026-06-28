@@ -118,157 +118,161 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
       {/* Right Area: Profile & Notifications */}
       <div className="flex items-center gap-2 sm:gap-4">
         {mounted && user && (
-          <div className="relative">
-            <button
-              onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
-              className="relative p-2 sm:p-2.5 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
-            >
-              <Bell className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px]" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 sm:top-1.5 right-1 sm:right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border border-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </button>
+          <>
+            {/* BELL DROPDOWN WRAPPER */}
+            <div className="relative">
+              <button
+                onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); }}
+                className="relative p-2 sm:p-2.5 text-slate-600 hover:text-blue-600 transition rounded-full hover:bg-blue-50 focus:outline-none"
+              >
+                <Bell className="w-[20px] h-[20px] sm:w-[22px] sm:h-[22px]" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 sm:top-1.5 right-1 sm:right-1.5 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border border-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {isBellOpen && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setIsBellOpen(false)}></div>
-                <div className="absolute right-[-10px] sm:right-0 mt-3 w-[calc(100vw-24px)] sm:w-[380px] max-w-[400px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all">
-                  
-                  {/* Notifications Header */}
-                  <div className="px-5 py-4 flex justify-between items-center shrink-0">
-                    <p className="text-base font-bold text-slate-900">Notifications</p>
-                    {unreadCount > 0 && (
-                      <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                        {unreadCount} New
-                      </span>
-                    )}
-                  </div>
+              {isBellOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setIsBellOpen(false)}></div>
+                  <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-[380px] max-w-[400px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all origin-top-right">
+                    
+                    {/* Notifications Header */}
+                    <div className="px-5 py-4 flex justify-between items-center shrink-0">
+                      <p className="text-base font-bold text-slate-900">Notifications</p>
+                      {unreadCount > 0 && (
+                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                          {unreadCount} New
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Notifications List with Custom Scrollbar */}
-                  <div className="max-h-[380px] overflow-y-auto px-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 pr-1 pb-2">
-                    {notifications.length === 0 ? (
-                      <p className="px-4 py-8 text-sm text-slate-500 text-center">No new notifications.</p>
-                    ) : (
-                      currentNotifs.map(n => (
-                        <div key={n.id} className={`px-4 py-4 mb-2 rounded-xl transition-colors border ${!n.isRead ? 'bg-white border-slate-100 shadow-sm' : 'bg-transparent border-transparent'}`}>
-                          <div className="flex justify-between items-start gap-2 mb-1.5">
-                            <p className={`text-sm font-bold truncate ${!n.isRead ? 'text-slate-900' : 'text-slate-700'}`}>
-                                {n.title}
+                    {/* Notifications List with Custom Scrollbar */}
+                    <div className="max-h-[380px] overflow-y-auto px-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 pr-1 pb-2">
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-8 text-sm text-slate-500 text-center">No new notifications.</p>
+                      ) : (
+                        currentNotifs.map(n => (
+                          <div key={n.id} className={`px-4 py-4 mb-2 rounded-xl transition-colors border ${!n.isRead ? 'bg-white border-slate-100 shadow-sm' : 'bg-transparent border-transparent'}`}>
+                            <div className="flex justify-between items-start gap-2 mb-1.5">
+                              <p className={`text-sm pr-2 line-clamp-1 w-full break-words ${!n.isRead ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
+                                  {n.title}
+                              </p>
+                              
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-3 shrink-0 mt-0.5">
+                                {!n.isRead && (
+                                  <button 
+                                    onClick={(e) => markAsRead(n.id, e)} 
+                                    className="text-[11px] bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-2 py-1 rounded-md transition-colors"
+                                  >
+                                    Mark Read
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={(e) => deleteNotification(n.id, e)} 
+                                  className="text-slate-300 hover:text-red-500 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <p className="text-[13px] text-slate-600 line-clamp-2 leading-relaxed mb-2 pr-4">
+                              {n.message}
                             </p>
                             
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-3 shrink-0 mt-0.5">
-                              {!n.isRead && (
-                                <button 
-                                  onClick={(e) => markAsRead(n.id, e)} 
-                                  className="text-[11px] bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-2 py-1 rounded-md transition-colors"
-                                >
-                                  Mark Read
-                                </button>
-                              )}
-                              <button 
-                                onClick={(e) => deleteNotification(n.id, e)} 
-                                className="text-slate-300 hover:text-red-500 transition-colors"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
+                            <p className="text-[11px] font-medium text-slate-400">
+                              {n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-GB') : "Recently"} at {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}
+                            </p>
                           </div>
-                          
-                          <p className="text-[13px] text-slate-600 line-clamp-2 leading-relaxed mb-2 pr-4">
-                            {n.message}
-                          </p>
-                          
-                          <p className="text-[11px] font-medium text-slate-400">
-                            {n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-GB') : "Recently"} at {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ""}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Pagination Footer */}
-                  {notifications.length > 0 && (
-                    <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-white rounded-b-2xl">
-                      <span className="text-xs font-bold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} 
-                          disabled={notifPage === 1} 
-                          className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors"
-                        >
-                          <ChevronLeft size={16} />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} 
-                          disabled={notifPage === totalNotifPages} 
-                          className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors"
-                        >
-                          <ChevronRight size={16} />
-                        </button>
-                      </div>
+                        ))
+                      )}
                     </div>
-                  )}
 
+                    {/* Pagination Footer */}
+                    {notifications.length > 0 && (
+                      <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-white rounded-b-2xl">
+                        <span className="text-xs font-bold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} 
+                            disabled={notifPage === 1} 
+                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors"
+                          >
+                            <ChevronLeft size={16} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} 
+                            disabled={notifPage === totalNotifPages} 
+                            className="p-1.5 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors"
+                          >
+                            <ChevronRight size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* PROFILE DROPDOWN WRAPPER */}
+            <div className="relative">
+              <button 
+                onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
+                className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm border border-slate-100 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+              >
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-blue-200 bg-white shrink-0">
+                  <img src={user?.imageUrl} alt="Profile" className="w-full h-full object-cover" />
                 </div>
-              </>
-            )}
-          </div>
+                <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
+                  <p className="text-sm font-bold text-slate-700 leading-tight truncate">Hi, {user?.firstName}</p>
+                  <p className="text-[10px] text-slate-500 font-medium truncate">RIDER</p>
+                </div>
+              </button>
+
+              {isProfileOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setIsProfileOpen(false)}></div>
+                  <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden origin-top-right">
+                    <div className="px-2 space-y-1">
+                      
+                      <Link href="/" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                        <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
+                      </Link>
+                      
+                      {/* ✅ Admin Access - Renders Admin Dashboard & Rider Dashboard links */}
+                      {showAdminBtn && (
+                        <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                          <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
+                        </Link>
+                      )}
+                      
+                      {(showAdminBtn || showSellerBtn) && (
+                        <Link href="/store" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                          <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
+                        </Link>
+                      )}
+
+                      <button onClick={() => openUserProfile()} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+                        <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
+                      </button>
+
+                    </div>
+                    <div className="border-t border-slate-100 mt-2 pt-2 px-2">
+                      <button onClick={() => signOut({ redirectUrl: '/' })} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors">
+                        <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
         )}
-
-        {/* Profile Dropdown */}
-        <div className="relative">
-          <button 
-            onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); }}
-            className="flex items-center gap-2 sm:gap-3 bg-slate-50 rounded-full pl-1.5 sm:pl-2 pr-2 sm:pr-4 py-1.5 shadow-sm border border-slate-100 hover:bg-slate-100 transition-all focus:outline-none"
-          >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-blue-200 bg-white shrink-0">
-              <img src={user?.imageUrl} alt="Profile" className="w-full h-full object-cover" />
-            </div>
-            <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
-              <p className="text-sm font-bold text-slate-700 leading-tight truncate">Hi, {user?.firstName}</p>
-              <p className="text-[10px] text-slate-500 font-medium truncate">RIDER</p>
-            </div>
-          </button>
-
-          {isProfileOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setIsProfileOpen(false)}></div>
-              <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden transform transition-all">
-                <div className="px-2 space-y-1">
-                  
-                  <Link href="/" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                    <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
-                  </Link>
-                  
-                  {showAdminBtn && (
-                    <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                      <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
-                    </Link>
-                  )}
-                  
-                  {(showAdminBtn || showSellerBtn) && (
-                    <Link href="/store" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                      <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
-                    </Link>
-                  )}
-
-                  <button onClick={() => openUserProfile()} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
-                    <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
-                  </button>
-
-                </div>
-                <div className="border-t border-slate-100 mt-2 pt-2 px-2">
-                  <button onClick={() => signOut({ redirectUrl: '/' })} className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors">
-                    <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
       </div>
     </header>
   )

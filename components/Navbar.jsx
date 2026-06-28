@@ -221,163 +221,164 @@ const Navbar = () => {
               </Link>
 
               {mounted && user && (
-                <div className="relative">
-                  <button
-                    onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); setIsMobileMenuOpen(false); }}
-                    className="relative p-1.5 sm:p-2 text-slate-600 hover:text-green-600 transition rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md"
-                  >
-                    <Bell size={20} className="sm:w-[22px] sm:h-[22px]" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
+                <>
+                  {/* BELL DROPDOWN WRAPPER */}
+                  <div className="relative">
+                    <button
+                      onClick={() => { setIsBellOpen(!isBellOpen); setIsProfileOpen(false); setIsMobileMenuOpen(false); }}
+                      className="relative p-1.5 sm:p-2 text-slate-600 hover:text-green-600 transition rounded-xl hover:bg-green-50 shadow-sm hover:shadow-md focus:outline-none"
+                    >
+                      <Bell size={20} className="sm:w-[22px] sm:h-[22px]" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-500 rounded-full border-2 border-white">
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
 
-                  {isBellOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                      <div className="absolute right-[-40px] sm:right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all">
-                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-                          <p className="text-sm font-bold text-slate-800">Notifications</p>
-                          <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
-                        </div>
-                        
-                        <div className="max-h-[60vh] overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <p className="px-4 py-8 text-sm text-slate-500 text-center font-medium">You have no notifications.</p>
-                          ) : (
-                            currentNotifications.map(notif => (
-                              <div 
-                                key={notif.id} 
-                                onClick={() => openNotification(notif)}
-                                className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-green-50/30' : ''}`}
-                              >
-                                <div className="flex justify-between items-start mb-1 gap-2">
-                                  <p className={`text-sm pr-2 line-clamp-1 break-words w-full ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
-                                      {notif.title}
-                                  </p>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                      {!notif.isRead && (
-                                        <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-green-600 font-bold hover:underline bg-green-100 px-1.5 py-0.5 rounded whitespace-nowrap">
-                                          Mark Read
+                    {isBellOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
+                        <div className="absolute right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top-right">
+                          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                            <p className="text-sm font-bold text-slate-800">Notifications</p>
+                            <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
+                          </div>
+                          
+                          <div className="max-h-[60vh] overflow-y-auto">
+                            {notifications.length === 0 ? (
+                              <p className="px-4 py-8 text-sm text-slate-500 text-center font-medium">You have no notifications.</p>
+                            ) : (
+                              currentNotifications.map(notif => (
+                                <div 
+                                  key={notif.id} 
+                                  onClick={() => openNotification(notif)}
+                                  className={`px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors hover:bg-slate-50 ${!notif.isRead ? 'bg-green-50/30' : ''}`}
+                                >
+                                  <div className="flex justify-between items-start mb-1 gap-2">
+                                    <p className={`text-sm pr-2 line-clamp-1 break-words w-full ${!notif.isRead ? 'font-bold text-gray-900' : 'font-semibold text-slate-700'}`}>
+                                        {notif.title}
+                                    </p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {!notif.isRead && (
+                                          <button onClick={(e) => markAsRead(notif.id, e)} className="text-[10px] text-green-600 font-bold hover:underline bg-green-100 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                            Mark Read
+                                          </button>
+                                        )}
+                                        <button onClick={(e) => deleteNotification(notif.id, e)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors" title="Delete">
+                                            <Trash2 size={14} />
                                         </button>
-                                      )}
-                                      <button onClick={(e) => deleteNotification(notif.id, e)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-1 rounded transition-colors" title="Delete">
-                                          <Trash2 size={14} />
-                                      </button>
+                                    </div>
                                   </div>
+                                  <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
+                                  <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
+                                    {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </span>
                                 </div>
-                                <p className="text-xs text-slate-600 line-clamp-2 break-words">{notif.message}</p>
-                                <span className="text-[10px] text-slate-400 block mt-1.5 font-medium">
-                                  {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </span>
+                              ))
+                            )}
+                          </div>
+
+                          {notifications.length > 0 && (
+                              <div className="p-3 border-t border-slate-100 bg-gray-50 flex items-center justify-between shrink-0">
+                                  <span className="text-xs font-semibold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
+                                  <div className="flex gap-2">
+                                      <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} disabled={notifPage === 1} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronLeft size={16} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} disabled={notifPage === totalNotifPages} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronRight size={16} /></button>
+                                  </div>
                               </div>
-                            ))
                           )}
                         </div>
+                      </>
+                    )}
+                  </div>
 
-                        {notifications.length > 0 && (
-                            <div className="p-3 border-t border-slate-100 bg-gray-50 flex items-center justify-between shrink-0">
-                                <span className="text-xs font-semibold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
-                                <div className="flex gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.max(1, p - 1)); }} disabled={notifPage === 1} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronLeft size={16} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setNotifPage(p => Math.min(totalNotifPages, p + 1)); }} disabled={notifPage === totalNotifPages} className="p-1 bg-white border rounded hover:bg-slate-100 disabled:opacity-50 text-slate-600 transition"><ChevronRight size={16} /></button>
-                                </div>
-                            </div>
-                        )}
+                  {/* PROFILE DROPDOWN WRAPPER */}
+                  <div className="relative ml-1 sm:ml-2">
+                    <button
+                      onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); setIsMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 sm:gap-3 bg-white rounded-full pl-1.5 sm:pl-2 pr-1.5 sm:pr-4 py-1.5 shadow-sm border border-slate-200 hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                    >
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-slate-100 bg-slate-50 shrink-0">
+                        <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
                       </div>
-                    </>
-                  )}
-                </div>
+                      <div className="hidden lg:block text-left truncate max-w-[120px]">
+                        <p className="text-sm font-bold text-slate-800 leading-tight truncate">Hi, {user?.firstName}</p>
+                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider truncate">Shopper</p>
+                      </div>
+                    </button>
+
+                    {isProfileOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                        <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top-right">
+                          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 lg:hidden">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
+                            <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+                          </div>
+
+                          <div className="px-2 space-y-1">
+                            <button
+                              onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
+                              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
+                            >
+                              <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
+                            </button>
+
+                            {showAdminBtn && (
+                              <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                                <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
+                              </Link>
+                            )}
+
+                            {showSellerBtn && (
+                              <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                                <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
+                              </Link>
+                            )}
+
+                            {(showAdminBtn || showRiderBtn) && (
+                              <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                                <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
+                              </Link>
+                            )}
+
+                            <Link href="/wallet" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <Wallet size={16} className="text-slate-500 shrink-0" /> My Wallet
+                            </Link>
+
+                            <Link href="/my-coupons" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <Ticket size={16} className="text-slate-500 shrink-0" /> My Coupons
+                            </Link>
+
+                            <Link href="/goal-history" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                              <History size={16} className="text-slate-500 shrink-0" /> Goal History
+                            </Link>
+                          </div>
+
+                          <div className="border-t border-slate-100 mt-2 pt-2 px-2">
+                            <button
+                              onClick={() => signOut({ redirectUrl: '/' })}
+                              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                            >
+                              <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
 
-              {/* Authentication & Profile Dropdown (Matches Admin/Store Pill Style) */}
-              {!mounted ? (
-                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-slate-200 rounded-full animate-pulse ml-1 sm:ml-2"></div>
-              ) : !user ? (
+              {/* Login Button for unauthenticated users */}
+              {mounted && !user && (
                 <button
                   onClick={openSignIn}
                   className="hidden sm:flex items-center px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm sm:text-base font-semibold rounded-xl shadow-md hover:scale-105 transition-all duration-200 active:scale-95 ml-1 sm:ml-2"
                 >
                   Sign In
                 </button>
-              ) : (
-                <div className="relative ml-1 sm:ml-2">
-                  <button
-                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsBellOpen(false); setIsMobileMenuOpen(false); }}
-                    className="flex items-center gap-2 sm:gap-3 bg-white rounded-full pl-1.5 sm:pl-2 pr-1.5 sm:pr-4 py-1.5 shadow-sm border border-slate-200 hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
-                  >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden border border-slate-100 bg-slate-50 shrink-0">
-                      <img src={user?.imageUrl} alt={user?.fullName || "User"} className="w-full h-full object-cover" />
-                    </div>
-                    {/* Text hidden on small mobiles to save space, visible on large screens */}
-                    <div className="hidden lg:block text-left truncate max-w-[120px]">
-                      <p className="text-sm font-bold text-slate-800 leading-tight truncate">Hi, {user?.firstName}</p>
-                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider truncate">Shopper</p>
-                    </div>
-                  </button>
-
-                  {isProfileOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                      <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden">
-                        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 lg:hidden">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
-                          <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-                        </div>
-
-                        <div className="px-2 space-y-1">
-                          <button
-                            onClick={() => { openUserProfile(); setIsProfileOpen(false); }}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium"
-                          >
-                            <Settings size={16} className="text-slate-500 shrink-0" /> Manage Account
-                          </button>
-
-                          {showAdminBtn && (
-                            <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
-                            </Link>
-                          )}
-
-                          {showSellerBtn && (
-                            <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
-                            </Link>
-                          )}
-
-                          {(showAdminBtn || showRiderBtn) && (
-                            <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                              <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
-                            </Link>
-                          )}
-
-                          <Link href="/wallet" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Wallet size={16} className="text-slate-500 shrink-0" /> My Wallet
-                          </Link>
-
-                          <Link href="/my-coupons" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <Ticket size={16} className="text-slate-500 shrink-0" /> My Coupons
-                          </Link>
-
-                          <Link href="/goal-history" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                            <History size={16} className="text-slate-500 shrink-0" /> Goal History
-                          </Link>
-                        </div>
-
-                        <div className="border-t border-slate-100 mt-2 pt-2 px-2">
-                          <button
-                            onClick={() => signOut({ redirectUrl: '/' })}
-                            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                          >
-                            <LogOut size={16} className="text-red-500 shrink-0" /> Sign Out
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
               )}
 
               {/* Mobile Toggle */}

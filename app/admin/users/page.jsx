@@ -85,25 +85,26 @@ export default function AdminUsers() {
   }
 
   // Shows a centered spinner while the initial fetchUsers request is running
-  if (loading) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
+  if (loading && users.length === 0) return <div className="min-h-[100dvh] flex items-center justify-center"><Loader2 className="animate-spin text-blue-600" size={40} /></div>
 
   // --- Main Render ---
   return (
     <div className="min-h-[100dvh] bg-gray-50 p-4 sm:p-6 md:p-12 text-gray-700">
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Page Header - ✅ FIXED to always stay in the same row */}
+        <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 sm:gap-3">
                 <Users className="text-blue-600 w-6 h-6 sm:w-8 sm:h-8 shrink-0" />
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Manage <span className="text-blue-600">Users</span></h1>
             </div>
             <button 
                 onClick={handleRefresh} 
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all text-sm font-bold w-fit"
+                disabled={loading}
+                className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 text-slate-600 shadow-sm transition-all shrink-0"
                 title="Refresh Users"
             >
-                <RefreshCw className="w-4 h-4" /> 
+                <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} /> 
             </button>
         </div>
 
@@ -124,7 +125,6 @@ export default function AdminUsers() {
               
               {/* Table Body */}
               <tbody className="divide-y divide-slate-50">
-                {/* Map over the users array to create a table row for each user */}
                 {users.map((user) => {
                   const isSelf = user.id === userId; 
 
@@ -134,7 +134,6 @@ export default function AdminUsers() {
                       {/* Column 1: Avatar and Name */}
                       <td className="py-3 sm:py-4 px-4 sm:px-6 flex items-center gap-3 whitespace-nowrap">
                         <img 
-                            // Try to load the user's actual image. If missing, fall back to an external service that generates an avatar based on their initials.
                             src={user.image || `https://ui-avatars.com/api/?name=${user.name}&background=random`} 
                             alt="avatar" 
                             className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-slate-200 object-cover shrink-0 ${!user.isActive ? 'opacity-50' : ''}`}
@@ -149,7 +148,6 @@ export default function AdminUsers() {
                       
                       {/* Column 3: STATUS BADGE */}
                       <td className="py-3 sm:py-4 px-4 sm:px-6 text-center whitespace-nowrap">
-                        {/* Conditionally render a Green "Active" badge or a Red "Disabled" badge */}
                         {user.isActive ? (
                             <span className="bg-emerald-100 text-emerald-700 px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold border border-emerald-200 shadow-sm">Active</span>
                         ) : (
@@ -160,11 +158,9 @@ export default function AdminUsers() {
                       {/* Column 4: Actions (Buttons) */}
                       <td className="py-3 sm:py-4 px-4 sm:px-6 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-                          {/* TOGGLE STATUS BUTTON */}
                           <button 
                               onClick={() => handleToggleStatus(user.id, user.name, user.isActive)} 
-                              disabled={isSelf} // Prevent admin from disabling themselves
-                              // Dynamic button styling: Handle self, active, and inactive states.
+                              disabled={isSelf}
                               className={`p-1.5 sm:p-2 rounded-lg transition-colors border ${
                                 isSelf 
                                   ? 'opacity-30 cursor-not-allowed text-slate-400 border-transparent' 
@@ -177,10 +173,9 @@ export default function AdminUsers() {
                               {user.isActive ? <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" /> : <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />}
                           </button>
 
-                          {/* DELETE BUTTON */}
                           <button 
                               onClick={() => handleDeleteUser(user.id, user.name)} 
-                              disabled={isSelf} // Prevent admin from deleting themselves
+                              disabled={isSelf}
                               className={`p-1.5 sm:p-2 rounded-lg transition-colors border text-slate-400 ${
                                 isSelf 
                                   ? 'opacity-30 cursor-not-allowed border-transparent' 
@@ -196,8 +191,6 @@ export default function AdminUsers() {
                   )
                 })}
                 
-                {/* Empty State Fallback */}
-                {/* If the database returns an empty array, span across all 4 columns and display this message */}
                 {users.length === 0 && (
                   <tr>
                       <td colSpan="4" className="py-12 sm:py-16 text-center text-slate-400 text-sm sm:text-base">No users found in the database.</td>
