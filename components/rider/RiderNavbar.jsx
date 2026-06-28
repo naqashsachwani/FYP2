@@ -3,10 +3,7 @@
 import { useUser, useClerk } from "@clerk/nextjs" 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { 
-  Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Store, 
-  Trash2, ChevronLeft, ChevronRight 
-} from "lucide-react" 
+import { Menu, Home, Settings, LogOut, ShieldCheck, Bell, X, Store, Trash2, ChevronLeft, ChevronRight } from "lucide-react" 
 
 export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
   const { user } = useUser()
@@ -25,17 +22,26 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifPage, setNotifPage] = useState(1)
   const NOTIFS_PER_PAGE = 4
+  const [selectedNotif, setSelectedNotif] = useState(null) // ✅ Added missing state
 
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const checkRoles = async () => {
       try {
-        const adminRes = await fetch('/api/admin/is-admin').catch(()=>null);
-        const sellerRes = await fetch('/api/store/is-seller').catch(()=>null);
+        const [adminRes, sellerRes] = await Promise.all([
+          fetch('/api/admin/is-admin').catch(() => null),
+          fetch('/api/store/is-seller').catch(() => null)
+        ]);
 
-        if (adminRes?.ok) setShowAdminBtn((await adminRes.json()).isAdmin === true);
-        if (sellerRes?.ok) setShowSellerBtn(!!(await sellerRes.json()).isSeller);
+        if (adminRes?.ok) {
+           const adminData = await adminRes.json();
+           setShowAdminBtn(adminData.isAdmin === true);
+        }
+        if (sellerRes?.ok) {
+           const sellerData = await sellerRes.json();
+           setShowSellerBtn(!!sellerData.isSeller);
+        }
       } catch (error) { console.error(error) }
     }
 
@@ -61,9 +67,16 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
     if (!isBellOpen) setNotifPage(1);
   }, [isBellOpen]);
 
+  // ✅ Added missing function to handle opening notifications
+  const openNotification = (notif) => {
+      if (!notif.isRead) markAsRead(notif.id);
+      setSelectedNotif(notif);
+      setIsBellOpen(false);
+  };
+
   // Mark single notification as read
   const markAsRead = async (id, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     try {
       await fetch('/api/notifications', { method: 'PATCH', body: JSON.stringify({ id }) });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
@@ -73,7 +86,7 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
 
   // Delete a notification
   const deleteNotification = async (id, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     try {
       await fetch('/api/notifications', { method: 'DELETE', body: JSON.stringify({ id }) });
       setNotifications(prev => {
@@ -94,9 +107,9 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
   const currentNotifs = notifications.slice((notifPage - 1) * NOTIFS_PER_PAGE, notifPage * NOTIFS_PER_PAGE);
 
   return (
+    <>
     <header className="h-[73px] shrink-0 flex items-center justify-between px-3 sm:px-4 lg:px-6 bg-white border-b border-slate-200 z-40 relative">
       
-      {/* Left Area: Logo matches Admin exactly */}
       <div className="flex items-center gap-2 sm:gap-4 lg:w-[240px] shrink-0">
         <button
           onClick={onToggleSidebar}
@@ -115,7 +128,6 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
         </Link>
       </div>
 
-      {/* Right Area: Profile & Notifications */}
       <div className="flex items-center gap-2 sm:gap-4">
         {mounted && user && (
           <>
@@ -136,9 +148,8 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
               {isBellOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsBellOpen(false)}></div>
-                  <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-[380px] max-w-[400px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all origin-top-right">
+                  <div className="fixed top-[80px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-[380px] sm:max-w-[400px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all origin-top sm:origin-top-right">
                     
-                    {/* Notifications Header */}
                     <div className="px-5 py-4 flex justify-between items-center shrink-0">
                       <p className="text-base font-bold text-slate-900">Notifications</p>
                       {unreadCount > 0 && (
@@ -148,19 +159,17 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
                       )}
                     </div>
 
-                    {/* Notifications List with Custom Scrollbar */}
                     <div className="max-h-[380px] overflow-y-auto px-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 pr-1 pb-2">
                       {notifications.length === 0 ? (
                         <p className="px-4 py-8 text-sm text-slate-500 text-center">No new notifications.</p>
                       ) : (
                         currentNotifs.map(n => (
-                          <div key={n.id} className={`px-4 py-4 mb-2 rounded-xl transition-colors border ${!n.isRead ? 'bg-white border-slate-100 shadow-sm' : 'bg-transparent border-transparent'}`}>
+                          <div key={n.id} onClick={() => openNotification(n)} className={`cursor-pointer px-4 py-4 mb-2 rounded-xl transition-colors border ${!n.isRead ? 'bg-white border-slate-100 shadow-sm' : 'bg-transparent border-transparent hover:bg-slate-50'}`}>
                             <div className="flex justify-between items-start gap-2 mb-1.5">
                               <p className={`text-sm pr-2 line-clamp-1 w-full break-words ${!n.isRead ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
                                   {n.title}
                               </p>
                               
-                              {/* Action Buttons */}
                               <div className="flex items-center gap-3 shrink-0 mt-0.5">
                                 {!n.isRead && (
                                   <button 
@@ -191,7 +200,6 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
                       )}
                     </div>
 
-                    {/* Pagination Footer */}
                     {notifications.length > 0 && (
                       <div className="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-white rounded-b-2xl">
                         <span className="text-xs font-bold text-slate-500">Page {notifPage} of {totalNotifPages}</span>
@@ -237,14 +245,14 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
               {isProfileOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsProfileOpen(false)}></div>
-                  <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden origin-top-right">
+                  <div className="fixed top-[80px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-full sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-64 sm:max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 overflow-hidden origin-top sm:origin-top-right">
                     <div className="px-2 space-y-1">
                       
                       <Link href="/" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
                         <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                       </Link>
                       
-                      {/* ✅ Admin Access - Renders Admin Dashboard & Rider Dashboard links */}
+                      {/* ✅ Admin Access - Renders Admin Dashboard */}
                       {showAdminBtn && (
                         <Link href="/admin" className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg font-medium transition-colors">
                           <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
@@ -275,5 +283,46 @@ export default function RiderNavbar({ onToggleSidebar, isSidebarOpen }) {
         )}
       </div>
     </header>
+
+    {/* NOTIFICATION VIEW MODAL */}
+    {selectedNotif && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="flex justify-between items-center p-4 sm:p-5 border-b border-gray-100 bg-gray-50 shrink-0">
+              <div className="flex items-center gap-2 text-slate-800">
+                  <Bell className="text-blue-600 shrink-0" size={20} />
+                  <h3 className="font-bold text-lg">Notification</h3>
+              </div>
+              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
+            </div>
+            
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-2 break-words">{selectedNotif.title}</h4>
+              <p className="text-xs sm:text-sm font-medium text-gray-400 mb-4 sm:mb-6 border-b border-gray-100 pb-4">
+                  {new Date(selectedNotif.createdAt).toLocaleDateString('en-GB')} at {new Date(selectedNotif.createdAt).toLocaleTimeString()}
+              </p>
+              
+              <div className="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap break-words" dangerouslySetInnerHTML={{ __html: selectedNotif.html || selectedNotif.message }}>
+              </div>
+            </div>
+
+            <div className="p-3 sm:p-4 border-t border-gray-100 bg-gray-50 flex gap-2 sm:gap-3 shrink-0">
+              <button 
+                onClick={() => { deleteNotification(selectedNotif.id, { stopPropagation: () => {} }); setSelectedNotif(null); }} 
+                className="flex-1 py-2 sm:py-3 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-50 transition flex items-center justify-center gap-2 text-sm sm:text-base"
+              >
+                <Trash2 size={16} className="shrink-0" /> Delete
+              </button>
+              <button 
+                onClick={() => setSelectedNotif(null)} 
+                className="flex-[2] py-2 sm:py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition text-sm sm:text-base"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

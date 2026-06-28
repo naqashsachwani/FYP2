@@ -15,6 +15,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
   const [mounted, setMounted] = useState(false)
   
   const [showAdminBtn, setShowAdminBtn] = useState(false)
+  const [showRiderBtn, setShowRiderBtn] = useState(false)
 
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -29,10 +30,18 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
 
     const checkRoles = async () => {
       try {
-        const adminRes = await fetch('/api/admin/is-admin').catch(()=>null);
+        const [adminRes, riderRes] = await Promise.all([
+          fetch('/api/admin/is-admin').catch(() => null),
+          fetch('/api/rider/is-rider').catch(() => null)
+        ]);
+
         if (adminRes?.ok) {
             const data = await adminRes.json();
             setShowAdminBtn(data.isAdmin === true);
+        }
+        if (riderRes?.ok) {
+           const riderData = await riderRes.json();
+           setShowRiderBtn(riderData.isRider === true);
         }
       } catch (error) { 
         console.error("Role check failed:", error) 
@@ -142,7 +151,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
               {isBellOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setIsBellOpen(false)}></div>
-                  <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all animate-in slide-in-from-top-2 origin-top-right">
+                  <div className="fixed top-[68px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-80 sm:max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-40 overflow-hidden transform transition-all animate-in slide-in-from-top-2 origin-top sm:origin-top-right">
                     <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                       <p className="text-sm font-bold text-slate-800">Notifications</p>
                       <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
@@ -203,14 +212,14 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
                 </div>
                 <div className="hidden sm:block text-left truncate max-w-[100px] lg:max-w-[150px]">
                   <p className="text-sm font-medium text-slate-700 leading-tight truncate">Hi, {user?.firstName || 'Admin'}</p>
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Administrator</p>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Store Manager</p>
                 </div>
               </button>
 
               {isProfileOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                  <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top-right">
+                  <div className="fixed top-[68px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-full sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-64 sm:max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top sm:origin-top-right">
                     <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 sm:hidden">
                       <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                       <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -228,6 +237,14 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
                       {showAdminBtn && (
                         <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium">
                           <ShieldCheck size={16} className="text-slate-500 shrink-0" /> Admin Dashboard
+                        </Link>
+                      )}
+
+                      {/* Store Dashboard link is explicitly removed from here because user is already on the Store dashboard */}
+
+                      {(showAdminBtn || showRiderBtn) && (
+                        <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium">
+                           <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
                         </Link>
                       )}
                     </div>
@@ -254,7 +271,7 @@ export default function StoreNavbar({ onToggleSidebar, isSidebarOpen }) {
                   <Bell className="text-blue-600 shrink-0" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
-              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><XIcon size={20} /></button>
+              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto">

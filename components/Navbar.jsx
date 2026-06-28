@@ -43,20 +43,21 @@ const Navbar = () => {
 
     const checkRoles = async () => {
       try {
-        // Fetch all roles concurrently, catching errors so one failure doesn't break the others
-        const adminRes = await fetch('/api/admin/is-admin').catch(() => null);
-        const sellerRes = await fetch('/api/store/is-seller').catch(() => null);
-        const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
+        const [adminRes, sellerRes, riderRes] = await Promise.all([
+          fetch('/api/admin/is-admin').catch(() => null),
+          fetch('/api/store/is-seller').catch(() => null),
+          fetch('/api/rider/is-rider').catch(() => null)
+        ]);
 
-        if (adminRes && adminRes.ok) {
+        if (adminRes?.ok) {
            const adminData = await adminRes.json();
            setShowAdminBtn(adminData.isAdmin === true);
         }
-        if (sellerRes && sellerRes.ok) {
+        if (sellerRes?.ok) {
            const sellerData = await sellerRes.json();
            setShowSellerBtn(!!sellerData.isSeller);
         }
-        if (riderRes && riderRes.ok) {
+        if (riderRes?.ok) {
            const riderData = await riderRes.json();
            setShowRiderBtn(riderData.isRider === true);
         }
@@ -172,7 +173,6 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
 
-            {/* Logo Section */}
             <Link href="/" className="flex items-center gap-1 relative group shrink-0">
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800 group-hover:text-green-600 transition-colors">
                 <span className="text-green-600">Dream</span>Saver
@@ -180,7 +180,6 @@ const Navbar = () => {
               <span className="text-green-600 text-3xl sm:text-4xl lg:text-5xl absolute -top-1 -right-2 sm:-right-3">.</span>
             </Link>
 
-            {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-8 font-medium text-slate-700">
               {navLinks.map((link) => (
                 <Link
@@ -194,7 +193,6 @@ const Navbar = () => {
               ))}
             </div>
 
-            {/* Desktop Search */}
             <form
               onSubmit={handleSearch}
               className="hidden lg:flex items-center w-72 bg-slate-100 px-3 py-2 rounded-xl border border-slate-200 text-sm focus-within:ring-2 focus-within:ring-green-400 transition shadow-sm hover:shadow-md"
@@ -209,7 +207,6 @@ const Navbar = () => {
               />
             </form>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-4 relative shrink-0">
               
               <Link
@@ -239,7 +236,7 @@ const Navbar = () => {
                     {isBellOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                        <div className="absolute right-0 mt-3 w-[calc(100vw-32px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top-right">
+                        <div className="fixed top-[72px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-80 sm:max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top sm:origin-top-right">
                           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                             <p className="text-sm font-bold text-slate-800">Notifications</p>
                             <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
@@ -311,7 +308,7 @@ const Navbar = () => {
                     {isProfileOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                        <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top-right">
+                        <div className="fixed top-[72px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-full sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-64 sm:max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top sm:origin-top-right">
                           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 lg:hidden">
                             <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                             <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -392,7 +389,6 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ✅ FIXED: Mobile Menu - Now floats absolutely over content instead of pushing it down */}
         <div
           className={`lg:hidden absolute top-full left-0 w-full bg-white border-b border-slate-200 shadow-xl transition-all duration-300 overflow-y-auto z-40 ${
             isMobileMenuOpen ? "max-h-[50vh] opacity-100" : "max-h-0 opacity-0 border-none"
@@ -410,7 +406,6 @@ const Navbar = () => {
               </Link>
             ))}
 
-            {/* Mobile Sign In button (if not logged in) */}
             {mounted && !user && (
                <div className="pt-2 border-t border-slate-100 mt-2">
                   <button
@@ -425,7 +420,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* ✅ NOTIFICATION VIEW MODAL */}
+      {/* NOTIFICATION VIEW MODAL */}
       {selectedNotif && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-[95%] sm:w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useUser, useClerk } from "@clerk/nextjs" 
-import { CrownIcon, MenuIcon, XIcon, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react" 
+import { CrownIcon, Menu, X, Home, Store, Settings, LogOut, Bell, Trash2, ChevronLeft, ChevronRight, Truck } from "lucide-react" 
 import toast from "react-hot-toast"
 
 export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
@@ -14,6 +14,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
   
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
+  
   const [showSellerBtn, setShowSellerBtn] = useState(false)
   const [showRiderBtn, setShowRiderBtn] = useState(false)
 
@@ -32,12 +33,16 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
 
     const checkRoles = async () => {
       try {
-        const sellerRes = await fetch('/api/store/is-seller');
-        const sellerData = await sellerRes.json();
-        setShowSellerBtn(!!sellerData.isSeller);
+        const [sellerRes, riderRes] = await Promise.all([
+          fetch('/api/store/is-seller').catch(() => null),
+          fetch('/api/rider/is-rider').catch(() => null)
+        ]);
 
-        const riderRes = await fetch('/api/rider/is-rider').catch(() => null);
-        if (riderRes && riderRes.ok) {
+        if (sellerRes?.ok) {
+           const sellerData = await sellerRes.json();
+           setShowSellerBtn(!!sellerData.isSeller);
+        }
+        if (riderRes?.ok) {
            const riderData = await riderRes.json();
            setShowRiderBtn(riderData.isRider === true);
         }
@@ -119,7 +124,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
             className="lg:hidden p-1.5 sm:p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all shrink-0"
             aria-label="Toggle Sidebar" 
           >
-            {isSidebarOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
+            {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
 
           <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
@@ -157,7 +162,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                     {isBellOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsBellOpen(false)}></div>
-                        <div className="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-80 max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top-right">
+                        <div className="fixed top-[72px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-80 sm:max-w-[340px] bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col z-50 overflow-hidden transform transition-all origin-top sm:origin-top-right">
                           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                             <p className="text-sm font-bold text-slate-800">Notifications</p>
                             <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{unreadCount} New</span>
@@ -229,7 +234,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                     {isProfileOpen && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                        <div className="absolute right-0 top-full mt-3 w-[calc(100vw-24px)] sm:w-64 max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top-right">
+                        <div className="fixed top-[72px] left-3 right-3 w-auto max-w-none sm:absolute sm:top-full sm:left-auto sm:right-0 mt-0 sm:mt-3 sm:w-64 sm:max-w-[280px] bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 overflow-hidden origin-top sm:origin-top-right">
                           <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 mb-1 sm:hidden">
                             <p className="text-sm font-semibold text-slate-800 truncate">{user?.fullName}</p>
                             <p className="text-xs text-slate-500 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -244,15 +249,20 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                               <Home size={16} className="text-slate-500 shrink-0" /> Go to Homepage
                             </Link>
 
-                            {showSellerBtn && (
+                            {/* Admin Dashboard link is explicitly removed from here because user is already on the Admin dashboard */}
+
+                            {/* Admins implicitly have access to Store and Rider, so we show them unconditionally (or based on their fallback flags just to be safe) */}
+                            {(true || showSellerBtn) && (
                               <Link href="/store" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
                                 <Store size={16} className="text-slate-500 shrink-0" /> Store Dashboard
                               </Link>
                             )}
 
-                            <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
-                               <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
-                            </Link>
+                            {(true || showRiderBtn) && (
+                              <Link href="/rider/dashboard" onClick={() => setIsProfileOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg transition-colors font-medium">
+                                 <Truck size={16} className="text-slate-500 shrink-0" /> Rider Dashboard
+                              </Link>
+                            )}
                           </div>
 
                           <div className="border-t border-slate-100 mt-2 pt-2 px-2">
@@ -279,7 +289,7 @@ export default function AdminNavbar({ onToggleSidebar, isSidebarOpen }) {
                   <Bell className="text-blue-600 shrink-0" size={20} />
                   <h3 className="font-bold text-lg">Notification</h3>
               </div>
-              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><XIcon size={20} /></button>
+              <button onClick={() => setSelectedNotif(null)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"><X size={20} /></button>
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto">
