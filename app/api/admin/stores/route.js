@@ -45,3 +45,52 @@ export async function GET(request) {
     );
   }
 }
+
+// ==============================
+// DELETE: Remove a store from the platform (Admin only)
+// ==============================
+export async function DELETE(request) {
+  try {
+    // 1. Authenticate the User
+    const { userId } = getAuth(request);
+    const isAdmin = await authAdmin(userId);
+    
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+    }
+
+    // 2. Extract the store ID from the URL search params (e.g., ?id=123)
+    const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get('id');
+
+    if (!storeId) {
+      return NextResponse.json({ error: "Store ID is required" }, { status: 400 });
+    }
+
+    // 3. Delete the store from the database
+    // Note: If you have foreign key constraints (like products tied to this store), 
+    // Prisma will handle cascading deletes if you configured it in your schema.prisma.
+    // Otherwise, you may need to delete those related records first.
+    await prisma.store.delete({
+      where: {
+        id: storeId
+      }
+    });
+
+    // 4. Return Success
+    return NextResponse.json({ message: "Store deleted successfully" }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error deleting store:", error);
+    
+    // If the record doesn't exist, Prisma throws a specific error code (P2025)
+    if (error.code === 'P2025') {
+       return NextResponse.json({ error: "Store not found in database" }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { error: "Failed to delete store from database" },
+      { status: 500 }
+    );
+  }
+}

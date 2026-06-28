@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Loader2, Car, CreditCard, ShieldCheck, Upload, Clock, CheckCircle, ShieldAlert, Ban } from "lucide-react";
+import { Loader2, Car, CreditCard, ShieldCheck, Upload, Clock, ShieldAlert, Ban } from "lucide-react";
 
 export default function RiderSignupPage() {
   const { isLoaded, userId } = useAuth();
@@ -35,14 +35,20 @@ export default function RiderSignupPage() {
             const data = await res.json();
             
             if (data.profile) {
+                // Set the profile first so the UI immediately renders the "APPROVED" message
                 setExistingProfile(data.profile);
+                
+                // If approved, wait 3 full seconds before redirecting
                 if (data.profile.status === "APPROVED") {
-                    setTimeout(() => router.push("/rider/dashboard"), 2000);
+                    setTimeout(() => {
+                        router.push("/rider/dashboard");
+                    }, 3000); 
                 }
             }
         } catch (error) {
             console.error("Status check failed", error);
         } finally {
+            // Turn off the loading spinner so the message becomes visible
             setIsCheckingStatus(false);
         }
     };
@@ -52,7 +58,7 @@ export default function RiderSignupPage() {
 
   if (!isLoaded || isCheckingStatus) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
 
-  // ✅ UPDATED: The locked-out state perfectly asks them to login to continue
+  // The locked-out state asks them to login to continue
   if (isLoaded && !userId) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
@@ -67,34 +73,34 @@ export default function RiderSignupPage() {
     );
   }
 
+  // Handle existing profiles (Approved, Pending, Suspended, Rejected)
   if (existingProfile) {
       return (
-          <div className="min-h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 p-6 sm:p-8 text-center">
+          <div className="min-h-[100dvh] bg-[#f4f3ff] flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-white rounded-3xl shadow-sm border border-slate-100 py-10 px-6 sm:px-8 text-center">
                   {existingProfile.status === 'APPROVED' && (
                       <div className="animate-in zoom-in duration-300">
-                          <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3 sm:mb-4" />
-                          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">You are Approved!</h2>
-                          <p className="text-xs sm:text-sm text-slate-500 mb-5 sm:mb-6">Redirecting you to the Rider Dashboard...</p>
-                          <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 animate-spin mx-auto" />
+                          <h2 className="text-2xl sm:text-[22px] font-bold text-slate-900 mb-6">Application Status</h2>
+                          <h3 className="text-lg font-bold text-indigo-600 tracking-widest uppercase mb-4">Approved</h3>
+                          <p className="text-sm sm:text-base text-slate-500">Your rider account has been approved! Redirecting...</p>
                       </div>
                   )}
                   {existingProfile.status === 'PENDING_APPROVAL' && (
-                      <div>
+                      <div className="py-2">
                           <Clock className="w-12 h-12 sm:w-16 sm:h-16 text-blue-500 mx-auto mb-3 sm:mb-4" />
                           <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">Application Under Review</h2>
                           <p className="text-xs sm:text-sm text-slate-500">Your application is currently being reviewed by our Admin team. We will notify you once a decision is made.</p>
                       </div>
                   )}
                   {existingProfile.status === 'SUSPENDED' && (
-                      <div>
+                      <div className="py-2">
                           <Ban className="w-12 h-12 sm:w-16 sm:h-16 text-orange-500 mx-auto mb-3 sm:mb-4" />
                           <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">Account Suspended</h2>
                           <p className="text-xs sm:text-sm text-slate-500">Your rider account has been temporarily suspended. Please contact support for more details.</p>
                       </div>
                   )}
                   {existingProfile.status === 'REJECTED' && (
-                      <div>
+                      <div className="py-2">
                           <ShieldAlert className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-3 sm:mb-4" />
                           <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">Application Rejected</h2>
                           <p className="text-xs sm:text-sm text-slate-500">Unfortunately, your application to become a rider was not approved at this time.</p>

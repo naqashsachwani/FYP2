@@ -79,8 +79,8 @@ export default function AdminStores() {
 
         try {
             const token = await getToken();
-            // API Call: Send a DELETE request with the storeId as a query parameter
-            await axios.delete(`/api/admin/store?id=${storeId}`, {
+            // API Call: Send a DELETE request with the storeId as a query parameter (Fixed to plural /stores)
+            await axios.delete(`/api/admin/stores?id=${storeId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             toast.success("Store deleted successfully");
