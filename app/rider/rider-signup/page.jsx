@@ -12,6 +12,7 @@ export default function RiderSignupPage() {
 
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [existingProfile, setExistingProfile] = useState(null);
+  const [isReapplying, setIsReapplying] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -35,7 +36,6 @@ export default function RiderSignupPage() {
             const data = await res.json();
             
             if (data.profile) {
-                // Set the profile first so the UI immediately renders the "APPROVED" message
                 setExistingProfile(data.profile);
                 
                 // If approved, wait 3 full seconds before redirecting
@@ -48,7 +48,6 @@ export default function RiderSignupPage() {
         } catch (error) {
             console.error("Status check failed", error);
         } finally {
-            // Turn off the loading spinner so the message becomes visible
             setIsCheckingStatus(false);
         }
     };
@@ -58,7 +57,6 @@ export default function RiderSignupPage() {
 
   if (!isLoaded || isCheckingStatus) return <div className="min-h-[100dvh] flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-green-600 w-10 h-10" /></div>;
 
-  // The locked-out state asks them to login to continue
   if (isLoaded && !userId) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
@@ -74,7 +72,10 @@ export default function RiderSignupPage() {
   }
 
   // Handle existing profiles (Approved, Pending, Suspended, Rejected)
-  if (existingProfile) {
+  if (existingProfile && !isReapplying) {
+      const isRejected = existingProfile.status === 'REJECTED';
+      const hasUsedRetry = isRejected && existingProfile.idImageUrl?.includes("RETRY");
+
       return (
           <div className="min-h-[100dvh] bg-[#f4f3ff] flex items-center justify-center p-4">
               <div className="max-w-md w-full bg-white rounded-3xl shadow-sm border border-slate-100 py-10 px-6 sm:px-8 text-center">
@@ -99,11 +100,25 @@ export default function RiderSignupPage() {
                           <p className="text-xs sm:text-sm text-slate-500">Your rider account has been temporarily suspended. Please contact support for more details.</p>
                       </div>
                   )}
-                  {existingProfile.status === 'REJECTED' && (
+                  {isRejected && (
                       <div className="py-2">
                           <ShieldAlert className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-3 sm:mb-4" />
-                          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">Application Rejected</h2>
-                          <p className="text-xs sm:text-sm text-slate-500">Unfortunately, your application to become a rider was not approved at this time.</p>
+                          <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1.5 sm:mb-2">
+                             {hasUsedRetry ? "Application Permanently Rejected" : "Application Rejected"}
+                          </h2>
+                          <p className="text-xs sm:text-sm text-slate-500 mb-5 sm:mb-6 leading-relaxed px-2">
+                             {hasUsedRetry 
+                               ? "Unfortunately, your application has been rejected again. You have exhausted your allowed attempts and cannot re-apply." 
+                               : "Unfortunately, your application to become a rider was not approved. You have one final chance to re-submit your documents."}
+                          </p>
+                          {!hasUsedRetry && (
+                             <button 
+                               onClick={() => setIsReapplying(true)}
+                               className="w-full py-3.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition shadow-md active:scale-95 text-sm"
+                             >
+                               Re-Apply (1 Chance Remaining)
+                             </button>
+                          )}
                       </div>
                   )}
               </div>
@@ -135,6 +150,7 @@ export default function RiderSignupPage() {
       toast.success("Application submitted successfully!", { id: toastId });
       
       setExistingProfile(data.rider); 
+      setIsReapplying(false);
     } catch (error) {
       toast.error(error.message, { id: toastId });
     } finally {

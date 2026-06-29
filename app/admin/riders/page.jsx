@@ -134,9 +134,10 @@ export default function AdminRiderManagementPage() {
     if (!jsonStr) return [];
     try { 
       const parsed = JSON.parse(jsonStr); 
-      return Array.isArray(parsed) ? parsed : [jsonStr]; 
+      // Filter out the "RETRY" flag used by backend for tracking rejection retries
+      return Array.isArray(parsed) ? parsed.filter(i => i !== "RETRY") : [jsonStr].filter(i => i !== "RETRY"); 
     } catch (e) { 
-      return [jsonStr]; 
+      return [jsonStr].filter(i => i !== "RETRY"); 
     }
   };
 
@@ -250,14 +251,16 @@ export default function AdminRiderManagementPage() {
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 sm:gap-2">
                           
-                          {/* EDIT BUTTON */}
-                          <button
-                            onClick={() => openEditModal(rider)}
-                            className="p-1 sm:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors shadow-sm border border-blue-200"
-                            title="Edit Rider Details"
-                          >
-                            <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
+                          {/* EDIT BUTTON - Hidden if status is REJECTED */}
+                          {rider.status !== 'REJECTED' && (
+                            <button
+                              onClick={() => openEditModal(rider)}
+                              className="p-1 sm:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors shadow-sm border border-blue-200"
+                              title="Edit Rider Details"
+                            >
+                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </button>
+                          )}
 
                           {rider.status === 'APPROVED' && (
                              <button

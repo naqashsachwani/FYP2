@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma';
 import { getAuth } from '@clerk/nextjs/server';
 import imagekit from "@/configs/imageKit";
 
-// ✅ NEW: GET method to check if the user already has a rider profile
+// ✅ GET method to check if the user already has a rider profile
 export async function GET(req) {
   try {
     const { userId } = getAuth(req);
@@ -38,7 +38,22 @@ export async function POST(req) {
     }
 
     const existingProfile = await prisma.riderProfile.findUnique({ where: { userId } });
-    if (existingProfile) return NextResponse.json({ error: "You have already applied." }, { status: 400 });
+    let isRetry = false;
+
+    if (existingProfile) {
+        // If they exist and are NOT rejected, block them.
+        if (existingProfile.status !== 'REJECTED') {
+            return NextResponse.json({ error: "You have already applied." }, { status: 400 });
+        }
+        
+        // If they ARE rejected, check if they've already used their 1 retry.
+        const existingImages = JSON.parse(existingProfile.idImageUrl || "[]");
+        if (existingImages.includes("RETRY")) {
+            return NextResponse.json({ error: "You have exhausted your retry attempts." }, { status: 400 });
+        }
+        
+        isRetry = true;
+    }
 
     const uploadPromises = files.map(async (file, index) => {
         const buffer = Buffer.from(await file.arrayBuffer());
@@ -51,22 +66,46 @@ export async function POST(req) {
     });
 
     const uploadedUrls = await Promise.all(uploadPromises);
+    
+    // Add the RETRY flag so we know they've used their 1 chance
+    if (isRetry) {
+        uploadedUrls.push("RETRY");
+    }
+    
     const idImageUrlString = JSON.stringify(uploadedUrls);
 
-    const rider = await prisma.riderProfile.create({
-      data: {
-        userId,
-        phoneNumber, 
-        vehicleType,
-        vehiclePlate,
-        cnicNumber,
-        licenseNumber,
-        idImageUrl: idImageUrlString,
-        status: "PENDING_APPROVAL"
-      }
-    });
+    if (isRetry) {
+        // OVERWRITE the existing rejected profile and set back to PENDING
+        const rider = await prisma.riderProfile.update({
+            where: { userId },
+            data: {
+              phoneNumber, 
+              vehicleType,
+              vehiclePlate,
+              cnicNumber,
+              licenseNumber,
+              idImageUrl: idImageUrlString,
+              status: "PENDING_APPROVAL"
+            }
+        });
+        return NextResponse.json({ success: true, rider });
+    } else {
+        // CREATE new profile
+        const rider = await prisma.riderProfile.create({
+          data: {
+            userId,
+            phoneNumber, 
+            vehicleType,
+            vehiclePlate,
+            cnicNumber,
+            licenseNumber,
+            idImageUrl: idImageUrlString,
+            status: "PENDING_APPROVAL"
+          }
+        });
+        return NextResponse.json({ success: true, rider });
+    }
 
-    return NextResponse.json({ success: true, rider });
   } catch (error) {
     if (error.code === 'P2002') return NextResponse.json({ error: "CNIC or License already registered." }, { status: 400 });
     return NextResponse.json({ error: "Failed to submit application" }, { status: 500 });
