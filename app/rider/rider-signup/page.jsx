@@ -128,6 +128,15 @@ export default function RiderSignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Strict Length Validations
+    if (formData.phoneNumber.length !== 11) {
+        return toast.error("Phone number must be exactly 11 digits.");
+    }
+    if (formData.cnicNumber.length !== 13) {
+        return toast.error("CNIC number must be exactly 13 digits.");
+    }
+    
     if (selectedFiles.length === 0) return toast.error("Please upload at least one image of your ID/License.");
 
     setIsSubmitting(true);
@@ -173,9 +182,16 @@ export default function RiderSignupPage() {
             <div>
               <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 sm:mb-2">Phone Number</label>
               <input 
-                type="tel" required placeholder="03001234567"
+                type="tel" 
+                required 
+                maxLength={11}
+                placeholder="03001234567"
                 value={formData.phoneNumber}
-                onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
+                onChange={(e) => {
+                  // Only allow numeric input
+                  const val = e.target.value.replace(/\D/g, '');
+                  setFormData({...formData, phoneNumber: val});
+                }}
                 className="w-full border border-slate-200 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none text-sm sm:text-base"
               />
             </div>
@@ -206,9 +222,16 @@ export default function RiderSignupPage() {
             <div>
               <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 sm:mb-2">CNIC Number</label>
               <input 
-                type="text" required placeholder="13 digits"
+                type="text" 
+                required 
+                maxLength={13}
+                placeholder="13 digit CNIC without dashes"
                 value={formData.cnicNumber}
-                onChange={(e) => setFormData({...formData, cnicNumber: e.target.value})}
+                onChange={(e) => {
+                  // Only allow numeric input
+                  const val = e.target.value.replace(/\D/g, '');
+                  setFormData({...formData, cnicNumber: val});
+                }}
                 className="w-full border border-slate-200 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all outline-none text-sm sm:text-base"
               />
             </div>
