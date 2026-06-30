@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"; // Prisma client for database operations
 // ================== AUTH: Seller Check ==================
 const authSeller = async (userId) => {
     try {
-        // 🛡️ THE FIX: Stop immediately if userId is empty to prevent Prisma crashes
+        //  THE FIX: Stop immediately if userId is empty to prevent Prisma crashes
         if (!userId) {
             return false;
         }

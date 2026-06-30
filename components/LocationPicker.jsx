@@ -50,7 +50,7 @@ export default function LocationPicker({ position, setPosition }) {
 
     return (
         <div className="h-48 sm:h-56 w-full rounded-xl overflow-hidden border-2 border-slate-200 relative z-0 mb-2 shadow-inner">
-            {/* ✅ Removed the dynamic key prop entirely */}
+            {/*  Removed the dynamic key prop entirely */}
             <MapContainer 
                 center={center} 
                 zoom={12} 

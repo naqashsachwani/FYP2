@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, X, Gift, Loader2, Plus, ChevronLeft, Calendar, Crosshair, Trash2 } from "lucide-react";
 import axios from "axios"; 
-import toast from "react-hot-toast"; // ✅ Added for better UX
-import dynamic from "next/dynamic"; // ✅ Added for dynamic map loading
+import toast from "react-hot-toast"; //  Added for better UX
+import dynamic from "next/dynamic"; //  Added for dynamic map loading
 
-// ✅ Dynamically import the map to prevent Server-Side Rendering crashes
+//  Dynamically import the map to prevent Server-Side Rendering crashes
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), { 
     ssr: false, 
     loading: () => (
@@ -26,7 +26,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false); 
   
-  // ✅ State for Map Pin
+  //  State for Map Pin
   const [pinPosition, setPinPosition] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -44,7 +44,7 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     return `${day}-${month}-${year}`;
   };
 
-  // ✅ Auto-fill address details based on Map coordinates
+  //  Auto-fill address details based on Map coordinates
   const fetchAddressFromCoordinates = async (lat, lng) => {
     try {
         const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
@@ -66,13 +66,13 @@ export default function RedeemAction({ goal, addresses, setAddresses, onSuccess 
     }
   };
 
-  // ✅ Handle manual map click
+  //  Handle manual map click
   const handleMapClick = (newPos) => {
       setPinPosition(newPos);
       fetchAddressFromCoordinates(newPos.lat, newPos.lng);
   };
 
-  // ✅ 1. Get Current Location (GPS) & Auto-fill
+  //  1. Get Current Location (GPS) & Auto-fill
   const handleUseGPS = () => {
     if (!navigator.geolocation) return toast.error("Geolocation not supported");
     setLoadingLocation(true);

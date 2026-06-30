@@ -110,7 +110,9 @@ const GoalDetailsModal = ({ goalId, onClose }) => {
 export default function AdminComplaintsPage() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null); 
+  
+  // ✅ UPDATE: Track both ID and Action so the loader only shows on the clicked button
+  const [processingData, setProcessingData] = useState({ id: null, action: null }); 
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -167,7 +169,7 @@ export default function AdminComplaintsPage() {
        return toast.error("Please enter a valid amount to credit to the wallet.");
     }
 
-    setProcessingId(id);
+    setProcessingData({ id, action: status });
     try {
       const res = await fetch("/api/admin/complaints", {
         method: "PATCH",
@@ -202,7 +204,7 @@ export default function AdminComplaintsPage() {
       
       fetchComplaints(); 
     } catch (e) { toast.error("Failed to update"); }
-    finally { setProcessingId(null); }
+    finally { setProcessingData({ id: null, action: null }); }
   };
 
   const filteredComplaints = complaints.filter(c => {
@@ -256,16 +258,27 @@ export default function AdminComplaintsPage() {
 
       <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5 sm:border-none sm:pb-0">
+        {/* ✅ HEADER LAYOUT FIXED */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-5 sm:border-none sm:pb-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Dispute Management</h1>
             <p className="text-slate-500 mt-1 text-sm sm:text-base">Resolve issues between stores, customers, and riders.</p>
           </div>
-          <div className="bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-sm border border-slate-200 text-xs sm:text-sm self-start md:self-auto shrink-0">
-             <span className="font-bold text-slate-700 mr-1.5 sm:mr-2">Total: {filteredComplaints.length}</span> | 
-             <span className="font-bold text-blue-600 ml-1.5 sm:ml-2">
-                {filteredComplaints.filter(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS').length} In Progress
-             </span>
+          <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+             <div className="bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl shadow-sm border border-slate-200 text-xs sm:text-sm shrink-0">
+                <span className="font-bold text-slate-700 mr-1.5 sm:mr-2">Total: {filteredComplaints.length}</span> | 
+                <span className="font-bold text-blue-600 ml-1.5 sm:ml-2">
+                   {filteredComplaints.filter(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS').length} In Progress
+                </span>
+             </div>
+             <button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                className="p-2 sm:p-2.5 bg-white border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-50 shadow-sm transition-colors text-slate-600 shrink-0"
+                title="Reset filters and refresh"
+             >
+                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+             </button>
           </div>
         </div>
 
@@ -318,14 +331,6 @@ export default function AdminComplaintsPage() {
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <button 
-                onClick={handleRefresh} 
-                disabled={loading}
-                className="flex items-center justify-center w-full sm:w-auto p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl hover:bg-slate-100 shadow-sm transition-colors text-slate-600 shrink-0"
-                title="Reset filters and refresh"
-              >
-                <RefreshCcw size={18} className={`sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
-              </button>
             </div>
         </div>
 
@@ -335,9 +340,6 @@ export default function AdminComplaintsPage() {
                 <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-slate-200 mx-auto mb-3 sm:mb-4" />
                 <h3 className="text-base sm:text-lg font-bold text-slate-700">No Complaints Found</h3>
                 <p className="text-slate-500 text-xs sm:text-sm mt-1">Try adjusting your filters or search term.</p>
-                {(searchTerm || statusFilter !== "ALL" || typeFilter !== "ALL" || filerFilter !== "ALL") && (
-                  <button onClick={() => { setSearchTerm(""); setStatusFilter("ALL"); setTypeFilter("ALL"); setFilerFilter("ALL"); }} className="mt-4 sm:mt-5 text-blue-600 hover:underline text-xs sm:text-sm font-medium">Clear all filters</button>
-                )}
              </div>
           ) : (
              <>
@@ -516,13 +518,14 @@ export default function AdminComplaintsPage() {
                              <textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} placeholder="Explain your decision. This will be sent to the parties involved..." className="w-full p-3 sm:p-4 border border-slate-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-blue-500 h-20 sm:h-24 resize-none transition-shadow custom-scrollbar" />
                            </div>
                            
+                           {/* ✅ FIXED: Button loading states strictly isolated using processingData */}
                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-3 border-t border-slate-200">
                              <button onClick={() => {setResolvingId(null); setCreditWallet(false); setCreditAmount("");}} className="w-full sm:flex-1 py-2.5 sm:py-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors text-xs sm:text-sm font-bold rounded-xl shadow-sm order-3 sm:order-1">Cancel</button>
-                             <button onClick={() => handleAction(c.id, "REJECTED")} disabled={processingId === c.id} className="w-full sm:flex-1 py-2.5 sm:py-3 bg-red-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-red-700 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 shadow-md shadow-red-500/20 transition-colors active:scale-95 order-2">
-                               {processingId === c.id ? <Loader2 size={14} className="animate-spin sm:w-4 sm:h-4"/> : <><XCircle size={14} className="sm:w-4 sm:h-4"/> Reject Ticket</>}
+                             <button onClick={() => handleAction(c.id, "REJECTED")} disabled={processingData.id === c.id} className="w-full sm:flex-1 py-2.5 sm:py-3 bg-red-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-red-700 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 shadow-md shadow-red-500/20 transition-colors active:scale-95 order-2">
+                               {processingData.id === c.id && processingData.action === "REJECTED" ? <Loader2 size={14} className="animate-spin sm:w-4 sm:h-4"/> : <><XCircle size={14} className="sm:w-4 sm:h-4"/> Reject Ticket</>}
                              </button>
-                             <button onClick={() => handleAction(c.id, "RESOLVED")} disabled={processingId === c.id} className="w-full sm:flex-[1.2] py-2.5 sm:py-3 bg-emerald-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 shadow-md shadow-emerald-500/20 transition-colors active:scale-95 order-1 sm:order-3">
-                               {processingId === c.id ? <Loader2 size={14} className="animate-spin sm:w-4 sm:h-4"/> : <><CheckCircle size={14} className="sm:w-4 sm:h-4"/> Approve / Resolve</>}
+                             <button onClick={() => handleAction(c.id, "RESOLVED")} disabled={processingData.id === c.id} className="w-full sm:flex-[1.2] py-2.5 sm:py-3 bg-emerald-600 text-white text-xs sm:text-sm font-bold rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 shadow-md shadow-emerald-500/20 transition-colors active:scale-95 order-1 sm:order-3">
+                               {processingData.id === c.id && processingData.action === "RESOLVED" ? <Loader2 size={14} className="animate-spin sm:w-4 sm:h-4"/> : <><CheckCircle size={14} className="sm:w-4 sm:h-4"/> Approve / Resolve</>}
                              </button>
                            </div>
                          </div>

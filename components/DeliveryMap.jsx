@@ -123,7 +123,7 @@ export default function DeliveryMap({ delivery }) {
 
     const fetchRoadPath = async () => {
       try {
-        // ✅ The base URL is securely fetched from the .env file with a fallback
+        //  The base URL is securely fetched from the .env file with a fallback
         const baseUrl = process.env.NEXT_PUBLIC_OSRM_BASE_URL || 'https://router.project-osrm.org';
         const res = await fetch(`${baseUrl}/route/v1/driving/${storeLocation.lng},${storeLocation.lat};${customerLocation.lng},${customerLocation.lat}?overview=full&geometries=geojson`);
         

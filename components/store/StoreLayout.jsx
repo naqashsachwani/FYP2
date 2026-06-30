@@ -17,7 +17,7 @@ const StoreLayout = ({ children }) => {
     const [loading, setLoading] = useState(true)
     const [storeInfo, setStoreInfo] = useState(null)
     
-    // ✅ ADDED: State to manage mobile sidebar, matching Admin & Rider logic
+    //  ADDED: State to manage mobile sidebar, matching Admin & Rider logic
     const [isSidebarOpen, setIsSidebarOpen] = useState(false) 
 
     const fetchIsSeller = async () => {
@@ -51,7 +51,7 @@ const StoreLayout = ({ children }) => {
     ) : isSeller ? (
         <div className="flex flex-col h-[100dvh] bg-gray-50 overflow-hidden">
 
-            {/* ✅ UPDATED: Passed toggle props to Navbar */}
+            {/*  UPDATED: Passed toggle props to Navbar */}
             <SellerNavbar 
                 brandName="DreamSaver" 
                 onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -60,7 +60,7 @@ const StoreLayout = ({ children }) => {
 
             <div className="flex flex-1 h-full overflow-hidden relative">
 
-                {/* ✅ UPDATED: Passed open/close props to Sidebar */}
+                {/* UPDATED: Passed open/close props to Sidebar */}
                 <SellerSidebar 
                     storeInfo={storeInfo} 
                     isOpen={isSidebarOpen}
